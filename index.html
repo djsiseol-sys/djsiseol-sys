@@ -344,7 +344,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
     <div class="topbar-tools">
       <span class="rob" id="roBadge" hidden>조회 전용</span>
       <span class="savestate" id="saveState">—</span>
-      <button type="button" class="btn btn-sm savenow" id="saveNow" title="지금 저장 (Ctrl+S)">저장</button>
+      <button type="button" class="btn btn-sm savenow" id="saveNow" title="지금 저장 (Ctrl+S) · 예약은 등록·수정 즉시 저장됩니다">저장</button>
       <button type="button" class="btn btn-sm" id="themeBtn" title="화면 모드 전환">◐</button>
       <button type="button" class="btn btn-primary btn-sm" id="newBtn">+ 예약 등록</button>
     </div>
@@ -688,8 +688,8 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
           <div class="fee-box">
             <div class="fee-line"><span>① 기본 전용사용료<span class="why">별표 2 · 체육경기 / 체육경기 외로 갈린다. 1회 금액이며 시간에 비례하지 않는다</span></span><span>별표 2 의 1회 금액</span></div>
             <div class="fee-line"><span>② 토·공휴일 가산<span class="why">별표 2 비고 · 토요일ㆍ공휴일(주간)</span></span><span>+ 기본액 × 50%</span></div>
-            <div class="fee-line"><span>＝ 당일 주간 전용사용료<span class="why">① + ② · 야간·조기는 여기서 출발한다</span></span><span>①+②</span></div>
-            <div class="fee-line"><span>③ 야간 가산 / 조기 감산<span class="why">별표 2 비고 · 별표 1의2 의 시간대로 판정 · 위 설정에 따름</span></span><span>× 1.5 / × 0.7</span></div>
+            <div class="fee-line"><span>＝ 당일 주간 전용사용료<span class="why">① + ② · 시간대별 사용료는 여기서 나온다</span></span><span>①+②</span></div>
+            <div class="fee-line"><span>③ 시간대별 사용료<span class="why">걸치는 시간대마다 1회분을 매겨 합산한다 · 제10조제2항</span></span><span>조기×0.7 + 주간 + 야간×1.5</span></div>
             <div class="fee-line"><span>④ 초과사용료<span class="why">제11조제3항 · 1시간 미만은 1시간으로 본다</span></span><span>+ 기본액 × 20% × 초과시간</span></div>
             <div class="fee-line"><span>⑤ 관람료 수입 사용료<span class="why">제12조 · 관람료를 받는 행사만</span></span><span>+ 수입 × 10% 또는 12.5%</span></div>
             <div class="fee-line"><span>⑥ 감면<span class="why">제13조 · 등록창에서 고른 유형</span></span><span>− (①~⑤) × 감면율</span></div>
@@ -697,10 +697,10 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
           </div>
           <div class="fee-box" style="margin-top:2px">
             <h3>시간대 판정 (별표 1의2)</h3>
-            <div class="fee-line"><span>야간에 걸치면</span><span>야간 가산</span></div>
-            <div class="fee-line"><span>조기 안에서만 쓰면</span><span>조기 감산</span></div>
-            <div class="fee-line"><span>그 밖</span><span>주간 (가산·감산 없음)</span></div>
-            <div class="fee-line"><span>조기와 주간에 걸치면</span><span>주간으로 본다</span></div>
+            <div class="fee-line"><span>걸치는 시간대마다</span><span>그 시간대의 1회 사용료</span></div>
+            <div class="fee-line"><span>조기 + 주간</span><span>두 금액을 더한다</span></div>
+            <div class="fee-line"><span>조기 + 주간 + 야간</span><span>세 금액을 더한다</span></div>
+            <div class="fee-line"><span>근거</span><span>제10조제2항 · 일부만 써도 전부 사용으로 본다</span></div>
           </div>
           <div class="fee-box" style="margin-top:2px">
             <h3>준비시간</h3>
@@ -1054,7 +1054,10 @@ let view = { year: new Date().getFullYear(), month: new Date().getMonth() + 1, s
    readonly= 볼 수만 있는 사람                                            */
 const RUNTIME = { api: null, shared: false, server: false, writable: true, saving: false, dirty: false, timer: null, retries: 0 };
 const DATA_PATH = "data/state.json";
-const AUTOSAVE_MS = 1000;    // 마지막 변경 후 이만큼 조용하면 자동 저장
+/* 예약 등록·수정·삭제·복제는 아래 타이머와 상관없이 바로 저장한다(saveNow).
+   이 타이머는 설정값처럼 자주 고치는 항목에만 걸리며, 길게 잡아야
+   무료 플랜 전송량이 덜 샌다. 급하면 저장 버튼이나 Ctrl+S 를 쓰면 된다 */
+const AUTOSAVE_MS = 120000;  // 마지막 변경 후 이만큼 조용하면 자동 저장 (2분)
 const POLL_MS = 10000;       // 다른 사람이 저장했는지 확인하는 주기
 
 /* ── 서버(Supabase) 접속 정보 ──────────────────────────────
@@ -1062,8 +1065,8 @@ const POLL_MS = 10000;       // 다른 사람이 저장했는지 확인하는 �
    publishable key(sb_publishable_...) 또는 옛 anon key 를 넣는다. 공개되어도 되는 키다.
    실제 권한은 서버의 RLS 정책이 정한다. secret / service_role 키는 절대 넣지 않는다.
    비워두면 서버를 쓰지 않고 기존 방식(아티팩트 / 이 브라우저)으로 동작한다. */
-const SUPABASE_URL = "";
-const SUPABASE_ANON_KEY = "";
+const SUPABASE_URL = "https://czsghzvzurpahvkzqweh.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_R4nWQLhaPwPMb0fU-aDvQg_Sw0SVznU";
 const ROW_ID = "main";
 const PENDING_KEY = "rsv.pending.v1";
 
@@ -1568,11 +1571,9 @@ function calcFee(r) {
 
   const A = s.articles || {};
   const hourTxt = (Math.round(out.hours * 10) / 10) + "시간";
-  const touched = [bd.early && "조기", bd.day && "주간", bd.night && "야간"].filter(Boolean);
-  // 야간에 걸치면 야간, 조기 안에서만 쓰면 조기, 그 밖은 주간으로 본다
-  const applied = bd.night ? "야간" : (bd.early && !bd.day ? "조기" : "주간");
-  const others = touched.filter(x => x !== applied);
-  const bandTxt = applied + (others.length ? "(" + others.join("·") + " 걸침)" : "");
+  // 걸치는 시간대를 모두 센다. 시간대마다 1회분 사용료가 붙는다
+  const used = [bd.early && "조기", bd.day && "주간", bd.night && "야간"].filter(Boolean);
+  const bandTxt = used.join("+") || "-";
 
   // ① 기본 전용사용료
   let base = 0;
@@ -1616,14 +1617,15 @@ function calcFee(r) {
   let sum = base;
 
   /* ②③ 가산·감산
-     야간·조기는 "당일 주간 전용사용료"를 출발점으로 삼는다.
-     그 출발점에 무엇을 곱하거나 더하는지는 두 가지로 읽힌다 — surchargeMode 로 고른다.
 
-       multiply (기존 실무, 기본값) : 당일 주간 사용료 × 1.5 (야간) / × 0.7 (조기)
-       add      (조례 문언 그대로)  : 당일 주간 사용료 ± 기본액 × 50% / 30%
+     조례는 조기·주간·야간을 각각 하나의 사용으로 보고, 기본 전용사용료를 "1회" 금액으로 정한다.
+     제10조제2항은 사용시간의 일부만 써도 전부 사용한 것으로 본다고 했다.
+     그래서 **걸치는 시간대마다 그 시간대의 1회 사용료를 매기고 합산한다.**
+     예) 07:00–23:00 은 조기·주간·야간 세 시간대를 쓴 것이므로 세 금액을 더한다.
 
-     평일은 두 방식이 같고, 토·일·공휴일에서만 갈린다.
-     예) 휴일 야간 = 202,500(곱셈) vs 180,000(덧셈) */
+     각 시간대 금액은 "당일 주간 전용사용료"에서 나온다 — surchargeMode 로 고른다.
+       multiply (기존 실무, 기본값) : 조기 × 0.7 · 주간 × 1 · 야간 × 1.5
+       add      (조례 문언 그대로)  : 조기 − 기본액×30% · 주간 · 야간 + 기본액×50% */
   const applySur = (!isPrep || s.prepSurcharge) && base > 0;
   const sur = isSurchargeDay(r.date);
   const byMul = (s.surchargeMode || "multiply") === "multiply";
@@ -1641,47 +1643,53 @@ function calcFee(r) {
   }
   const dayAmt = sum;   // 당일 주간 전용사용료
 
-  const useNight = applySur && bd.night && Number(s.nightRate) > 0;
-  const useEarly = applySur && bd.early && !bd.day && !bd.night && Number(s.earlyRate) > 0;
-  if (useNight || useEarly) {
-    out.lines.push({
-      subtotal: true,
-      label: "＝ 당일 주간 전용사용료",
-      why: sur.yes ? "기본액 " + won(base) + "원 + 토·일·공휴일 가산 " + won(dayAmt - base) + "원"
-                   : "평일이라 기본액과 같다",
-      amount: dayAmt
-    });
-  }
+  /* 시간대별 1회 사용료 */
+  const nRate = Number(s.nightRate) || 0, eRate = Number(s.earlyRate) || 0;
+  const bandAmt = k => k === "야간" ? (byMul ? dayAmt * (1 + nRate / 100) : dayAmt + base * nRate / 100)
+                     : k === "조기" ? (byMul ? dayAmt * (1 - eRate / 100) : dayAmt - base * eRate / 100)
+                     : dayAmt;
+  const bandWhy = k => {
+    const b = bd.band;
+    if (k === "조기") return b.season + " 조기 " + fmtMin(b.early) + "–" + fmtMin(b.day) + " 사용 · 당일 주간 전용사용료 " +
+      won(dayAmt) + "원 " + (byMul ? "× " + (1 - eRate / 100) : "− 기본액의 " + eRate + "%") + " · " + A.early;
+    if (k === "야간") return b.season + " 야간 " + fmtMin(b.night) + "–" + fmtMin(b.close) + " 사용 · 당일 주간 전용사용료 " +
+      won(dayAmt) + "원 " + (byMul ? "× " + (1 + nRate / 100) : "+ 기본액의 " + nRate + "%") + " · " + A.night;
+    return b.season + " 주간 " + fmtMin(b.day) + "–" + fmtMin(b.night) + " 사용 · 당일 주간 전용사용료 그대로 · " + A.base;
+  };
 
-  if (useNight) {
-    const rate = Number(s.nightRate);
-    const amt = byMul ? dayAmt * rate / 100 : base * rate / 100;
-    out.lines.push({
-      label: "③ 야간사용 가산 " + rate + "%",
-      why: bd.band.season + " 야간 " + fmtMin(bd.band.night) + " 이후에 걸침 · 당일 주간 전용사용료 " + won(dayAmt) + "원의 " +
-           (byMul ? rate + "%" : rate + "% (기본액 기준 " + won(base * rate / 100) + "원)") + " 가산" +
-           (others.length ? " · " + others.join("·") + "에도 걸치지만 야간에 걸치면 야간으로 본다" : "") + " · " + A.night,
-      amount: amt
-    });
-    sum += amt;
-  } else if (useEarly) {
-    const rate = Number(s.earlyRate);
-    const amt = -(byMul ? dayAmt * rate / 100 : base * rate / 100);
-    out.lines.push({
-      label: "③ 조기사용 감산 " + rate + "%",
-      why: bd.band.season + " 조기 " + fmtMin(bd.band.early) + "–" + fmtMin(bd.band.day) + " 안에서만 사용 · 당일 주간 전용사용료 " +
-           won(dayAmt) + "원의 " + (byMul ? rate + "%" : rate + "% (기본액 기준 " + won(base * rate / 100) + "원)") + " 감산 · " + A.early,
-      amount: amt
-    });
-    sum += amt;
-  }
-
-  // 조기에 걸쳤는데 감산이 안 붙는 경우가 있다. 그 이유를 적어둔다
-  if (applySur && bd.early && bd.day && !bd.night && Number(s.earlyRate) > 0) {
-    out.lines.push({
-      label: "③ 조기사용 감산 없음",
-      why: bd.band.season + " 조기 " + fmtMin(bd.band.early) + "–" + fmtMin(bd.band.day) + " 에 걸치지만 주간까지 이어져 주간으로 본다 · " + A.early,
-      amount: 0
+  if (applySur && used.length) {
+    if (used.length > 1 || used[0] !== "주간") {
+      out.lines.push({
+        subtotal: true,
+        label: "＝ 당일 주간 전용사용료",
+        why: (sur.yes ? "기본액 " + won(base) + "원 + 토·일·공휴일 가산 " + won(dayAmt - base) + "원"
+                      : "평일이라 기본액과 같다") + " · 시간대별 사용료는 이 금액에서 나온다",
+        amount: dayAmt
+      });
+    }
+    // 주간을 썼으면 ①②가 곧 주간 1회분이다. 안 썼으면 첫 시간대를 그 자리에 놓는다
+    const primary = used.includes("주간") ? "주간" : used[0];
+    if (primary !== "주간") {
+      const delta = bandAmt(primary) - dayAmt;
+      if (delta !== 0) {
+        out.lines.push({
+          label: "③ " + primary + "사용 " + (delta > 0 ? "가산 " + nRate : "감산 " + eRate) + "%",
+          why: bandWhy(primary),
+          amount: delta
+        });
+        sum += delta;
+      }
+    }
+    // 나머지 시간대는 그 시간대의 1회 사용료를 통째로 더한다
+    let n = 3;
+    used.filter(k => k !== primary).forEach(k => {
+      const amt = bandAmt(k);
+      out.lines.push({
+        label: "③-" + (++n - 3) + " " + k + " 시간대 사용료 (1회분 추가)",
+        why: bandWhy(k) + " · 시간대마다 1회분을 매긴다 (제10조제2항 · 제11조제1항)",
+        amount: amt
+      });
+      sum += amt;
     });
   }
 
