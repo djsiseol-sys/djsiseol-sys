@@ -268,6 +268,9 @@ td.t{font-family:"IBM Plex Mono",monospace;white-space:nowrap}
 .modal-foot{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;align-items:center}
 .modal-foot .spacer{margin-left:auto}
 .fee-box{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.timepick{display:flex;align-items:center;gap:5px}
+.timepick select{flex:0 1 auto;min-width:0;padding-right:4px}
+.timepick span{font-size:12px;color:var(--muted);flex:0 0 auto}
 .fee-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .fee-head h3{margin:0}
 .fee-sum{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:2px}
@@ -749,12 +752,18 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
           <input type="date" id="fDate" required class="mono">
         </div>
         <div class="field">
-          <label for="fStart">시작</label>
-          <input type="time" id="fStart" required step="600" class="mono">
+          <label for="fStartH">시작</label>
+          <div class="timepick">
+            <select id="fStartH" class="mono"></select><span>시</span>
+            <select id="fStartM" class="mono"></select><span>분</span>
+          </div>
         </div>
         <div class="field">
-          <label for="fEnd">종료</label>
-          <input type="time" id="fEnd" required step="600" class="mono">
+          <label for="fEndH">종료</label>
+          <div class="timepick">
+            <select id="fEndH" class="mono"></select><span>시</span>
+            <select id="fEndM" class="mono"></select><span>분</span>
+          </div>
         </div>
       </div>
 
@@ -2153,8 +2162,8 @@ function openModal(id, presetDate) {
   fillSelects();
 
   $("#fDate").value = r ? r.date : (presetDate || view.selected || ymd(view.year, view.month, 1));
-  $("#fStart").value = r ? r.start : "09:00";
-  $("#fEnd").value = r ? r.end : "12:00";
+  setTimeVal("fStart", r ? r.start : "09:00");
+  setTimeVal("fEnd", r ? r.end : "12:00");
   $("#fFac").value = r ? r.facilityId : (state.facilities[0] ? state.facilities[0].id : "");
   $("#fStatusSel").value = r ? r.status : "신청";
   $("#fApplicant").value = r ? r.applicant : "";
@@ -2201,8 +2210,8 @@ function formToRes() {
     kind: $("#fKind").value,
     linkId: prev ? (prev.linkId || null) : null,
     date: $("#fDate").value,
-    start: $("#fStart").value,
-    end: $("#fEnd").value,
+    start: timeVal("fStart"),
+    end: timeVal("fEnd"),
     facilityId: $("#fFac").value,
     status: $("#fStatusSel").value,
     applicant: $("#fApplicant").value.trim(),
@@ -2239,6 +2248,24 @@ function readAnnexQty() {
   return Object.keys(out).length ? out : null;
 }
 
+/* 시각 입력 — 오전/오후가 헷갈려서 24시간제 시·분 고르기로 두었다.
+   <input type="time"> 은 브라우저 지역 설정에 따라 12시간제로 나오는데,
+   그걸 코드로 강제할 방법이 없다. **다시 type="time" 으로 돌리지 않는다.** */
+const TIME_MIN_STEP = 10;
+function fillTimeSelects() {
+  const hrs = Array.from({ length: 24 }, (_, i) => '<option value="' + i + '">' + pad(i) + "</option>").join("");
+  const mins = Array.from({ length: 60 / TIME_MIN_STEP }, (_, i) =>
+    '<option value="' + i * TIME_MIN_STEP + '">' + pad(i * TIME_MIN_STEP) + "</option>").join("");
+  ["fStart", "fEnd"].forEach(k => { $("#" + k + "H").innerHTML = hrs; $("#" + k + "M").innerHTML = mins; });
+}
+function timeVal(k) { return pad(Number($("#" + k + "H").value)) + ":" + pad(Number($("#" + k + "M").value)); }
+function setTimeVal(k, hhmm) {
+  const [h, m] = String(hhmm || "00:00").split(":").map(Number);
+  $("#" + k + "H").value = String(h || 0);
+  // 10분 단위 밖의 값(예전 자료)은 가장 가까운 아래 눈금으로 맞춘다
+  $("#" + k + "M").value = String(Math.floor((m || 0) / TIME_MIN_STEP) * TIME_MIN_STEP);
+}
+
 function updateKindUI() {
   const fac = facilityOf($("#fFac").value);
   const allowed = !!(fac && fac.prep && fac.prep.allowed);
@@ -2260,7 +2287,7 @@ function updateKindUI() {
 
   const b = Number($("#fPrepBefore").value) || 0, a = Number($("#fPrepAfter").value) || 0;
   if (!$("#prepBox").hidden && $("#fPrepOn").checked && (b || a)) {
-    const st = toMin($("#fStart").value), en = toMin($("#fEnd").value);
+    const st = toMin(timeVal("fStart")), en = toMin(timeVal("fEnd"));
     const parts = [];
     if (b) parts.push("전 " + minToHm(st - b * 60) + "–" + minToHm(st));
     if (a) parts.push("후 " + minToHm(en) + "–" + minToHm(en + a * 60));
@@ -2444,6 +2471,7 @@ async function boot() {
 
 function init() {
   $("#monthInput").innerHTML = Array.from({ length: 12 }, (_, i) => '<option value="' + (i + 1) + '">' + (i + 1) + "월</option>").join("");
+  fillTimeSelects();
   fillSelects();
   renderAll();
 
@@ -2515,7 +2543,7 @@ function init() {
       if (e.key === "ArrowRight") shiftMonth(1);
     }
   });
-  ["#fDate", "#fStart", "#fEnd", "#fFac", "#fDiscount", "#fStatusSel", "#fOverride", "#fKind",
+  ["#fDate", "#fStartH", "#fStartM", "#fEndH", "#fEndM", "#fFac", "#fDiscount", "#fStatusSel", "#fOverride", "#fKind",
    "#fUseType", "#fAdmission", "#fSchoolGame", "#fPower", "#fWater"].forEach(sel =>
     $(sel).addEventListener("input", () => { updateKindUI(); updateFeePreview(); }));
   $("#annexList").addEventListener("input", () => updateFeePreview());
