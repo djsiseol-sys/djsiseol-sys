@@ -295,7 +295,7 @@ td.t{font-family:"IBM Plex Mono",monospace;white-space:nowrap}
 }
 .recover[hidden]{display:none}
 .recover span{margin-right:auto}
-body.ro #newBtn,body.ro #railAdd,body.ro .item-actions,body.ro #resetAll,body.ro #importJson,
+body.ro #newBtn,body.ro #railAdd,body.ro .item-actions,body.ro #resetAll,body.ro #clearRes,body.ro #importJson,
 body.ro #addFacility,body.ro #addDiscount,body.ro [data-delfac],body.ro [data-deldc],body.ro #importPaste,
 body.ro #deleteRes,body.ro #saveRes{display:none!important}
 body.ro #pane-settings input,body.ro #pane-settings select,body.ro #pane-settings textarea,
@@ -720,7 +720,12 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
             <textarea id="setOrgNote" placeholder="담당자, 조례 개정일, 인수인계 사항 등"></textarea>
           </div>
           <div class="hr"></div>
-          <button type="button" class="btn btn-danger btn-sm" id="resetAll" style="align-self:flex-start">전체 데이터 초기화</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button type="button" class="btn btn-danger btn-sm" id="clearRes">예약만 전부 지우기</button>
+            <button type="button" class="btn btn-danger btn-sm" id="resetAll">전체 데이터 초기화</button>
+          </div>
+          <div class="hint">‘예약만 전부 지우기’ 는 시설·요금 기준은 그대로 두고 예약 건만 지웁니다.
+            서버에도 바로 반영되고, 이 브라우저에 남아 있던 복구 대기분도 함께 지웁니다.</div>
         </div>
       </div>
 
@@ -2651,10 +2656,26 @@ function init() {
       save(); fillSelects(); renderSettings(); renderAll();
     }
   });
+  $("#clearRes").addEventListener("click", () => {
+    if (!RUNTIME.writable) { toast("조회 전용이라 지울 수 없습니다"); return; }
+    const n = state.reservations.length;
+    if (!n) { toast("지울 예약이 없습니다"); return; }
+    if (!confirm("예약 " + n + "건을 모두 지웁니다. 시설·요금 기준은 그대로 둡니다.\n되돌릴 수 없습니다. 계속할까요?")) return;
+    state.reservations = [];
+    clearPending();                 // 복구 대기분이 되살아나지 않게 함께 지운다
+    $("#recoverBar").hidden = true;
+    save(); saveNow(true);          // 서버에 바로 반영한다
+    renderAll();
+    toast("예약 " + n + "건을 지웠습니다");
+  });
   $("#resetAll").addEventListener("click", () => {
+    if (!RUNTIME.writable) { toast("조회 전용이라 초기화할 수 없습니다"); return; }
     if (!confirm("모든 예약과 설정을 초기 상태로 되돌립니다. 계속할까요?")) return;
     state = structuredClone(DEFAULT_STATE);
-    save(); fillSelects(); renderSettings(); renderAll(); toast("초기화했습니다");
+    clearPending();                 // 지운 예약이 복구 안내로 되살아나지 않게 한다
+    $("#recoverBar").hidden = true;
+    save(); saveNow(true);
+    fillSelects(); renderSettings(); renderAll(); toast("초기화했습니다");
   });
 
   // 내보내기 / 불러오기
