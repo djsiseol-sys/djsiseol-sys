@@ -83,6 +83,7 @@ button{cursor:pointer}
 .brand{display:flex;align-items:baseline;gap:9px;margin-right:2px}
 .brand h1{font-size:15px;font-weight:600;letter-spacing:-.01em;margin:0}
 .brand span{font-size:10px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase}
+.brand .ver{letter-spacing:0;text-transform:none;color:var(--faint)}
 .period{display:flex;align-items:center;gap:6px}
 .period input[type=number]{
   width:74px;padding:5px 8px;border:1px solid var(--line);border-radius:var(--r);
@@ -446,6 +447,10 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
     <div class="brand">
       <h1>시설 예약 관리대장</h1>
       <span>internal</span>
+      <!-- 화면에 뜬 것이 최신 파일인지 한눈에 보려고 판 번호를 띄운다.
+           "고쳤다는데 안 바뀐다" 는 대개 옛 파일을 열고 있는 것이라서,
+           이 표시가 없으면 확인할 방법이 없다. 내용을 고치면 APP_VERSION 을 올린다 -->
+      <span class="ver mono" id="appVer" title="이 화면 파일의 판 번호"></span>
     </div>
 
     <div class="period">
@@ -1083,6 +1088,11 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* =========================================================
    1. 데이터 구조
    ========================================================= */
+/* 화면에 띄우는 판 번호. **내용을 고치면 여기를 올린다.**
+   "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을 열고 있는 것인데,
+   이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
+const APP_VERSION = "2026-08-23.3";
+
 const STORAGE_KEY = "rsv.mgmt.v1";
 
 /* 시설 구분색. CSS 의 --fc-<이름>-soft/line/ink 와 짝이 맞아야 한다 */
@@ -3129,6 +3139,7 @@ async function boot() {
 }
 
 function init() {
+  $("#appVer").textContent = APP_VERSION;
   $("#monthInput").innerHTML = Array.from({ length: 12 }, (_, i) => '<option value="' + (i + 1) + '">' + (i + 1) + "월</option>").join("");
   fillTimeSelects();
   fillSelects();
