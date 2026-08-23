@@ -1054,7 +1054,7 @@ let view = { year: new Date().getFullYear(), month: new Date().getMonth() + 1, s
    readonly= 볼 수만 있는 사람                                            */
 const RUNTIME = { api: null, shared: false, server: false, writable: true, saving: false, dirty: false, timer: null, retries: 0 };
 const DATA_PATH = "data/state.json";
-const AUTOSAVE_MS = 10000;   // 마지막 변경 후 이만큼 조용하면 자동 저장
+const AUTOSAVE_MS = 1000;    // 마지막 변경 후 이만큼 조용하면 자동 저장
 const POLL_MS = 10000;       // 다른 사람이 저장했는지 확인하는 주기
 
 /* ── 서버(Supabase) 접속 정보 ──────────────────────────────
@@ -1152,12 +1152,17 @@ function save() {
 }
 
 /* 저장 버튼 — 기다리지 않고 지금 저장 */
-function saveNow() {
-  if (!RUNTIME.shared) { mirrorLocal(); setSaveState("저장됨 " + hhmm(new Date())); toast("저장했습니다"); return; }
-  if (!RUNTIME.writable) { toast("조회 전용이라 저장할 수 없습니다"); return; }
-  if (!RUNTIME.dirty && !RUNTIME.saving) { toast("저장할 변경이 없습니다"); return; }
+/* silent = true 면 안내를 띄우지 않는다. 예약 등록·수정처럼
+   자체 안내가 이미 나가는 곳에서 쓴다 */
+function saveNow(silent) {
+  const say = m => { if (!silent) toast(m); };
+  if (!RUNTIME.shared) { mirrorLocal(); setSaveState("저장됨 " + hhmm(new Date())); say("저장했습니다"); return; }
+  if (!RUNTIME.writable) { say("조회 전용이라 저장할 수 없습니다"); return; }
+  if (!RUNTIME.dirty && !RUNTIME.saving) { say("저장할 변경이 없습니다"); return; }
   clearTimeout(RUNTIME.timer);
   RUNTIME.dirty = true;
+  // 앞선 저장이 아직 안 끝났으면 그게 끝난 뒤에 이어서 올린다
+  if (RUNTIME.saving) { RUNTIME.timer = setTimeout(pushShared, 300); return; }
   pushShared();
 }
 
@@ -1183,6 +1188,8 @@ async function pushShared() {
     RUNTIME.retries = 0;
     markClean();
     setSaveState((RUNTIME.server ? "서버에 저장됨 " : "모두에게 저장됨 ") + hhmm(new Date()));
+    // 저장하는 동안 또 고쳤으면 이어서 한 번 더 올린다
+    if (RUNTIME.dirty) { clearTimeout(RUNTIME.timer); RUNTIME.timer = setTimeout(pushShared, AUTOSAVE_MS); }
   } catch (err) {
     const code = (err && err.code) || "upstream_error";
     if (code === "conflict") {
@@ -1561,7 +1568,11 @@ function calcFee(r) {
 
   const A = s.articles || {};
   const hourTxt = (Math.round(out.hours * 10) / 10) + "시간";
-  const bandTxt = [bd.early && "조기", bd.day && "주간", bd.night && "야간"].filter(Boolean).join("·") || "-";
+  const touched = [bd.early && "조기", bd.day && "주간", bd.night && "야간"].filter(Boolean);
+  // 야간에 걸치면 야간, 조기 안에서만 쓰면 조기, 그 밖은 주간으로 본다
+  const applied = bd.night ? "야간" : (bd.early && !bd.day ? "조기" : "주간");
+  const others = touched.filter(x => x !== applied);
+  const bandTxt = applied + (others.length ? "(" + others.join("·") + " 걸침)" : "");
 
   // ① 기본 전용사용료
   let base = 0;
@@ -1648,7 +1659,8 @@ function calcFee(r) {
     out.lines.push({
       label: "③ 야간사용 가산 " + rate + "%",
       why: bd.band.season + " 야간 " + fmtMin(bd.band.night) + " 이후에 걸침 · 당일 주간 전용사용료 " + won(dayAmt) + "원의 " +
-           (byMul ? rate + "%" : rate + "% (기본액 기준 " + won(base * rate / 100) + "원)") + " 가산 · " + A.night,
+           (byMul ? rate + "%" : rate + "% (기본액 기준 " + won(base * rate / 100) + "원)") + " 가산" +
+           (others.length ? " · " + others.join("·") + "에도 걸치지만 야간에 걸치면 야간으로 본다" : "") + " · " + A.night,
       amount: amt
     });
     sum += amt;
@@ -1662,6 +1674,15 @@ function calcFee(r) {
       amount: amt
     });
     sum += amt;
+  }
+
+  // 조기에 걸쳤는데 감산이 안 붙는 경우가 있다. 그 이유를 적어둔다
+  if (applySur && bd.early && bd.day && !bd.night && Number(s.earlyRate) > 0) {
+    out.lines.push({
+      label: "③ 조기사용 감산 없음",
+      why: bd.band.season + " 조기 " + fmtMin(bd.band.early) + "–" + fmtMin(bd.band.day) + " 에 걸치지만 주간까지 이어져 주간으로 본다 · " + A.early,
+      amount: 0
+    });
   }
 
   // ④ 초과사용료 — 1회 기준 시간이 정해진 시설에만 붙는다
@@ -2460,7 +2481,7 @@ function init() {
       const src = state.reservations.find(x => x.id === cp.dataset.copy);
       if (src) {
         const c = Object.assign({}, src, { id: uid(), status: "신청" });
-        state.reservations.push(c); save(); renderAll(); openModal(c.id);
+        state.reservations.push(c); save(); saveNow(true); renderAll(); openModal(c.id);
       }
     }
   });
@@ -2513,7 +2534,8 @@ function init() {
     const i = state.reservations.findIndex(x => x.id === r.id);
     if (i >= 0) state.reservations[i] = r; else state.reservations.push(r);
     const n = rebuildPrepRows(r);
-    save(); closeModal();
+    save(); saveNow(true);      // 예약은 기다리지 않고 바로 서버에 올린다
+    closeModal();
     view.year = Number(r.date.slice(0, 4)); view.month = Number(r.date.slice(5, 7)); view.selected = r.date;
     renderAll();
     toast((i >= 0 ? "수정했습니다" : "등록했습니다") + (n ? " · 준비시간 " + n + "건 포함" : ""));
@@ -2524,7 +2546,7 @@ function init() {
     if (!confirm(kids ? "이 예약과 함께 등록된 준비시간 " + kids + "건을 모두 삭제할까요?" : "이 예약을 삭제할까요?")) return;
     const gone = view.editingId;
     state.reservations = state.reservations.filter(x => x.id !== gone && x.linkId !== gone);
-    save(); closeModal(); renderAll(); toast("삭제했습니다");
+    save(); saveNow(true); closeModal(); renderAll(); toast("삭제했습니다");
   });
 
   // 설정 편집
@@ -2628,7 +2650,7 @@ function init() {
   });
 
   // 내보내기 / 불러오기
-  $("#saveNow").addEventListener("click", saveNow);
+  $("#saveNow").addEventListener("click", () => saveNow());
 
   $("#srvSaveCfg").addEventListener("click", () => {
     const u = $("#srvUrl").value.trim(), k = $("#srvKey").value.trim();
