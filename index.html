@@ -165,16 +165,17 @@ main{max-width:1440px;margin:0 auto;padding:18px 20px 60px}
 /* 색은 시설을 뜻하고, 상태는 형태로 나타낸다 (승인=채움, 신청=파선, 취소=취소선) */
 .chip{
   display:block;width:100%;text-align:left;
-  border:1px solid var(--fc-line);background:var(--fc-soft);color:var(--fc-ink);
-  border-radius:3px;padding:3px 6px;font-size:12px;line-height:1.35;
+  border:1px solid var(--fc-line);background:var(--fc-soft);color:var(--ink);
+  border-radius:3px;padding:3px 5px;font-size:12px;line-height:1.35;
   box-shadow:inset 3px 0 0 var(--fc-line);
   overflow:hidden;
 }
 .chip>span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.chip .n{font-size:11px;opacity:.85}
-.chip .t{font-family:"IBM Plex Mono",monospace;opacity:.8;margin-right:5px;font-size:11px;display:inline!important}
-.chip.pending{background:transparent;border-style:dashed;box-shadow:none}
-.chip.cancelled{background:transparent;border-color:var(--line-strong);color:var(--faint);text-decoration:line-through;box-shadow:none}
+.chip>span:first-child{font-size:11px;opacity:.85}
+.chip .n{font-size:12px;font-weight:500;opacity:1}
+.chip .t{font-family:"IBM Plex Mono",monospace;margin-right:3px;font-size:10px;letter-spacing:-.04em;display:inline!important}
+.chip.pending{border-style:dashed}
+.chip.cancelled{opacity:.5;text-decoration:line-through}
 .chip.conflict{border-color:var(--alert);box-shadow:inset 3px 0 0 var(--alert)}
 
 /* 시설 색 — data-fc 로 고른다 */
@@ -191,11 +192,11 @@ main{max-width:1440px;margin:0 auto;padding:18px 20px 60px}
 .rail-head .sub{font-size:11px;color:var(--muted)}
 .rail-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px;max-height:calc(100vh - 260px);overflow:auto}
 .empty{padding:22px 14px;text-align:center;color:var(--faint);font-size:12px}
-.item{border:1px solid var(--line);border-radius:var(--r);padding:9px 10px 9px 12px;display:flex;flex-direction:column;gap:5px;background:var(--surface);box-shadow:inset 4px 0 0 var(--fc-line)}
-.item.is-conflict{border-color:var(--alert);background:var(--alert-soft);box-shadow:inset 4px 0 0 var(--alert)}
-/* 준비 건은 예전처럼 연한 바탕으로 구분한다 */
-.item.is-prep{background:var(--fc-soft)}
+.item{border:1px solid var(--line);border-radius:var(--r);padding:9px 10px 9px 12px;display:flex;flex-direction:column;gap:5px;background:var(--fc-soft);box-shadow:inset 4px 0 0 var(--fc-line)}
+/* 행사는 시설색 바탕, 준비는 흰 바탕으로 구분한다 */
+.item.is-prep{background:var(--surface)}
 .item-top .item-fac{color:var(--fc-ink);font-weight:500}
+.item.is-conflict{border-color:var(--alert);background:var(--alert-soft);box-shadow:inset 4px 0 0 var(--alert)}
 .item-top{display:flex;align-items:baseline;gap:8px}
 .item-time{font-family:"IBM Plex Mono",monospace;font-size:12px;font-variant-numeric:tabular-nums}
 .item-fac{font-size:12px;color:var(--muted);margin-left:auto}
@@ -205,7 +206,6 @@ main{max-width:1440px;margin:0 auto;padding:18px 20px 60px}
 .item-actions{display:flex;gap:4px;margin-top:2px}
 .status{font-size:10px;letter-spacing:.04em;padding:1px 6px;border-radius:999px;border:1px solid var(--line-strong);color:var(--muted)}
 .kindtag{font-size:10px;letter-spacing:.04em;padding:1px 6px;border-radius:3px;background:var(--fc-soft,var(--accent-soft));color:var(--fc-ink,var(--accent-ink));border:1px solid var(--fc-line,transparent)}
-.item.is-prep .kindtag{background:var(--surface)}
 .prepbox{border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:flex;flex-direction:column;gap:9px;background:var(--surface-2)}
 .prepbox[hidden]{display:none}
 .prep-toggle{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer}
@@ -1353,7 +1353,7 @@ function renderCalendar() {
       const cf = conflicts.has(r.id) ? " conflict" : "";
       return '<button type="button" class="chip' + cls + cf + '" data-fc="' + colorOf(f) + '" data-edit="' + r.id + '" title="' +
         esc(r.start + "–" + r.end + " " + (f ? f.name : "") + " / " + r.applicant) + '">' +
-        '<span><span class="t">' + esc(r.start) + "</span>" + esc(f ? f.name : "?") + "</span>" +
+        '<span><span class="t">' + esc(r.start) + "–" + esc(r.end) + "</span>" + esc(f ? f.name : "?") + "</span>" +
         '<span class="n">' + esc(r.applicant) + "</span></button>";
     }).join("");
     const more = items.length > CAL_CHIPS
