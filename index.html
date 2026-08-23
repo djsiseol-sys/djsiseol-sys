@@ -994,12 +994,12 @@ function facSeed(id, name, color, prepAllowed) {
     feeOther: b.other,        // 체육경기 외 기본 전용사용료 (1회)
     sessionHours: 0,          // 1회 기준 시간. 0이면 시간 제한이 정해져 있지 않다는 뜻
     capacity: 0, article: b.article,
-    prep: { allowed: prepAllowed, mode: "percent", fee: 0, percent: 50, article: "" }
+    prep: { allowed: prepAllowed, mode: "percent", fee: 0, percent: 100, article: "" }
   };
 }
 
 const DEFAULT_STATE = {
-  version: 3,
+  version: 4,
   settings: {
     rounding: 10,
 
@@ -1031,7 +1031,7 @@ const DEFAULT_STATE = {
     discountAnnex: true,   // 부속시설·전기·수도에도 감면을 적용할지 (아래 주석 참고)
 
     holidays: [],
-    prepSurcharge: false,  // 준비시간에도 가산·감산을 적용할지
+    prepSurcharge: true,   // 준비시간에도 가산·감산을 적용할지
     articles: {
       base:    "별표 2 (제11조제1항 관련)",
       weekend: "별표 2 비고 · 토요일ㆍ공휴일(주간)",
@@ -1138,6 +1138,14 @@ function migrate(d) {
   // 제11조제1항이 부속시설 사용료도 "사용료"에 넣고 있어 제13조 감면 대상이다.
   // 처음에는 실비 성격을 걱정해 꺼두었으나, 담당자 확인으로 켜는 것으로 정했다
   if (old < 3) st.discountAnnex = true;
+  // 준비시간도 그 날 그 시간대의 전용사용료를 따른다 (담당자 확인).
+  // 손으로 고친 요율은 건드리지 않고, 예전 기본값 50 만 100 으로 올린다
+  if (old < 4) {
+    st.prepSurcharge = true;
+    facs.forEach(f => {
+      if (f.prep && f.prep.mode === "percent" && Number(f.prep.percent) === 50) f.prep.percent = 100;
+    });
+  }
   if (old < 2) {   // 예전 할증 설정은 조례 값과 뜻이 달라 그대로 쓸 수 없다
     st.weekendRate = base.settings.weekendRate;
     st.nightRate   = base.settings.nightRate;
@@ -1146,7 +1154,7 @@ function migrate(d) {
   }
   delete st.minHours; delete st.nightStart; delete st.holidayRate; delete st.surchargeArticle;
 
-  return { version: 3, settings: st, facilities: facs, discounts: dcs, reservations: res };
+  return { version: 4, settings: st, facilities: facs, discounts: dcs, reservations: res };
 }
 
 function readLocal() {
