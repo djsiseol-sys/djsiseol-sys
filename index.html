@@ -172,6 +172,13 @@ main{max-width:1440px;margin:0 auto;padding:18px 20px 60px}
 .cell.today .cell-date b{background:var(--accent);color:var(--surface);border-radius:4px;padding:0 5px}
 .cell.today.sat .cell-date b,.cell.today.sun .cell-date b,.cell.today.hol .cell-date b{color:var(--surface)}
 .holiday-tag{font-size:10px;color:var(--sun);letter-spacing:-.01em}
+/* 그 날 할 일을 다 마쳤다는 표시. 우측 상세의 '확인' 으로 켜고 끈다 */
+.cell-done{
+  position:absolute;right:5px;bottom:4px;line-height:1;
+  font-size:15px;font-weight:700;color:var(--accent);
+}
+.cell.out .cell-done{opacity:.45}
+.cell.is-done{padding-bottom:21px}
 .cell-count{margin-left:auto;font-size:10px;color:var(--muted);display:flex;gap:5px;align-items:center;white-space:nowrap}
 .cell-count b{font-weight:600;color:var(--ink-2)}
 .cell-count .pc{color:var(--faint)}
@@ -189,6 +196,7 @@ main{max-width:1440px;margin:0 auto;padding:18px 20px 60px}
 .chip .t{font-family:"IBM Plex Mono",monospace;margin-right:3px;font-size:10px;letter-spacing:-.04em;display:inline!important}
 /* 상태는 화면에서 쓰지 않기로 해서 테두리는 전부 실선이다 (예전 '신청' 파선 없음) */
 .chip.cancelled{opacity:.5;text-decoration:line-through}
+.chip.is-prep{border-color:var(--prep-line);box-shadow:inset 3px 0 0 var(--prep-line)}
 .chip.conflict{border-color:var(--alert);box-shadow:inset 3px 0 0 var(--alert)}
 
 /* 시설 색 — data-fc 로 고른다 */
@@ -263,6 +271,8 @@ tbody tr.is-prep td:first-child{border-left:2px solid var(--prep-line)}
 tbody tr.is-prep td:last-child{border-right:2px solid var(--prep-line)}
 tfoot td{font-weight:600;background:var(--surface-2);border-top:1px solid var(--line-strong)}
 td.memo{white-space:pre-wrap;word-break:break-word;min-width:180px}
+/* 목록 맨 왼쪽 — 그 날짜를 확인 완료로 표시했는지 */
+td.done,th.done{width:26px;text-align:center;padding-left:6px;padding-right:6px;color:var(--accent);font-weight:700}
 
 /* ---------- settings ---------- */
 .settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;align-items:start}
@@ -327,7 +337,7 @@ td.memo{white-space:pre-wrap;word-break:break-word;min-width:180px}
 }
 .recover[hidden]{display:none}
 .recover span{margin-right:auto}
-body.ro #newBtn,body.ro #railAdd,body.ro .item-actions,body.ro #resetAll,body.ro #clearRes,body.ro #importJson,
+body.ro #newBtn,body.ro #railDone,body.ro .item-actions,body.ro #resetAll,body.ro #clearRes,body.ro #importJson,
 body.ro #addFacility,body.ro #addDiscount,body.ro [data-delfac],body.ro [data-deldc],body.ro #importPaste,
 body.ro #deleteRes,body.ro #saveRes{display:none!important}
 body.ro #pane-settings input,body.ro #pane-settings select,body.ro #pane-settings textarea,
@@ -344,7 +354,13 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
    무엇을 인쇄할지는 인쇄 창(#printBox)에서 고른다 */
 .print-only{display:none}
 #printArea{display:none}
-.pd-head{display:flex;align-items:baseline;gap:10px;margin:0 0 8px;padding-bottom:5px;border-bottom:2px solid #000}
+.pc-page{margin:0 0 6px}
+.pc-page .dow{border:1px solid #888;border-bottom:0}
+.pc-legend{display:flex;gap:12px;font-size:10px;color:#333;margin-left:auto;align-items:center;flex-wrap:wrap}
+.pc-legend>span{white-space:nowrap}
+.pc-legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px;
+  background:var(--fc-soft);border:1px solid var(--fc-line)}
+.pd-head{display:flex;align-items:baseline;gap:10px;margin:0 0 8px;padding-bottom:5px;border-bottom:2px solid #000;flex-wrap:wrap}
 .pd-head h1{margin:0;font-size:15px;font-weight:600}
 .pd-head span{font-size:11px;color:#444}
 .pd-day{border:1px solid #888;margin:0 0 7px;break-inside:avoid;page-break-inside:avoid}
@@ -368,8 +384,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
   .topbar,.recover,.toast,.backdrop,.item-actions,.btn,.chip-more,.fee-detail{display:none!important}
   .legend{display:none!important}
   /* 달력을 찍을 때는 시설 구분색이 무슨 시설인지 알려 주는 범례를 남긴다 */
-  body.print-cal .legend{display:flex!important;font-size:10px}
-  body.print-cal .legend .legend-sep,body.print-cal .legend span:not(.fac):not(#facLegend){display:none}
+  .pc-legend{display:flex!important}
   body{background:#fff;color:#000}
   main{max-width:none;padding:0;margin:0}
   .card{border:1px solid #888;border-radius:0;box-shadow:none}
@@ -379,26 +394,30 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
   .print-head span{font-size:11px;color:#444}
 
   /* ① 달력으로 인쇄 — 가로 용지로 칸을 최대한 크게 잡는다.
-     예전에는 우측 상세까지 함께 들어가 달력이 눌려서 글씨가 안 보였다 */
-  body.print-cal .rail,body.print-cal #pane-list,body.print-cal #pane-settings{display:none!important}
-  body.print-cal #pane-calendar{display:block!important}
-  body.print-cal .split{display:block}
-  body.print-cal .cal-head{padding:4px 6px}
-  body.print-cal .cal-title{font-size:15px}
-  body.print-cal #calOrgNote{display:inline!important;margin-left:10px}
-  body.print-cal .dow div{padding:3px 4px;font-size:11px}
+     예전에는 우측 상세까지 함께 들어가 달력이 눌려서 글씨가 안 보였다.
+     **행사 달력과 준비 달력을 한 장에 섞지 않고 따로 찍는다** */
+  body.print-cal main{display:none!important}
+  body.print-cal #printArea{display:block!important}
+  /* 한 장에 한 달. A4 가로에서 쓸 수 있는 높이는 210 − 위아래 7mm = 196mm 다.
+     머리글·요일줄을 빼고 여섯 줄이 들어가도록 칸 최소 높이를 잡았다.
+     한 날에 일정이 아주 많으면 그 줄만 늘어나고 다음 장으로 넘어간다 */
+  .pc-page{break-after:page;page-break-after:always;min-height:193mm;display:flex;flex-direction:column}
+  .pc-page:last-child{break-after:auto;page-break-after:auto}
+  .pc-page .grid{flex:1 0 auto;align-content:stretch}
+  .pc-page .dow div{padding:3px 4px;font-size:11px}
   /* 여섯 줄 × 25mm 면 A4 가로 한 장에 들어간다. 바쁜 날은 칸이 알아서 늘어난다 */
-  body.print-cal .grid{grid-auto-rows:minmax(25mm,auto)}
-  body.print-cal .cell{padding:3px 4px;gap:2px;border-color:#aaa}
-  body.print-cal .cell.out{background:#f2f2f2}
-  body.print-cal .cell-date{font-size:11px}
-  body.print-cal .cell-date b{font-size:13px;font-weight:700}
-  body.print-cal .cell.today .cell-date b{background:none;color:#000;border:1px solid #000;padding:0 3px}
-  body.print-cal .cell-count{font-size:9px}
-  body.print-cal .chip{font-size:12px;padding:2px 4px;line-height:1.32;box-shadow:inset 3px 0 0 var(--fc-line)}
-  body.print-cal .chip>span:first-child{font-size:10.5px;opacity:1}
-  body.print-cal .chip .t{font-size:10.5px}
-  body.print-cal .chip .n{font-size:12.5px;font-weight:600}
+  .pc-page .grid{grid-auto-rows:minmax(22mm,auto);border:1px solid #888;border-top:0}
+  .pc-page .cell{padding:3px 4px;gap:2px;border-color:#aaa}
+  .pc-page .cell.out{background:#f2f2f2}
+  .pc-page .cell-date{font-size:11px}
+  .pc-page .cell-date b{font-size:13px;font-weight:700}
+  .pc-page .cell.today .cell-date b{background:none;color:#000;border:1px solid #000;padding:0 3px}
+  .pc-page .cell-count{font-size:9px}
+  .pc-page .cell-done{font-size:14px}
+  .pc-page .chip{font-size:12px;padding:2px 4px;line-height:1.32;box-shadow:inset 3px 0 0 var(--fc-line)}
+  .pc-page .chip>span:first-child{font-size:10.5px;opacity:1}
+  .pc-page .chip .t{font-size:10.5px}
+  .pc-page .chip .n{font-size:12.5px;font-weight:600}
 
   /* ② 목록으로 인쇄 */
   body.print-list .rail,body.print-list #pane-calendar,body.print-list #pane-settings,body.print-list .filters{display:none!important}
@@ -494,7 +513,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
             </div>
             <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end">
               <button type="button" class="btn btn-sm" id="railHoliday" hidden>공휴일 지정</button>
-              <button type="button" class="btn btn-sm" id="railAdd" hidden>+ 추가</button>
+              <button type="button" class="btn btn-sm" id="railDone" hidden>확인</button>
             </div>
           </div>
           <div class="rail-body" id="railBody">
@@ -1024,6 +1043,15 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
         </select>
         <span class="hint" id="printHint"></span>
       </div>
+      <div class="field" id="printCalKindBox">
+        <label for="printCalKind">달력에 넣을 것</label>
+        <select id="printCalKind">
+          <option value="both">행사 달력 + 준비 달력 (2장)</option>
+          <option value="행사">행사 달력만</option>
+          <option value="준비">준비 달력만</option>
+        </select>
+        <span class="hint">행사와 준비를 한 장에 섞지 않고 달력을 따로 찍습니다.</span>
+      </div>
       <div class="fee-box" id="printDateBox" hidden>
         <div class="fee-head">
           <h3>인쇄할 날짜</h3>
@@ -1219,6 +1247,7 @@ const DEFAULT_STATE = {
 
     holidays: [],          // 손으로 넣은 공휴일 (대체공휴일·임시공휴일)
     holidayOff: [],        // 자동 공휴일 중 손으로 뺀 날
+    doneDates: [],         // 그 날 할 일을 다 마쳤다고 표시한 날짜 ("확인")
     prepSurcharge: true,   // 준비시간에도 가산·감산을 적용할지
     articles: {
       base:    "별표 2 (제11조제1항 관련)",
@@ -1326,6 +1355,8 @@ function migrate(d) {
   if (!Array.isArray(st.annexItems) || !st.annexItems.length) st.annexItems = structuredClone(BYULPYO6);
   if (!Array.isArray(st.holidays)) st.holidays = [];
   if (!Array.isArray(st.holidayOff)) st.holidayOff = [];
+  st.doneDates = (Array.isArray(st.doneDates) ? st.doneDates : [])
+    .filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x)).sort();
   // 공휴일은 2040년까지 자동으로 잡히므로, 예전에 손으로 적어둔 것 중
   // 자동과 겹치는 날은 지운다. 대체공휴일처럼 자동에 없는 날만 남긴다
   st.holidays = st.holidays.filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x) && !autoHolidayName(x));
@@ -1719,6 +1750,18 @@ function holidayName(dateStr) {
   return autoHolidayName(dateStr);
 }
 function isHoliday(dateStr) { return !!holidayName(dateStr); }
+
+/* 그 날 할 일을 다 마쳤다는 표시.
+   달력 칸 우측 아래와 목록 맨 왼쪽에 체크(✓)로 나온다.
+   예약 하나하나가 아니라 **날짜 단위**다 — 그 날 처리가 끝났는지를 보는 것이라서 그렇다 */
+function isDone(dateStr) { return (state.settings.doneDates || []).includes(dateStr); }
+function toggleDone(dateStr) {
+  const s = state.settings;
+  s.doneDates = s.doneDates || [];
+  const on = isDone(dateStr);
+  s.doneDates = on ? s.doneDates.filter(x => x !== dateStr) : s.doneDates.concat([dateStr]).sort();
+  return !on;
+}
 /* 달력에서 누른 날을 공휴일로 넣거나 뺀다 */
 function toggleHoliday(dateStr) {
   const s = state.settings;
@@ -2076,9 +2119,8 @@ let conflicts = new Set();
 /* =========================================================
    5. 달력
    ========================================================= */
-const CAL_CHIPS = 4;   // 달력 한 칸에 보여줄 행사 개수. 넘으면 "+N건 더"
-/* 인쇄 중일 때만 켜진다. all 이 켜지면 달력 칸에 그 날 것을 다 펴서 그린다 */
-const PRINT = { all: false };
+const CAL_CHIPS = 4;   // 달력 화면 한 칸에 보여줄 행사 개수. 넘으면 "+N건 더"
+                       // 인쇄판은 cap:0 으로 그려서 감추지 않고 다 편다
 
 /* 시간순 정렬. 시작시각 → 종료시각 → 행사 먼저(준비는 뒤) 순으로 본다.
    문자열 비교가 아니라 분으로 바꿔 비교하므로 "9:00" 처럼 앞의 0 이 빠져도 맞게 정렬된다 */
@@ -2097,21 +2139,21 @@ function monthReservations(y, m) {
   const p = y + "-" + pad(m);
   return state.reservations.filter(r => r.date.startsWith(p));
 }
-function renderCalendar() {
-  const y = view.year, m = view.month;
-  const first = new Date(y, m - 1, 1);
-  const startDow = first.getDay();
+/* 달력 칸을 만든다. 화면과 인쇄가 같은 함수를 쓴다 —
+   종이에 찍힌 것과 화면에 뜬 것이 달라지지 않게 하려는 것이다.
+     kinds  그릴 건 구분. 화면은 ["행사"] 만, 인쇄는 행사/준비를 따로 뽑는다
+     cap    한 칸에 보여줄 개수. 0 이면 제한 없음(인쇄)
+     live   달력 화면인지 (누를 수 있는 칸·선택 표시) */
+function calCellsHtml(o) {
+  const y = o.year, m = o.month;
+  const kinds = o.kinds || ["행사"];
+  const cap = o.cap || 0;
+  const live = o.live !== false;
+  const startDow = new Date(y, m - 1, 1).getDay();
   const daysInMonth = new Date(y, m, 0).getDate();
   const prevDays = new Date(y, m - 1, 0).getDate();
   const today = new Date();
   const todayStr = ymd(today.getFullYear(), today.getMonth() + 1, today.getDate());
-
-  $("#calTitle").textContent = y + "년 " + m + "월";
-  const mr = monthReservations(y, m).filter(r => r.status !== "취소");
-  const nEv = mr.filter(r => r.kind !== "준비").length, nPr = mr.length - nEv;
-  const sum = mr.reduce((a, r) => a + feeOf(r), 0);
-  $("#calSubtitle").textContent = "행사 " + nEv + "건" + (nPr ? " · 준비 " + nPr + "건" : "") + " · 이용료 " + won(sum) + "원";
-  $("#calOrgNote").textContent = state.settings.orgNote || "";   // 인쇄할 때만 보인다
 
   const byDate = {};
   monthReservations(y, m).forEach(r => (byDate[r.date] = byDate[r.date] || []).push(r));
@@ -2127,47 +2169,64 @@ function renderCalendar() {
     else { date = ymd(y, m, dnum); label = dnum; }
 
     const dow = (i % 7);
-    // 달력에는 행사만 띄운다. 준비시간은 날짜를 누르면 우측에서 함께 보인다
     const dayAll = byDate[date] || (out ? state.reservations.filter(r => r.date === date) : []);
-    const items = dayAll.filter(r => (r.kind || "행사") !== "준비");
-    const prepCount = dayAll.length - items.length;
-    // 인쇄할 때는 "+N건 더" 로 감추지 않고 그 날 것을 다 펴서 보여준다
-    const cap = PRINT.all ? items.length : CAL_CHIPS;
-    const shown = items.slice(0, cap);
-    const chips = shown.map(r => {
+    const items = dayAll.filter(r => kinds.includes(r.kind || "행사"));
+    const evCount = dayAll.filter(r => (r.kind || "행사") !== "준비").length;
+    const prepCount = dayAll.length - evCount;
+    const n = cap > 0 ? Math.min(cap, items.length) : items.length;
+    const chips = items.slice(0, n).map(r => {
       const f = facilityOf(r.facilityId);
       // 상태는 화면에서 쓰지 않는다. 취소만 흐리게 남긴다 (테두리는 전부 실선)
       const cls = r.status === "취소" ? " cancelled" : "";
       const cf = conflicts.has(r.id) ? " conflict" : "";
-      return '<button type="button" class="chip' + cls + cf + '" data-fc="' + colorOf(f) + '" data-edit="' + r.id + '" title="' +
+      const pk = (r.kind || "행사") === "준비" ? " is-prep" : "";
+      return "<" + (live ? "button type=\"button\"" : "span") + ' class="chip' + cls + cf + pk +
+        '" data-fc="' + colorOf(f) + '"' + (live ? ' data-edit="' + r.id + '"' : "") + ' title="' +
         esc(r.start + "–" + r.end + " " + (f ? f.name : "") + " / " + r.applicant) + '">' +
         '<span><span class="t">' + esc(r.start) + "–" + esc(r.end) + "</span>" + esc(f ? f.name : "?") + "</span>" +
-        '<span class="n">' + esc(r.applicant) + "</span></button>";
+        '<span class="n">' + esc(r.applicant) + "</span></" + (live ? "button" : "span") + ">";
     }).join("");
-    const more = items.length > cap
-      ? '<button type="button" class="chip-more" data-day="' + date + '">+ ' + (items.length - cap) + "건 더</button>"
+    const more = (live && items.length > n)
+      ? '<button type="button" class="chip-more" data-day="' + date + '">+ ' + (items.length - n) + "건 더</button>"
       : "";
 
     // 바탕은 전부 흰색이다. 토요일은 파랑, 일요일·공휴일은 빨강 — 날짜 숫자에만 쓴다
     const hn = holidayName(date);
+    const showEv = kinds.includes("행사"), showPr = kinds.includes("준비");
     cells.push(
-      '<div class="cell' + (out ? " out" : "") +
+      "<div" + (live ? ' role="button" tabindex="0"' : "") + ' class="cell' + (out ? " out" : "") +
+      (!out && isDone(date) ? " is-done" : "") +
       (dow === 6 ? " sat" : "") + (dow === 0 ? " sun" : "") + (hn ? " hol" : "") +
-      (date === todayStr ? " today" : "") + (date === view.selected ? " selected" : "") +
-      '" data-day="' + date + '" role="button" tabindex="0">' +
+      (date === todayStr ? " today" : "") + (live && date === view.selected ? " selected" : "") +
+      '" data-day="' + date + '">' +
         '<div class="cell-date"><b>' + label + "</b>" +
           (hn ? '<span class="holiday-tag">' + esc(hn) + "</span>" : "") +
-          ((items.length || prepCount)
+          ((evCount || prepCount)
             ? '<span class="cell-count">' +
-                (items.length ? "행사 <b>" + items.length + "</b>" : "") +
-                (prepCount ? '<span class="pc">준비 ' + prepCount + "</span>" : "") +
+                (showEv && evCount ? "행사 <b>" + evCount + "</b>" : "") +
+                (showPr && prepCount ? '<span class="pc">준비 ' + prepCount + "</span>" : "") +
               "</span>"
             : "") +
         "</div>" + chips + more +
+        // 그 날 할 일을 다 마쳤다는 표시. 우측 상세의 '확인' 으로 켠다
+        (!out && isDone(date) ? '<span class="cell-done" title="확인 완료">✓</span>' : "") +
       "</div>"
     );
   }
-  $("#calGrid").innerHTML = cells.join("");
+  return cells.join("");
+}
+
+function renderCalendar() {
+  const y = view.year, m = view.month;
+  $("#calTitle").textContent = y + "년 " + m + "월";
+  const mr = monthReservations(y, m).filter(r => r.status !== "취소");
+  const nEv = mr.filter(r => r.kind !== "준비").length, nPr = mr.length - nEv;
+  const sum = mr.reduce((a, r) => a + feeOf(r), 0);
+  $("#calSubtitle").textContent = "행사 " + nEv + "건" + (nPr ? " · 준비 " + nPr + "건" : "") + " · 이용료 " + won(sum) + "원";
+  $("#calOrgNote").textContent = state.settings.orgNote || "";   // 인쇄할 때만 보인다
+
+  // 달력 화면에는 행사만 띄운다. 준비는 날짜를 누르면 우측에서 함께 보인다
+  $("#calGrid").innerHTML = calCellsHtml({ year: y, month: m, kinds: ["행사"], cap: CAL_CHIPS, live: true });
   $("#facLegend").innerHTML = state.facilities
     .map(f => '<span class="fac" data-fc="' + colorOf(f) + '"><i></i>' + esc(f.name) + "</span>")
     .join(" ");
@@ -2200,7 +2259,7 @@ function renderRail() {
   if (!d) {
     $("#railTitle").textContent = "날짜를 선택하세요";
     $("#railSub").textContent = "달력에서 날짜를 누르면 그 날의 예약이 표시됩니다";
-    $("#railAdd").hidden = true;
+    $("#railDone").hidden = true;
     $("#railHoliday").hidden = true;
     $("#railBody").innerHTML = '<p class="empty">선택된 날짜 없음</p>';
     return;
@@ -2209,7 +2268,13 @@ function renderRail() {
   const hn = holidayName(d);
   $("#railTitle").textContent = (dt.getMonth() + 1) + "월 " + dt.getDate() + "일 (" + DOW[dt.getDay()] + ")" +
     (hn ? " · " + hn : "");
-  $("#railAdd").hidden = false;
+  // 그 날 처리를 다 마쳤는지 표시한다. 달력 칸 우측 아래와 목록 왼쪽에 ✓ 로 나온다
+  const db = $("#railDone");
+  db.hidden = false;
+  db.textContent = isDone(d) ? "확인 해제" : "확인";
+  db.classList.toggle("btn-primary", isDone(d));
+  db.title = isDone(d) ? "이 날은 확인 완료로 표시돼 있습니다. 누르면 표시를 뗍니다"
+                       : "이 날 할 일을 다 마쳤으면 누릅니다. 달력과 목록에 ✓ 가 붙습니다";
   // 대체공휴일·임시공휴일은 미리 알 수 없어서 여기서 손으로 넣고 뺀다
   const hb = $("#railHoliday");
   hb.hidden = false;
@@ -2273,10 +2338,13 @@ function renderRail() {
    열 정의를 한 곳에 두고 화면·인쇄·엑셀·CSV 가 모두 이것을 쓴다 —
    화면에서 본 것과 뽑은 종이가 달라지지 않게 하려는 것이다 */
 const LIST_MODES = {
-  view:   { name: "조회용",    cols: ["date", "dow", "time", "fac", "kind", "applicant", "purpose", "head", "memo"] },
-  income: { name: "수익집계용", cols: ["date", "dow", "time", "fac", "kind", "applicant", "head", "discount", "use", "annex", "util", "total"] }
+  view:   { name: "조회용",    cols: ["done", "date", "dow", "time", "fac", "kind", "applicant", "purpose", "head", "memo"] },
+  income: { name: "수익집계용", cols: ["done", "date", "dow", "time", "fac", "kind", "applicant", "head", "discount", "use", "annex", "util", "total"] }
 };
+/* 날짜 하나에 딸린 값이라 여러 줄을 하나로 합쳐서 보여주는 열 (엑셀 병합·CSV 빈칸) */
+const MERGE_COLS = ["done", "date", "dow"];
 const LIST_COLS = {
+  done:      { label: "완료",   cls: "done" },
   date:      { label: "날짜",   cls: "t" },
   dow:       { label: "요일",   cls: "" },
   time:      { label: "시간",   cls: "t" },
@@ -2299,6 +2367,7 @@ function listRow(r) {
   const fp = feeParts(r);
   return {
     r: r,
+    done: isDone(r.date) ? "✓" : "",
     date: r.date,
     dow: DOW[parseYmd(r.date).getDay()],
     time: r.start + "–" + r.end,
@@ -2365,7 +2434,12 @@ function renderList() {
   const sumCols = cols.filter(k => LIST_COLS[k].sum);
   $("#listFoot").innerHTML = (rows.length && sumCols.length)
     ? "<tr>" + cols.map((k, i) => {
-        if (LIST_COLS[k].sum) return '<td class="num">' + won(rows.reduce((a, x) => a + Number(x[k] || 0), 0)) + "</td>";
+        const c = LIST_COLS[k];
+        if (c.sum) {
+          const v = rows.reduce((a, x) => a + Number(x[k] || 0), 0);
+          // 칸을 비우는 열은 합계도 0이면 비운다. 위는 비었는데 아래만 0이면 어색하다
+          return '<td class="num">' + ((c.blankZero && !v) ? "" : won(v)) + "</td>";
+        }
         return "<td>" + (i === 0 ? rows.length + "건 합계" : "") + "</td>";
       }).join("") + "<td></td></tr>"
     : "";
@@ -2721,8 +2795,9 @@ function openPrintBox() {
 function updatePrintBoxUI() {
   const k = $("#printKind").value;
   $("#printDateBox").hidden = k !== "detail";
+  $("#printCalKindBox").hidden = k !== "cal";
   $("#printHint").textContent =
-    k === "cal"    ? "가로 용지로 한 달 달력을 찍습니다. 한 칸에 그 날 행사를 모두 펼쳐 보여줍니다." :
+    k === "cal"    ? "가로 용지로 한 달 달력을 찍습니다. 한 칸에 그 날 것을 모두 펼쳐 보여줍니다." :
     k === "detail" ? "고른 날짜만 세로 용지에 표로 찍습니다. 메모와 공과금까지 함께 나옵니다." :
                      "목록 탭에서 고른 종류(" + LIST_MODES[view.listMode].name + ")와 조건 그대로 찍습니다.";
 }
@@ -2750,6 +2825,29 @@ function renderPrintDatePicker() {
 }
 function pickedPrintDates() {
   return $$("#printDateList [data-pd]").filter(el => el.checked).map(el => el.dataset.pd);
+}
+
+/* 달력 인쇄판을 만든다.
+   행사와 준비를 한 장에 섞지 않고 **달력을 따로** 뽑는다 —
+   현장에 붙여 두는 종이가 다르기 때문이다 (행사 일정표 / 준비 작업표) */
+function buildPrintCalendar(kindList) {
+  const y = view.year, m = view.month;
+  const mr = monthReservations(y, m).filter(r => r.status !== "취소");
+  const org = state.settings.orgNote || "";
+  const legend = '<span class="pc-legend">' + state.facilities
+    .map(f => '<span data-fc="' + colorOf(f) + '"><i></i>' + esc(f.name) + "</span>").join("") + "</span>";
+
+  $("#printArea").innerHTML = kindList.map(kind => {
+    const n = mr.filter(r => (r.kind || "행사") === kind).length;
+    const fee = mr.filter(r => (r.kind || "행사") === kind).reduce((a, r) => a + feeOf(r), 0);
+    return '<section class="pc-page">' +
+      '<div class="pd-head"><h1>' + y + "년 " + m + "월 " + kind + " 일정표</h1>" +
+        "<span>" + kind + " " + n + "건 · 이용료 " + won(fee) + "원</span>" +
+        (org ? "<span>" + esc(org) + "</span>" : "") + legend + "</div>" +
+      '<div class="dow"><div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div></div>' +
+      '<div class="grid">' + calCellsHtml({ year: y, month: m, kinds: [kind], cap: 0, live: false }) + "</div>" +
+      "</section>";
+  }).join("");
 }
 
 /* 날짜별 상세 인쇄판을 만든다 */
@@ -2812,16 +2910,16 @@ function doPrint(kind) {
     $("#printPage").textContent = "@page{size:A4 landscape;margin:8mm}";
     document.body.classList.add("print-list");
   } else {
-    if (view.pane !== "calendar") setPane("calendar");
-    PRINT.all = true;            // "+N건 더" 로 감추지 않고 다 편다
-    renderCalendar();
+    // 행사 달력과 준비 달력을 따로 찍는다. 인쇄판에서는 "+N건 더" 없이 그 날 것을 다 편다
+    const pick = $("#printCalKind").value;
+    const kinds = pick === "both" ? ["행사", "준비"] : [pick];
+    buildPrintCalendar(kinds);
     $("#printPage").textContent = "@page{size:A4 landscape;margin:7mm}";
     document.body.classList.add("print-cal");
   }
   const done = () => {
     document.body.classList.remove("print-cal", "print-list", "print-detail");
     $("#printPage").textContent = "";
-    if (PRINT.all) { PRINT.all = false; renderCalendar(); }
     $("#printArea").innerHTML = "";
     window.removeEventListener("afterprint", done);
   };
@@ -2869,7 +2967,7 @@ function exportTable(fmt, rows, mode, periodLabel) {
   if (fmt === "csv") {
     const body = data.map((row, i) => cols.map(k => {
       // 같은 날짜의 둘째 줄부터는 날짜·요일을 비운다 (병합해서 보이도록)
-      if ((k === "date" || k === "dow") && span[i] === 0) return "";
+      if (MERGE_COLS.includes(k) && span[i] === 0) return "";
       if (k === "kind") return row.kind === "준비" ? "[준비]" : "행사";
       return listCellText(row, k);
     }));
@@ -2908,7 +3006,7 @@ function exportTable(fmt, rows, mode, periodLabel) {
     const plain = "border:.5pt solid #999999;";
     const bd = prep ? "border:2px solid " + YL + ";background:" + YB + ";" : plain;
     return "<tr>" + cols.map(k => {
-      const merged = (k === "date" || k === "dow");
+      const merged = MERGE_COLS.includes(k);
       if (merged && span[i] === 0) return "";
       const rs = merged && span[i] > 1 ? ' rowspan="' + span[i] + '"' : "";
       const c = LIST_COLS[k];
@@ -2921,11 +3019,16 @@ function exportTable(fmt, rows, mode, periodLabel) {
     }).join("") + "</tr>";
   }).join("");
 
-  const sums = cols.map(k => LIST_COLS[k].sum ? data.reduce((a, x) => a + Number(x[k] || 0), 0) : null);
+  const sums = cols.map(k => {
+    const c = LIST_COLS[k];
+    if (!c.sum) return null;
+    const v = data.reduce((a, x) => a + Number(x[k] || 0), 0);
+    return (c.blankZero && !v) ? "" : v;
+  });
   const foot = sums.some(v => v != null)
     ? '<tr><td style="border:.5pt solid #999999;background:#EEEEEE;font-weight:bold">' + data.length + "건 합계</td>" +
       cols.slice(1).map((k, i) => '<td style="border:.5pt solid #999999;background:#EEEEEE;font-weight:bold;text-align:right">' +
-        (sums[i + 1] != null ? won(sums[i + 1]) : "") + "</td>").join("") + "</tr>"
+        (sums[i + 1] ? won(sums[i + 1]) : "") + "</td>").join("") + "</tr>"
     : "";
 
   const html =
@@ -3041,7 +3144,15 @@ function init() {
   $("#yearInput").addEventListener("change", e => { view.year = Number(e.target.value) || view.year; renderAll(); });
   $("#monthInput").addEventListener("change", e => { view.month = Number(e.target.value); renderAll(); });
   $("#newBtn").addEventListener("click", () => openModal(null));
-  $("#railAdd").addEventListener("click", () => openModal(null, view.selected));
+  // 그 날 할 일을 다 마쳤다는 표시 — 달력 칸 우측 아래와 목록 왼쪽에 ✓ 가 붙는다
+  $("#railDone").addEventListener("click", () => {
+    if (!view.selected) return;
+    if (!RUNTIME.writable) { toast("조회 전용이라 고칠 수 없습니다"); return; }
+    const on = toggleDone(view.selected);
+    save(); saveNow(true);
+    renderAll();
+    toast(view.selected + (on ? " 을 확인 완료로 표시했습니다" : " 의 확인 표시를 뗐습니다"));
+  });
 
   $("#themeBtn").addEventListener("click", () => {
     const cur = document.documentElement.getAttribute("data-theme");
