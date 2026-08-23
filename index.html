@@ -129,33 +129,35 @@ main{max-width:1440px;margin:0 auto;padding:18px 20px 60px}
 .dow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-bottom:1px solid var(--line);background:var(--surface-2)}
 .dow div{padding:7px 8px;font-size:11px;letter-spacing:.08em;color:var(--muted);text-align:center}
 .dow div:first-child,.dow div:last-child{color:var(--ink-2)}
-.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:minmax(112px,auto)}
-.cell{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px;display:flex;flex-direction:column;gap:4px;background:var(--surface);text-align:left;font:inherit;color:inherit;border-top:0;border-left:0;position:relative}
+.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:minmax(150px,auto)}
+.cell{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px;display:flex;flex-direction:column;gap:5px;background:var(--surface);text-align:left;font:inherit;color:inherit;border-top:0;border-left:0;position:relative}
 .cell:nth-child(7n){border-right:0}
 .cell.out{background:var(--sunk)}
 .cell.weekend{background:linear-gradient(0deg,var(--surface-2),var(--surface-2))}
 .cell.out.weekend{background:var(--sunk)}
 .cell:hover{box-shadow:inset 0 0 0 1px var(--line-strong)}
 .cell.selected{box-shadow:inset 0 0 0 2px var(--accent)}
-.cell-date{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-2)}
+.cell-date{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2)}
 .cell.out .cell-date{color:var(--faint)}
-.cell-date b{font-weight:500;font-size:13px}
+.cell-date b{font-weight:500;font-size:14px}
 .cell.today .cell-date b{background:var(--accent);color:var(--surface);border-radius:4px;padding:0 5px}
 .holiday-tag{font-size:10px;color:var(--alert);letter-spacing:-.01em}
-.cell-count{margin-left:auto;font-size:10px;color:var(--faint)}
+.cell-count{margin-left:auto;font-size:11px;color:var(--faint)}
 .chip{
   display:block;width:100%;text-align:left;border:1px solid var(--accent);
   background:var(--accent);color:var(--surface);
-  border-radius:3px;padding:2px 5px;font-size:11px;line-height:1.35;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  border-radius:3px;padding:3px 6px;font-size:12px;line-height:1.35;
+  overflow:hidden;
 }
-.chip .t{font-family:"IBM Plex Mono",monospace;opacity:.85;margin-right:4px;font-size:10px}
+.chip>span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip .n{font-size:11px;opacity:.9}
+.chip .t{font-family:"IBM Plex Mono",monospace;opacity:.85;margin-right:5px;font-size:11px;display:inline!important}
 .chip.pending{background:transparent;color:var(--accent-ink);border-style:dashed}
 .chip.prep{background:var(--accent-soft);color:var(--accent-ink);border-color:var(--accent-soft);box-shadow:inset 2px 0 0 var(--accent)}
 .chip.prep.pending{border:1px dashed var(--accent)}
 .chip.cancelled{background:transparent;border-color:var(--line-strong);color:var(--faint);text-decoration:line-through}
 .chip.conflict{border-color:var(--alert);box-shadow:inset 2px 0 0 var(--alert)}
-.chip-more{font-size:10px;color:var(--muted);background:none;border:0;padding:1px 4px;text-align:left}
+.chip-more{font-size:11px;color:var(--muted);background:none;border:0;padding:2px 4px;text-align:left}
 
 /* ---------- side rail ---------- */
 .rail{position:sticky;top:70px;display:flex;flex-direction:column;gap:14px}
@@ -256,6 +258,9 @@ body.ro #deleteRes,body.ro #saveRes{display:none!important}
 body.ro #pane-settings input,body.ro #pane-settings select,body.ro #pane-settings textarea,
 body.ro #resForm input,body.ro #resForm select,body.ro #resForm textarea{pointer-events:none;opacity:.72}
 body.ro #copyText{pointer-events:auto;opacity:1}
+/* 조회 전용에서도 서버 연결·로그인 입력란은 살려둔다.
+   잠그면 로그인을 할 수 없어 조회 전용에서 영영 빠져나오지 못한다 */
+body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textarea{pointer-events:auto;opacity:1}
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:12.5px;z-index:80;box-shadow:var(--shadow)}
 .toast[hidden]{display:none}
 
@@ -264,7 +269,7 @@ body.ro #copyText{pointer-events:auto;opacity:1}
   body{background:#fff}
   .split{grid-template-columns:1fr}
   .card{border-color:#bbb}
-  .grid{grid-auto-rows:minmax(96px,auto)}
+  .grid{grid-auto-rows:minmax(112px,auto)}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -322,7 +327,6 @@ body.ro #copyText{pointer-events:auto;opacity:1}
           <div class="legend">
             <span><i class="lg-approved"></i>승인</span>
             <span><i class="lg-pending"></i>신청</span>
-            <span><i class="lg-prep"></i>준비</span>
             <span><i class="lg-cancel"></i>취소</span>
             <span><i class="lg-conflict"></i>시간 중복</span>
           </div>
@@ -480,7 +484,7 @@ body.ro #copyText{pointer-events:auto;opacity:1}
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" id="serverCard">
         <div class="sec-head">
           <h2>서버 연결</h2>
           <p>여러 사람이 같은 대장을 보려면 서버에 연결합니다. 등록·수정은 로그인한 담당자만 할 수 있습니다.</p>
@@ -494,6 +498,7 @@ body.ro #copyText{pointer-events:auto;opacity:1}
           <div class="field">
             <label for="srvUrl">Project URL</label>
             <input type="text" id="srvUrl" placeholder="https://xxxxxxxx.supabase.co" spellcheck="false">
+            <span class="hint">https://xxxxxxxx.supabase.co 까지만 넣습니다. 뒤에 /rest/v1 을 붙이면 로그인이 되지 않습니다.</span>
           </div>
           <div class="field">
             <label for="srvKey">Publishable key (공개용 키)</label>
@@ -943,13 +948,23 @@ const SERVER_SESSION_KEY = "rsv.session.v1";
 function serverCfg() {
   try {
     const raw = localStorage.getItem(SERVER_CFG_KEY);
-    if (raw) { const c = JSON.parse(raw); if (c && c.url && c.anonKey) return c; }
+    if (raw) { const c = JSON.parse(raw); if (c && c.url && c.anonKey) return { url: normalizeUrl(c.url), anonKey: String(c.anonKey).trim() }; }
   } catch (e) {}
-  if (SUPABASE_URL && SUPABASE_ANON_KEY) return { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY };
+  if (SUPABASE_URL && SUPABASE_ANON_KEY) return { url: normalizeUrl(SUPABASE_URL), anonKey: SUPABASE_ANON_KEY.trim() };
   return null;
 }
+/* 주소에서 뒤에 붙은 경로를 떼고 프로젝트 기본 주소만 남긴다.
+   sbFetch / serverLogin 이 "/rest/v1/..." "/auth/v1/..." 를 스스로 붙이기 때문에,
+   대시보드에서 복사한 ".../rest/v1" 을 그대로 넣으면
+   ".../rest/v1/auth/v1/token" 이 되어 404 가 난다. */
+function normalizeUrl(url) {
+  return String(url || "").trim()
+    .replace(/\/+$/, "")
+    .replace(/\/(rest|auth|storage|realtime|functions)\/v\d+$/i, "")
+    .replace(/\/+$/, "");
+}
 function saveServerCfg(url, anonKey) {
-  try { localStorage.setItem(SERVER_CFG_KEY, JSON.stringify({ url: url.trim().replace(/\/$/, ""), anonKey: anonKey.trim() })); } catch (e) {}
+  try { localStorage.setItem(SERVER_CFG_KEY, JSON.stringify({ url: normalizeUrl(url), anonKey: anonKey.trim() })); } catch (e) {}
 }
 function loadSession() {
   try { const d = JSON.parse(localStorage.getItem(SERVER_SESSION_KEY) || "null");
@@ -986,7 +1001,17 @@ async function serverLogin(email, password) {
     body: JSON.stringify({ email: email, password: password })
   });
   const d = await res.json().catch(() => ({}));
-  if (!res.ok || !d.access_token) throw new Error(d.error_description || d.msg || "로그인하지 못했습니다");
+  if (!res.ok || !d.access_token) {
+    // 서버가 이유를 알려주면 그대로, 아니면 상태코드로 짐작해서 보여준다.
+    // 그냥 "로그인하지 못했습니다" 만 뜨면 무엇을 고쳐야 할지 알 수가 없다.
+    let msg = d.error_description || d.msg || d.error || d.message || "";
+    if (!msg) {
+      if (res.status === 404) msg = "주소가 잘못되었습니다. Project URL 은 https://xxxx.supabase.co 까지만 넣습니다 (/rest/v1 은 빼세요)";
+      else if (res.status === 401) msg = "키가 잘못되었습니다. Publishable key 를 다시 확인하세요";
+      else msg = "서버가 " + res.status + " 을 돌려줬습니다";
+    }
+    throw new Error(msg);
+  }
   SERVER.token = d.access_token; SERVER.refresh = d.refresh_token; SERVER.email = email;
   storeSession();
   return d;
@@ -1227,6 +1252,16 @@ let conflicts = new Set();
 /* =========================================================
    5. 달력
    ========================================================= */
+const CAL_CHIPS = 4;   // 달력 한 칸에 보여줄 행사 개수. 넘으면 "+N건 더"
+
+/* 시간순 정렬. 시작시각 → 종료시각 → 행사 먼저(준비는 뒤) 순으로 본다.
+   문자열 비교가 아니라 분으로 바꿔 비교하므로 "9:00" 처럼 앞의 0 이 빠져도 맞게 정렬된다 */
+function byTime(a, b) {
+  return (toMin(a.start) - toMin(b.start))
+      || (toMin(a.end) - toMin(b.end))
+      || ((a.kind === "준비" ? 1 : 0) - (b.kind === "준비" ? 1 : 0));
+}
+
 function monthReservations(y, m) {
   const p = y + "-" + pad(m);
   return state.reservations.filter(r => r.date.startsWith(p));
@@ -1248,7 +1283,7 @@ function renderCalendar() {
 
   const byDate = {};
   monthReservations(y, m).forEach(r => (byDate[r.date] = byDate[r.date] || []).push(r));
-  Object.values(byDate).forEach(a => a.sort((x, y2) => x.start.localeCompare(y2.start)));
+  Object.values(byDate).forEach(a => a.sort(byTime));
 
   const cells = [];
   const total = Math.ceil((startDow + daysInMonth) / 7) * 7;
@@ -1260,20 +1295,21 @@ function renderCalendar() {
     else { date = ymd(y, m, dnum); label = dnum; }
 
     const dow = (i % 7);
-    const items = byDate[date] || (out ? state.reservations.filter(r => r.date === date) : []);
-    const shown = items.slice(0, 3);
+    // 달력에는 행사만 띄운다. 준비시간은 날짜를 누르면 우측에서 함께 보인다
+    const dayAll = byDate[date] || (out ? state.reservations.filter(r => r.date === date) : []);
+    const items = dayAll.filter(r => (r.kind || "행사") !== "준비");
+    const shown = items.slice(0, CAL_CHIPS);
     const chips = shown.map(r => {
       const f = facilityOf(r.facilityId);
       const cls = r.status === "승인" ? "" : (r.status === "취소" ? " cancelled" : " pending");
-      const pk = r.kind === "준비" ? " prep" : "";
       const cf = conflicts.has(r.id) ? " conflict" : "";
-      return '<button type="button" class="chip' + cls + pk + cf + '" data-edit="' + r.id + '" title="' +
-        esc(r.start + "–" + r.end + " " + (f ? f.name : "") + " / " + r.applicant + (r.kind === "준비" ? " (준비시간)" : "")) + '">' +
-        '<span class="t">' + esc(r.start) + '</span>' + (r.kind === "준비" ? "[준비] " : "") +
-        esc(f ? f.name : "?") + " · " + esc(r.applicant) + "</button>";
+      return '<button type="button" class="chip' + cls + cf + '" data-edit="' + r.id + '" title="' +
+        esc(r.start + "–" + r.end + " " + (f ? f.name : "") + " / " + r.applicant) + '">' +
+        '<span><span class="t">' + esc(r.start) + "</span>" + esc(f ? f.name : "?") + "</span>" +
+        '<span class="n">' + esc(r.applicant) + "</span></button>";
     }).join("");
-    const more = items.length > 3
-      ? '<button type="button" class="chip-more" data-day="' + date + '">+ ' + (items.length - 3) + "건 더</button>"
+    const more = items.length > CAL_CHIPS
+      ? '<button type="button" class="chip-more" data-day="' + date + '">+ ' + (items.length - CAL_CHIPS) + "건 더</button>"
       : "";
 
     cells.push(
@@ -1324,8 +1360,8 @@ function renderRail() {
   $("#railTitle").textContent = (dt.getMonth() + 1) + "월 " + dt.getDate() + "일 (" + DOW[dt.getDay()] + ")";
   $("#railAdd").hidden = false;
 
-  const items = state.reservations.filter(r => r.date === d)
-    .sort((a, b) => a.start.localeCompare(b.start));
+  // 행사와 준비시간을 함께 보여준다. 시간순 정렬
+  const items = state.reservations.filter(r => r.date === d).sort(byTime);
   const live = items.filter(r => r.status !== "취소");
   $("#railSub").textContent = items.length
     ? "예약 " + live.length + "건 · " + won(live.reduce((a, r) => a + feeOf(r), 0)) + "원"
@@ -1904,7 +1940,10 @@ function init() {
     const u = $("#srvUrl").value.trim(), k = $("#srvKey").value.trim();
     if (!u || !k) { $("#srvMsg").textContent = "주소와 키를 모두 입력하세요."; return; }
     saveServerCfg(u, k);
-    $("#srvMsg").textContent = "저장했습니다. 화면을 다시 불러옵니다…";
+    const cleaned = normalizeUrl(u);
+    $("#srvUrl").value = cleaned;
+    $("#srvMsg").textContent = (cleaned !== u ? "주소를 " + cleaned + " 로 정리했습니다. " : "")
+      + "저장했습니다. 화면을 다시 불러옵니다…";
     setTimeout(() => location.reload(), 600);
   });
   $("#srvLogin").addEventListener("click", async () => {

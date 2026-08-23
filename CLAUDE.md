@@ -86,7 +86,7 @@ README.md             # 저장소 첫 화면 설명
 | 2 | 유틸 | `toMin`, `ymd`, `won`, `esc` |
 | 3 | **이용료 계산** | `calcFee`, `feeOf` |
 | 4 | 중복 검사 | `conflictIds` |
-| 5 | 달력 | `renderCalendar`, `renderSummary` |
+| 5 | 달력 | `renderCalendar`, `renderSummary`, `byTime` |
 | 6 | 우측 상세 | `renderRail` |
 | 7 | 목록 | `renderList` |
 | 8 | 설정 화면 | `renderSettings`, `renderServerCard` |
@@ -95,6 +95,20 @@ README.md             # 저장소 첫 화면 설명
 | 11 | 이벤트 바인딩 | `boot`, `init` |
 
 렌더는 전부 문자열 조합 후 `innerHTML`이다. **사용자 입력을 넣을 때는 반드시 `esc()`를 거친다.**
+
+### 달력에 무엇을 띄우는가
+
+- **달력 칸에는 행사만 띄운다.** 준비 건(`kind === "준비"`)은 칩으로 그리지 않는다.
+  달력이 준비 건으로 가득 차서 정작 주요 업무가 안 보였기 때문이다
+- 날짜 옆 건수와 `+N건 더`도 행사 기준으로 센다
+- 한 칸에 보여줄 개수는 `CAL_CHIPS`. 넘으면 `+N건 더`
+- 칩은 두 줄이다 — 윗줄 시각·시설, 아랫줄 신청 단체.
+  한 줄이면 단체명이 잘려서 무슨 행사인지 알 수 없다
+- **날짜를 누르면 우측 상세에는 행사와 준비가 모두 나온다.** 여기서 준비를 빼지 않는다
+- 정렬은 달력·우측 상세 모두 `byTime()` 하나를 쓴다.
+  문자열이 아니라 분으로 비교하므로 `"9:00"` 처럼 앞의 0 이 빠져도 맞게 정렬된다
+
+> 준비 건만 있고 행사가 없는 날은 달력 칸이 비어 보인다. 지금은 의도된 동작이다.
 
 ## 데이터 모델
 
@@ -199,6 +213,9 @@ README.md             # 저장소 첫 화면 설명
 | local | 그 외 (내려받은 파일) | localStorage |
 | readonly | 저장이 `not_writer` 로 거부됨 | `body.ro` 를 붙여 쓰기 UI를 감춤 |
 
+**`body.ro` 는 서버 연결 카드(`#serverCard`)를 잠그지 않는다.** 여기까지 잠그면
+로그인 입력란을 누를 수 없어서 조회 전용에서 영영 빠져나오지 못한다. 이 예외를 없애지 않는다.
+
 ### 서버 모드 (섹션 1-B)
 
 Supabase REST 를 **직접 fetch** 로 부른다. SDK 를 쓰지 않는다 — 단일 파일 제약을 지키기 위해서다.
@@ -216,6 +233,11 @@ Supabase REST 를 **직접 fetch** 로 부른다. SDK 를 쓰지 않는다 — �
 - `SUPABASE_URL`/`SUPABASE_ANON_KEY` 를 코드에 넣어도 된다. 값은 **publishable key**
   (`sb_publishable_...`) 를 넣는다. 옛 `anon` 키(`eyJ...`)도 동작하지만 2026년 말 폐지 예정이다.
   **`sb_secret_` / `service_role` 키는 절대 코드에 넣지 않는다**
+- **주소는 프로젝트 기본 주소만 넣는다** (`https://xxxx.supabase.co`).
+  `sbFetch()` 와 `serverLogin()` 이 `/rest/v1/...`, `/auth/v1/...` 를 스스로 붙이기 때문에,
+  대시보드에서 복사한 `.../rest/v1` 을 그대로 넣으면 `.../rest/v1/auth/v1/token` 이 되어
+  로그인이 404 로 실패한다. `normalizeUrl()` 이 뒤에 붙은 경로를 떼어내며,
+  저장할 때와 읽을 때 양쪽에서 부른다. **이 정규화를 빼지 않는다**
 - **헤더 규칙에 주의.** publishable 키는 `Authorization: Bearer` 로 보내면 거부된다.
   `apikey` 헤더에만 싣고, `Authorization` 은 로그인한 사용자의 access token 이 있을 때만 붙인다
   (`sbFetch()` 참고). 이 규칙을 바꾸면 새 키에서 401 이 난다
