@@ -242,6 +242,7 @@ td.t{font-family:"IBM Plex Mono",monospace;white-space:nowrap}
 .sec-body{padding:12px 14px;display:flex;flex-direction:column;gap:11px}
 .field{display:flex;flex-direction:column;gap:4px}
 .field label{font-size:11px;color:var(--muted);letter-spacing:.02em}
+.prep-toggle input[type="checkbox"]{width:15px;height:15px;flex:0 0 auto}
 .field input,.field select,.field textarea{
   padding:6px 9px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);width:100%;
 }
@@ -273,6 +274,11 @@ td.t{font-family:"IBM Plex Mono",monospace;white-space:nowrap}
 .fee-amount{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
 .fee-note{font-size:11px;color:var(--muted)}
 .fee-box .fee-detail,.item .fee-detail{margin-top:6px;background:var(--surface);font-size:12px}
+.annex-row{display:flex;align-items:center;gap:10px;padding:3px 0;border-top:1px solid var(--line)}
+.annex-row:first-child{border-top:0}
+.annex-name{flex:1;font-size:12px;min-width:0}
+.annex-row input{width:74px;padding:3px 6px;border:1px solid var(--line-strong);border-radius:4px;background:var(--surface);text-align:right}
+#annexList:not([hidden]){margin-top:8px;border-top:1px solid var(--line);padding-top:4px}
 #feeBreakdown:not([hidden]){margin-top:8px;border-top:1px solid var(--line);padding-top:6px}
 .fee-box h3{margin:0 0 7px;font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;font-weight:500}
 .fee-line{display:flex;justify-content:space-between;gap:12px;font-size:12px;padding:2px 0}
@@ -576,6 +582,25 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
           <div class="hr"></div>
 
           <div class="field">
+            <label>부속시설 사용료 <span class="hint" style="display:inline">별표 6</span></label>
+            <div class="hint">등록창에서 수량을 넣으면 자동으로 더해집니다.
+              <b>전기료·수도료는 실비라서 자동 계산하지 않습니다</b> — 사용량을 확인한 뒤 등록창에 금액을 직접 넣습니다.<br>
+              참고로 별표 6 이 정한 전기료 산식은
+              「주변압기 전력기본요금 × (행사용변압기 용량 ÷ 2차변전실 변압기 용량) ÷ 30 × 1.1
+              + 전력사용량(㎾) × 전력요금 × 1.1」 이고, 수도료는 「1일 1회 수도사용 실비(전용사용 시)」 입니다.</div>
+          </div>
+          <div id="annexItemList" style="display:flex;flex-direction:column;gap:9px"></div>
+          <button type="button" class="btn btn-sm" id="addAnnex" style="align-self:flex-start">+ 부속시설 항목 추가</button>
+          <label class="prep-toggle" style="margin-top:4px">
+            <input type="checkbox" id="setDiscountAnnex">
+            <span>부속시설·전기·수도에도 감면 적용</span>
+          </label>
+          <div class="hint">제11조제1항은 부속시설 사용료도 “사용료”에 넣고 있어 제13조 감면 대상으로 볼 여지가 있습니다.
+            다만 전기·수도는 실비라서 기본은 꺼둡니다. 시 해석에 따라 켜세요.</div>
+
+          <div class="hr"></div>
+
+          <div class="field">
             <label>감면 유형 <span class="hint" style="display:inline">제13조</span></label>
             <div class="hint">감면율은 ①~⑤를 모두 합한 금액에 적용됩니다. 등록창에서 해당 유형을 고르면 자동으로 빠집니다.</div>
           </div>
@@ -811,6 +836,30 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
         <div id="feeBreakdown" hidden></div>
       </div>
 
+      <div class="fee-box" id="annexBox" style="margin-top:2px">
+        <div class="fee-head">
+          <h3>부속시설 · 전기 · 수도 (별표 6)</h3>
+          <button type="button" class="btn btn-quiet btn-sm" id="annexToggle" aria-expanded="false">부속시설 고르기</button>
+        </div>
+        <div class="fee-sum">
+          <span class="fee-amount mono" id="annexTotal" style="font-size:16px">0원</span>
+          <span class="fee-note">행사 종료 후 7일 이내에 징수합니다 · 제11조제2항</span>
+        </div>
+        <div id="annexList" hidden></div>
+        <div class="row2" style="margin-top:8px">
+          <div class="field">
+            <label for="fPower">전기료 (실비 · 직접 입력)</label>
+            <input type="number" id="fPower" min="0" step="10" class="mono" placeholder="원">
+            <span class="hint">실제 사용량을 확인한 뒤 금액을 적습니다. 자동으로 계산하지 않습니다 · 별표 6</span>
+          </div>
+          <div class="field">
+            <label for="fWater">수도료 (실비 · 직접 입력)</label>
+            <input type="number" id="fWater" min="0" step="10" class="mono" placeholder="원">
+            <span class="hint">실제 사용량을 확인한 뒤 금액을 적습니다. 자동으로 계산하지 않습니다 · 별표 6</span>
+          </div>
+        </div>
+      </div>
+
       <div class="field">
         <label for="fOverride">이용료 직접 입력 (비워두면 위 산정액 사용)</label>
         <input type="number" id="fOverride" min="0" step="10" class="mono" placeholder="원">
@@ -878,6 +927,24 @@ const BYULPYO2 = {
   "한밭야구장":  { sports:  30000, other: 100000, article: "별표 2 · 한밭종합운동장 한밭야구장" }
 };
 
+/* 별표 6 — 부속시설 사용료. 한밭종합운동장 계열 시설에 해당하는 항목만 담았다.
+   전기료·수도료는 조례가 "실비"로 정해 금액이 없으므로 등록창에서 직접 넣는다. */
+const BYULPYO6 = [
+  { id: "a1",  name: "마이크시설·확성기 기본료", fee: 30000, unit: "1회", article: "별표 6" },
+  { id: "a2",  name: "마이크",                   fee:  5000, unit: "개",  article: "별표 6 · 마이크 개당" },
+  { id: "a3",  name: "전광판",                   fee: 60000, unit: "1회", article: "별표 6" },
+  { id: "a4",  name: "집중조명",                 fee: 20000, unit: "1회", article: "별표 6" },
+  { id: "a5",  name: "조명타워",                 fee: 40000, unit: "1회", article: "별표 6" },
+  { id: "a6",  name: "냉·난방료 기본료",         fee: 30000, unit: "1회", article: "별표 6 · 전기요금·유류대는 실비로 따로 받는다" },
+  { id: "a7",  name: "권투링",                   fee: 30000, unit: "1일", article: "별표 6 · 아마추어경기 제외" },
+  { id: "a8",  name: "이동식 의자",              fee:   400, unit: "개",  article: "별표 6" },
+  { id: "a9",  name: "이동식 탁자",              fee:   600, unit: "개",  article: "별표 6" },
+  { id: "a10", name: "바닥깔이 설치",            fee: 20000, unit: "1회", article: "별표 6" },
+  { id: "a11", name: "인조잔디 관수료",          fee: 20000, unit: "1회", article: "별표 6" },
+  { id: "a12", name: "롤러스케이트 대여",        fee:  2000, unit: "개",  article: "별표 6 · 대여료" },
+  { id: "a13", name: "빙상스케이트 대여",        fee:  1500, unit: "개",  article: "별표 6 · 대여료" }
+];
+
 /* 예전 자료의 시설명을 별표 1 의 이름으로 맞춘다 */
 const FAC_ALIAS = { "야구장": "한밭야구장" };
 
@@ -933,6 +1000,10 @@ const DEFAULT_STATE = {
     admOtherRate: 12.5,    // 프로경기 및 일반행사
     admSchoolCut: 20,      // 고등학교 이하의 경기 할인
 
+    /* 별표 6 — 부속시설 사용료 */
+    annexItems: structuredClone(BYULPYO6),
+    discountAnnex: false,  // 부속시설·전기·수도에도 감면을 적용할지 (아래 주석 참고)
+
     holidays: [],
     prepSurcharge: false,  // 준비시간에도 가산·감산을 적용할지
     articles: {
@@ -942,6 +1013,7 @@ const DEFAULT_STATE = {
       early:   "별표 2 비고 · 조기사용",
       over:    "제11조제3항 · 별표 2 비고",
       hours:   "별표 1의2 (제10조제1항 관련)",
+      annex:   "별표 6 (제11조제1항 관련)",
       adm:     "제12조제2항",
       admCut:  "제12조제3항",
       discount:"제13조"
@@ -1003,7 +1075,9 @@ function migrate(d) {
 
   const res = (Array.isArray(d.reservations) ? d.reservations : [])
     .map(r => {
-      const x = Object.assign({ kind: "행사", linkId: null, useType: "체육경기", admission: null, schoolGame: false }, r);
+      const x = Object.assign({ kind: "행사", linkId: null, useType: "체육경기", admission: null, schoolGame: false,
+                               annex: null, power: null, water: null }, r);
+      if (x.annex && typeof x.annex !== "object") x.annex = null;
       delete x.contact;          // 연락처 항목 폐지 — 예전 자료에 남아 있으면 함께 지운다
       return x;
     });
@@ -1018,6 +1092,7 @@ function migrate(d) {
   st.hours.summer = Object.assign({}, base.settings.hours.summer, st.hours.summer || {});
   st.hours.winter = Object.assign({}, base.settings.hours.winter, st.hours.winter || {});
   st.articles = Object.assign({}, base.settings.articles, (d.settings || {}).articles || {});
+  if (!Array.isArray(st.annexItems) || !st.annexItems.length) st.annexItems = structuredClone(BYULPYO6);
   if (old < 2) {   // 예전 할증 설정은 조례 값과 뜻이 달라 그대로 쓸 수 없다
     st.weekendRate = base.settings.weekendRate;
     st.nightRate   = base.settings.nightRate;
@@ -1549,17 +1624,57 @@ function calcFee(r) {
     }
   }
 
-  // ⑥ 감면
+  // ⑥⑦⑧ 부속시설 사용료 (별표 6) — 행사 종료 후 7일 이내에 징수한다 (제11조제2항)
+  let annexSum = 0;
+  const qty = (r.annex && typeof r.annex === "object") ? r.annex : {};
+  if (!isPrep) {
+    (s.annexItems || []).forEach(it => {
+      const n = Number(qty[it.id]) || 0;
+      if (n <= 0) return;
+      const amt = (Number(it.fee) || 0) * n;
+      out.lines.push({
+        label: "⑥ 부속시설 · " + it.name + " " + n + (it.unit === "개" ? "개" : "회"),
+        why: won(it.fee) + "원 × " + n + " · " + (it.article || A.annex),
+        amount: amt
+      });
+      annexSum += amt;
+    });
+    const pw = Number(r.power) || 0;
+    if (pw > 0) {
+      out.lines.push({
+        label: "⑦ 전기료 (실비)",
+        why: "실제 사용량을 확인해 직접 입력한 실비 · " + A.annex,
+        amount: pw
+      });
+      annexSum += pw;
+    }
+    const wt = Number(r.water) || 0;
+    if (wt > 0) {
+      out.lines.push({
+        label: "⑧ 수도료 (실비)",
+        why: "실제 사용량을 확인해 직접 입력한 실비 · " + A.annex + " · 1일 1회 수도사용 (전용사용 시)",
+        amount: wt
+      });
+      annexSum += wt;
+    }
+  }
+  out.annex = annexSum;
+
+  // ⑨ 감면
   const dc = discountOf(r.discountId);
+  const dcAnnex = !!s.discountAnnex;   // 부속시설·전기·수도에도 감면을 적용할지
   let cut = 0;
   if (Number(dc.rate) > 0) {
-    cut = sum * Number(dc.rate) / 100;
+    const dcBase = sum + (dcAnnex ? annexSum : 0);
+    cut = dcBase * Number(dc.rate) / 100;
     out.lines.push({
-      label: "⑥ 감면 · " + dc.name + " " + dc.rate + "%",
-      why: (dc.article || A.discount) + (Number(dc.rate) === 100 ? " · 전부 면제" : " · 사용료의 " + dc.rate + "% 감경"),
+      label: "⑨ 감면 · " + dc.name + " " + dc.rate + "%",
+      why: (dc.article || A.discount) + (Number(dc.rate) === 100 ? " · 전부 면제" : " · 사용료의 " + dc.rate + "% 감경") +
+           (annexSum > 0 ? (dcAnnex ? " · 부속시설·전기·수도 포함" : " · 부속시설·전기·수도(실비)는 제외") : ""),
       amount: -cut
     });
   }
+  sum += annexSum;
 
   out.note = bd.band.season + " · " + bandTxt + (sur.yes && applySur ? " · " + sur.tag : "");
   const unit = Math.max(1, Number(s.rounding) || 1);
@@ -1877,6 +1992,24 @@ function renderSettings() {
     "</div>";
   }).join("");
 
+  $("#setDiscountAnnex").checked = !!s.discountAnnex;
+  $("#annexItemList").innerHTML = (s.annexItems || []).map(it =>
+    '<div class="item" data-aid="' + it.id + '">' +
+      '<div class="row21">' +
+        '<div class="field"><label>항목</label><input data-k="name" value="' + esc(it.name) + '"></div>' +
+        '<div class="field"><label>금액(원)</label><input type="number" class="mono" data-k="fee" value="' + (it.fee || 0) + '"></div>' +
+      "</div>" +
+      '<div class="row21">' +
+        '<div class="field"><label>근거 조문</label><input data-k="article" value="' + esc(it.article || "") + '" placeholder="예: 별표 6"></div>' +
+        '<div class="field"><label>단위</label><select data-k="unit">' +
+          '<option value="1회"' + (it.unit === "1회" ? " selected" : "") + ">1회</option>" +
+          '<option value="1일"' + (it.unit === "1일" ? " selected" : "") + ">1일</option>" +
+          '<option value="개"'  + (it.unit === "개"  ? " selected" : "") + ">개</option>" +
+        "</select></div>" +
+      "</div>" +
+      '<div class="item-actions"><button type="button" class="btn btn-danger btn-sm" data-delannex="' + it.id + '">삭제</button></div>' +
+    "</div>").join("");
+
   $("#discountList").innerHTML = state.discounts.map((d, i) =>
     '<div class="item" data-did="' + d.id + '">' +
       '<div class="row2">' +
@@ -1922,6 +2055,12 @@ function openModal(id, presetDate) {
   $("#fUseType").value = r ? (r.useType || "체육경기") : "체육경기";
   $("#fAdmission").value = r && r.admission ? r.admission : "";
   $("#fSchoolGame").checked = !!(r && r.schoolGame);
+  $("#fPower").value = r && r.power ? r.power : "";
+  $("#fWater").value = r && r.water ? r.water : "";
+  renderAnnexList(r);
+  $("#annexList").hidden = !(r && r.annex && Object.keys(r.annex).length);
+  $("#annexToggle").textContent = $("#annexList").hidden ? "부속시설 고르기" : "접기";
+  $("#annexToggle").setAttribute("aria-expanded", String(!$("#annexList").hidden));
   $("#feeBreakdown").hidden = true;
   $("#feeToggle").textContent = "상세보기";
   $("#feeToggle").setAttribute("aria-expanded", "false");
@@ -1960,11 +2099,34 @@ function formToRes() {
     useType: $("#fUseType").value,
     admission: $("#fAdmission").value === "" ? null : Number($("#fAdmission").value),
     schoolGame: $("#fSchoolGame").checked,
+    annex: readAnnexQty(),
+    power: $("#fPower").value === "" ? null : Number($("#fPower").value),
+    water: $("#fWater").value === "" ? null : Number($("#fWater").value),
     discountId: $("#fDiscount").value,
     memo: $("#fMemo").value.trim(),
     feeOverride: $("#fOverride").value === "" ? null : Number($("#fOverride").value)
   };
 }
+/* 별표 6 부속시설 — 수량 칸을 그린다. 0인 항목은 계산에 들어가지 않는다 */
+function renderAnnexList(r) {
+  const q = (r && r.annex && typeof r.annex === "object") ? r.annex : {};
+  $("#annexList").innerHTML = (state.settings.annexItems || []).map(it =>
+    '<div class="annex-row">' +
+      '<span class="annex-name">' + esc(it.name) + '<span class="why">' + won(it.fee) + "원 / " + esc(it.unit) +
+        (it.article ? " · " + esc(it.article) : "") + "</span></span>" +
+      '<input type="number" class="mono" min="0" step="1" data-annex="' + it.id + '" value="' +
+        (Number(q[it.id]) || "") + '" placeholder="0">' +
+    "</div>").join("");
+}
+function readAnnexQty() {
+  const out = {};
+  document.querySelectorAll("#annexList [data-annex]").forEach(el => {
+    const n = Number(el.value) || 0;
+    if (n > 0) out[el.dataset.annex] = n;
+  });
+  return Object.keys(out).length ? out : null;
+}
+
 function updateKindUI() {
   const fac = facilityOf($("#fFac").value);
   const allowed = !!(fac && fac.prep && fac.prep.allowed);
@@ -1978,6 +2140,7 @@ function updateKindUI() {
   const isEvent = kindSel.value === "행사";
   $("#prepBox").hidden = !(allowed && isEvent);
   $("#admBox").hidden = !isEvent;
+  $("#annexBox").hidden = !isEvent;
   $("#useTypeHint").textContent = $("#fUseType").value === "체육경기"
     ? "국가·지방자치단체 및 대한체육회·장애인체육회 산하단체가 주관하는 경기"
     : "직장단체·동호인 등 다수인이 참여하는 경기 및 행사 (콘서트·공연·전람·전시 포함)";
@@ -2068,6 +2231,7 @@ function updateFeePreview() {
     const f = calcFee(r);
     tot.textContent = won(f.total) + "원";
     note.textContent = (f.pending ? "기본액 미입력 · " : "") + (f.note || "");
+    $("#annexTotal").textContent = won(f.annex || 0) + "원";
     box.innerHTML = feeLinesHtml(f, { tail: prepPreview(r, f.total) });
   }
   // 중복 안내
@@ -2237,8 +2401,17 @@ function init() {
     }
   });
   ["#fDate", "#fStart", "#fEnd", "#fFac", "#fDiscount", "#fStatusSel", "#fOverride", "#fKind",
-   "#fUseType", "#fAdmission", "#fSchoolGame"].forEach(sel =>
+   "#fUseType", "#fAdmission", "#fSchoolGame", "#fPower", "#fWater"].forEach(sel =>
     $(sel).addEventListener("input", () => { updateKindUI(); updateFeePreview(); }));
+  $("#annexList").addEventListener("input", () => updateFeePreview());
+
+  // 부속시설 항목 접었다 펴기
+  $("#annexToggle").addEventListener("click", () => {
+    const box = $("#annexList"), btn = $("#annexToggle");
+    box.hidden = !box.hidden;
+    btn.textContent = box.hidden ? "부속시설 고르기" : "접기";
+    btn.setAttribute("aria-expanded", String(!box.hidden));
+  });
 
   // 산정 이용료 상세보기 — 어떻게 나온 금액인지 접었다 폈다 한다
   $("#feeToggle").addEventListener("click", () => {
@@ -2276,7 +2449,12 @@ function init() {
   // 설정 편집
   $("#pane-settings").addEventListener("input", e => {
     const t = e.target;
-    const facBox = t.closest("[data-fid]"), dcBox = t.closest("[data-did]");
+    const facBox = t.closest("[data-fid]"), dcBox = t.closest("[data-did]"), anBox = t.closest("[data-aid]");
+    if (anBox && t.dataset.k) {
+      const it = (state.settings.annexItems || []).find(x => x.id === anBox.dataset.aid);
+      if (it) { it[t.dataset.k] = t.dataset.k === "fee" ? Number(t.value) : t.value; save(); renderAll(); }
+      return;
+    }
     if (facBox && t.dataset.k) {
       const f = facilityOf(facBox.dataset.fid);
       const k = t.dataset.k;
@@ -2310,6 +2488,7 @@ function init() {
     };
     if (t.id === "setPrepSurcharge") { state.settings.prepSurcharge = t.checked; save(); renderAll(); return; }
     if (t.id === "setSundayHoliday") { state.settings.sundayAsHoliday = t.checked; save(); renderAll(); return; }
+    if (t.id === "setDiscountAnnex") { state.settings.discountAnnex = t.checked; save(); renderAll(); return; }
     if (hmap[t.id]) {
       const [season, key] = hmap[t.id];
       state.settings.hours[season][key] = t.value;
@@ -2334,11 +2513,20 @@ function init() {
       prep: { allowed: false, mode: "percent", fee: 0, percent: 50, article: "" } });
     save(); fillSelects(); renderSettings(); renderAll();
   });
+  $("#addAnnex").addEventListener("click", () => {
+    state.settings.annexItems.push({ id: uid(), name: "새 부속시설", fee: 0, unit: "1회", article: "별표 6" });
+    save(); renderSettings();
+  });
   $("#addDiscount").addEventListener("click", () => {
     state.discounts.push({ id: uid(), name: "새 감면 유형", rate: 0, article: "" });
     save(); fillSelects(); renderSettings();
   });
   $("#pane-settings").addEventListener("click", e => {
+    const da = e.target.closest("[data-delannex]");
+    if (da) {
+      state.settings.annexItems = state.settings.annexItems.filter(x => x.id !== da.dataset.delannex);
+      save(); renderSettings(); renderAll(); return;
+    }
     const df = e.target.closest("[data-delfac]"), dd = e.target.closest("[data-deldc]");
     if (df) {
       const used = state.reservations.some(r => r.facilityId === df.dataset.delfac);
