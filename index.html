@@ -509,6 +509,16 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
               <span class="hint">관공서의 공휴일에 관한 규정 제2조제1호</span>
             </div>
           </div>
+          <div class="field">
+            <label for="setSurchargeMode">야간·조기를 반영하는 방식</label>
+            <select id="setSurchargeMode">
+              <option value="multiply">당일 주간 사용료 × 1.5 (야간) / × 0.7 (조기) — 기존 실무</option>
+              <option value="add">당일 주간 사용료 ± 기본액의 50% / 30% — 조례 문언 그대로</option>
+            </select>
+            <span class="hint">평일은 두 방식이 같고, <b>토·일·공휴일에서만 갈립니다.</b>
+              충무·한밭체육관 체육경기 휴일 야간 기준 202,500원(곱셈) / 180,000원(덧셈).
+              지금까지 써 온 방식은 곱셈이라 기본값으로 두었습니다.</span>
+          </div>
           <label class="prep-toggle">
             <input type="checkbox" id="setPrepSurcharge">
             <span>준비시간에도 가산·감산 적용</span>
@@ -678,7 +688,8 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
           <div class="fee-box">
             <div class="fee-line"><span>① 기본 전용사용료<span class="why">별표 2 · 체육경기 / 체육경기 외로 갈린다. 1회 금액이며 시간에 비례하지 않는다</span></span><span>별표 2 의 1회 금액</span></div>
             <div class="fee-line"><span>② 토·공휴일 가산<span class="why">별표 2 비고 · 토요일ㆍ공휴일(주간)</span></span><span>+ 기본액 × 50%</span></div>
-            <div class="fee-line"><span>③ 야간 가산 / 조기 감산<span class="why">별표 2 비고 · 별표 1의2 의 시간대로 판정</span></span><span>± 기본액 × 50% / 30%</span></div>
+            <div class="fee-line"><span>＝ 당일 주간 전용사용료<span class="why">① + ② · 야간·조기는 여기서 출발한다</span></span><span>①+②</span></div>
+            <div class="fee-line"><span>③ 야간 가산 / 조기 감산<span class="why">별표 2 비고 · 별표 1의2 의 시간대로 판정 · 위 설정에 따름</span></span><span>× 1.5 / × 0.7</span></div>
             <div class="fee-line"><span>④ 초과사용료<span class="why">제11조제3항 · 1시간 미만은 1시간으로 본다</span></span><span>+ 기본액 × 20% × 초과시간</span></div>
             <div class="fee-line"><span>⑤ 관람료 수입 사용료<span class="why">제12조 · 관람료를 받는 행사만</span></span><span>+ 수입 × 10% 또는 12.5%</span></div>
             <div class="fee-line"><span>⑥ 감면<span class="why">제13조 · 등록창에서 고른 유형</span></span><span>− (①~⑤) × 감면율</span></div>
@@ -995,6 +1006,10 @@ const DEFAULT_STATE = {
     earlyRate: 30,         // 조기사용 감산
     overRate: 20,          // 허가시간 초과 1시간당 가산 (제11조제3항)
     sundayAsHoliday: true, // 일요일을 공휴일로 본다 (관공서의 공휴일에 관한 규정 제2조제1호)
+    /* 야간·조기를 "당일 주간 전용사용료"에 어떻게 반영할지
+       "multiply" 당일 주간 사용료 × 1.5 / × 0.7   ← 기존 실무 (기본값)
+       "add"      당일 주간 사용료 ± 기본액의 50% / 30%  ← 조례 문언 그대로 */
+    surchargeMode: "multiply",
 
     /* 제12조 — 관람료 수입에 따른 사용료 */
     admSportsRate: 10,     // 체육경기
@@ -1562,49 +1577,61 @@ function calcFee(r) {
 
   let sum = base;
 
-  // ②③ 가산·감산은 모두 "기본액"을 기준으로 한다. 준비시간은 설정에 따라 건너뛴다
+  /* ②③ 가산·감산
+     야간·조기는 "당일 주간 전용사용료"를 출발점으로 삼는다.
+     그 출발점에 무엇을 곱하거나 더하는지는 두 가지로 읽힌다 — surchargeMode 로 고른다.
+
+       multiply (기존 실무, 기본값) : 당일 주간 사용료 × 1.5 (야간) / × 0.7 (조기)
+       add      (조례 문언 그대로)  : 당일 주간 사용료 ± 기본액 × 50% / 30%
+
+     평일은 두 방식이 같고, 토·일·공휴일에서만 갈린다.
+     예) 휴일 야간 = 202,500(곱셈) vs 180,000(덧셈) */
   const applySur = (!isPrep || s.prepSurcharge) && base > 0;
   const sur = isSurchargeDay(r.date);
+  const byMul = (s.surchargeMode || "multiply") === "multiply";
 
+  // ② 토·일·공휴일 가산 — 여기까지가 "당일 주간 전용사용료"다
   if (applySur && sur.yes && Number(s.weekendRate) > 0) {
     const amt = base * Number(s.weekendRate) / 100;
     out.lines.push({
-      label: "② 토요일·공휴일 가산 " + s.weekendRate + "%",
-      why: r.date + " " + DOW[parseYmd(r.date).getDay()] + "요일" + (sur.why ? " · " + sur.why : "") + " · " + A.weekend,
+      label: "② 토·일·공휴일 가산 " + s.weekendRate + "%",
+      why: r.date + " " + DOW[parseYmd(r.date).getDay()] + "요일" + (sur.why ? " · " + sur.why : "") +
+           " · 기본액 " + won(base) + "원의 " + s.weekendRate + "% · " + A.weekend,
       amount: amt
     });
     sum += amt;
   }
+  const dayAmt = sum;   // 당일 주간 전용사용료
 
-  // 조례는 야간·조기를 "당일 주간 전용사용료"에서 출발해 계산한다.
-  // 그 중간값을 보여줘야 산식을 따라갈 수 있다
-  const needDaySubtotal = applySur && ((bd.night && Number(s.nightRate) > 0) ||
-                                       (bd.early && !bd.day && Number(s.earlyRate) > 0));
-  if (needDaySubtotal) {
+  const useNight = applySur && bd.night && Number(s.nightRate) > 0;
+  const useEarly = applySur && bd.early && !bd.day && !bd.night && Number(s.earlyRate) > 0;
+  if (useNight || useEarly) {
     out.lines.push({
       subtotal: true,
       label: "＝ 당일 주간 전용사용료",
-      why: sur.yes ? "기본액 " + won(base) + "원 + 토·공휴일 가산 " + won(sum - base) + "원"
-                   : "평일이므로 기본액과 같다 · " + won(base) + "원",
-      amount: sum
+      why: sur.yes ? "기본액 " + won(base) + "원 + 토·일·공휴일 가산 " + won(dayAmt - base) + "원"
+                   : "평일이라 기본액과 같다",
+      amount: dayAmt
     });
   }
 
-  if (applySur && bd.night && Number(s.nightRate) > 0) {
-    const amt = base * Number(s.nightRate) / 100;
+  if (useNight) {
+    const rate = Number(s.nightRate);
+    const amt = byMul ? dayAmt * rate / 100 : base * rate / 100;
     out.lines.push({
-      label: "③ 야간사용 가산 " + s.nightRate + "%",
-      why: bd.band.season + " 야간 " + fmtMin(bd.band.night) + " 이후에 걸침 · 당일 주간 전용사용료 " +
-           won(sum) + "원에 기본액의 " + s.nightRate + "% 를 가산 · " + A.night,
+      label: "③ 야간사용 가산 " + rate + "%",
+      why: bd.band.season + " 야간 " + fmtMin(bd.band.night) + " 이후에 걸침 · 당일 주간 전용사용료 " + won(dayAmt) + "원의 " +
+           (byMul ? rate + "%" : rate + "% (기본액 기준 " + won(base * rate / 100) + "원)") + " 가산 · " + A.night,
       amount: amt
     });
     sum += amt;
-  } else if (applySur && bd.early && !bd.day && Number(s.earlyRate) > 0) {
-    const amt = -base * Number(s.earlyRate) / 100;
+  } else if (useEarly) {
+    const rate = Number(s.earlyRate);
+    const amt = -(byMul ? dayAmt * rate / 100 : base * rate / 100);
     out.lines.push({
-      label: "③ 조기사용 감산 " + s.earlyRate + "%",
+      label: "③ 조기사용 감산 " + rate + "%",
       why: bd.band.season + " 조기 " + fmtMin(bd.band.early) + "–" + fmtMin(bd.band.day) + " 안에서만 사용 · 당일 주간 전용사용료 " +
-           won(sum) + "원에서 기본액의 " + s.earlyRate + "% 를 감산 · " + A.early,
+           won(dayAmt) + "원의 " + (byMul ? rate + "%" : rate + "% (기본액 기준 " + won(base * rate / 100) + "원)") + " 감산 · " + A.early,
       amount: amt
     });
     sum += amt;
@@ -1701,7 +1728,7 @@ function calcFee(r) {
 
   out.note = bd.band.season + " · " + bandTxt + (sur.yes && applySur ? " · " + sur.tag : "");
   const unit = Math.max(1, Number(s.rounding) || 1);
-  out.total = Math.max(0, Math.floor((sum - cut) / unit) * unit);
+  out.total = Math.max(0, Math.floor((sum - cut) / unit + 1e-9) * unit);
   return out;
 }
 function feeOf(r) {
@@ -1959,6 +1986,7 @@ function renderSettings() {
   $("#setEarlyRate").value = s.earlyRate;
   $("#setOverRate").value = s.overRate;
   $("#setSundayHoliday").checked = s.sundayAsHoliday !== false;
+  $("#setSurchargeMode").value = s.surchargeMode || "multiply";
   $("#setPrepSurcharge").checked = !!s.prepSurcharge;
   $("#setSumEarly").value = (H.summer || {}).early || "";
   $("#setSumDay").value   = (H.summer || {}).day   || "";
@@ -2513,6 +2541,7 @@ function init() {
     if (t.id === "setPrepSurcharge") { state.settings.prepSurcharge = t.checked; save(); renderAll(); return; }
     if (t.id === "setSundayHoliday") { state.settings.sundayAsHoliday = t.checked; save(); renderAll(); return; }
     if (t.id === "setDiscountAnnex") { state.settings.discountAnnex = t.checked; save(); renderAll(); return; }
+    if (t.id === "setSurchargeMode") { state.settings.surchargeMode = t.value; save(); renderAll(); return; }
     if (hmap[t.id]) {
       const [season, key] = hmap[t.id];
       state.settings.hours[season][key] = t.value;
