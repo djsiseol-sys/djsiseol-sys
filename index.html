@@ -21,6 +21,11 @@
   --fc-orange-soft:#FAEDDF; --fc-orange-line:#DFBE99; --fc-orange-ink:#7A4A16;
   --fc-blue-soft:#E5EDF6;   --fc-blue-line:#AFC7DE;   --fc-blue-ink:#1F4A73;
   --fc-green-soft:#E4F0E5;  --fc-green-line:#ADCBB3;  --fc-green-ink:#285631;
+
+  /* 요일·준비 표시색. 담당자 요청으로 추가했다 — 토요일 파랑, 일요일·공휴일 빨강,
+     준비 건은 노란 테두리. 세 테마 블록에 모두 정의한다 */
+  --sat:#20558C; --sun:#B03A3A;
+  --prep-line:#C8961A; --prep-soft:#FCF5E2;
   --shadow:0 1px 2px rgba(20,23,26,.05),0 8px 24px -12px rgba(20,23,26,.18);
   --r:6px;
 }
@@ -35,6 +40,8 @@
     --fc-orange-soft:#2C2318; --fc-orange-line:#5A422A; --fc-orange-ink:#DFB78A;
     --fc-blue-soft:#1A2733;   --fc-blue-line:#2E4557;   --fc-blue-ink:#9DC3E3;
     --fc-green-soft:#1A2A1E;  --fc-green-line:#2D4935;  --fc-green-ink:#9BC8A5;
+    --sat:#8FB6E0; --sun:#E39191;
+    --prep-line:#C79A2A; --prep-soft:#2B2617;
     --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px -14px rgba(0,0,0,.7);
   }
 }
@@ -48,6 +55,8 @@
   --fc-orange-soft:#2C2318; --fc-orange-line:#5A422A; --fc-orange-ink:#DFB78A;
   --fc-blue-soft:#1A2733;   --fc-blue-line:#2E4557;   --fc-blue-ink:#9DC3E3;
   --fc-green-soft:#1A2A1E;  --fc-green-line:#2D4935;  --fc-green-ink:#9BC8A5;
+  --sat:#8FB6E0; --sun:#E39191;
+  --prep-line:#C79A2A; --prep-soft:#2B2617;
   --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px -14px rgba(0,0,0,.7);
 }
 *{box-sizing:border-box}
@@ -137,28 +146,32 @@ main{max-width:1440px;margin:0 auto;padding:18px 20px 60px}
 .legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
 .legend .fac i{background:var(--fc-soft);border:1px solid var(--fc-line)}
 .legend-sep{width:1px;align-self:stretch;background:var(--line)}
-.lg-approved{background:var(--accent)}
-.lg-pending{background:transparent;border:1px solid var(--accent)}
 .lg-prep{background:var(--accent-soft);box-shadow:inset 2px 0 0 var(--accent)}
 .lg-cancel{background:var(--line-strong)}
 .lg-conflict{background:var(--alert)}
 
 .dow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-bottom:1px solid var(--line);background:var(--surface-2)}
 .dow div{padding:7px 8px;font-size:11px;letter-spacing:.08em;color:var(--muted);text-align:center}
-.dow div:first-child,.dow div:last-child{color:var(--ink-2)}
+/* 일요일은 빨강, 토요일은 파랑. 요일 글자와 날짜 숫자에만 쓴다 */
+.dow div:first-child{color:var(--sun);font-weight:600}
+.dow div:last-child{color:var(--sat);font-weight:600}
 .grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:minmax(150px,auto)}
+/* 체육관은 쉬는 날이 따로 없어서 칸 바탕은 전부 흰색이다.
+   이번 달이 아닌 날(앞뒤 달)만 회색으로 남겨 구분한다 */
 .cell{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px;display:flex;flex-direction:column;gap:5px;background:var(--surface);text-align:left;font:inherit;color:inherit;border-top:0;border-left:0;position:relative}
 .cell:nth-child(7n){border-right:0}
 .cell.out{background:var(--sunk)}
-.cell.weekend{background:linear-gradient(0deg,var(--surface-2),var(--surface-2))}
-.cell.out.weekend{background:var(--sunk)}
 .cell:hover{box-shadow:inset 0 0 0 1px var(--line-strong)}
 .cell.selected{box-shadow:inset 0 0 0 2px var(--accent)}
 .cell-date{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2)}
 .cell.out .cell-date{color:var(--faint)}
 .cell-date b{font-weight:500;font-size:14px}
+.cell.sat .cell-date b{color:var(--sat)}
+.cell.sun .cell-date b,.cell.hol .cell-date b{color:var(--sun)}
+.cell.out .cell-date b{opacity:.55}
 .cell.today .cell-date b{background:var(--accent);color:var(--surface);border-radius:4px;padding:0 5px}
-.holiday-tag{font-size:10px;color:var(--alert);letter-spacing:-.01em}
+.cell.today.sat .cell-date b,.cell.today.sun .cell-date b,.cell.today.hol .cell-date b{color:var(--surface)}
+.holiday-tag{font-size:10px;color:var(--sun);letter-spacing:-.01em}
 .cell-count{margin-left:auto;font-size:10px;color:var(--muted);display:flex;gap:5px;align-items:center;white-space:nowrap}
 .cell-count b{font-weight:600;color:var(--ink-2)}
 .cell-count .pc{color:var(--faint)}
@@ -174,7 +187,7 @@ main{max-width:1440px;margin:0 auto;padding:18px 20px 60px}
 .chip>span:first-child{font-size:11px;opacity:.85}
 .chip .n{font-size:12px;font-weight:500;opacity:1}
 .chip .t{font-family:"IBM Plex Mono",monospace;margin-right:3px;font-size:10px;letter-spacing:-.04em;display:inline!important}
-.chip.pending{border-style:dashed}
+/* 상태는 화면에서 쓰지 않기로 해서 테두리는 전부 실선이다 (예전 '신청' 파선 없음) */
 .chip.cancelled{opacity:.5;text-decoration:line-through}
 .chip.conflict{border-color:var(--alert);box-shadow:inset 3px 0 0 var(--alert)}
 
@@ -203,6 +216,12 @@ main{max-width:1440px;margin:0 auto;padding:18px 20px 60px}
 .item-name{font-size:13px;font-weight:500}
 .item-meta{font-size:11px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
 .item-fee{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-2)}
+/* 메모는 일정 아래에 눈에 띄게 붙인다. 담당자가 아닌 직원이 여기부터 본다 */
+.item-memo{
+  border:1px solid var(--accent);border-left-width:4px;background:var(--accent-soft);color:var(--ink);
+  border-radius:4px;padding:5px 8px;font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-word;
+}
+.item-memo b{display:block;font-size:10px;letter-spacing:.08em;color:var(--accent-ink);font-weight:600;margin-bottom:1px}
 .item-actions{display:flex;gap:4px;margin-top:2px}
 .status{font-size:10px;letter-spacing:.04em;padding:1px 6px;border-radius:999px;border:1px solid var(--line-strong);color:var(--muted)}
 .kindtag{font-size:10px;letter-spacing:.04em;padding:1px 6px;border-radius:3px;background:var(--fc-soft,var(--accent-soft));color:var(--fc-ink,var(--accent-ink));border:1px solid var(--fc-line,transparent)}
@@ -233,6 +252,17 @@ td.t{font-family:"IBM Plex Mono",monospace;white-space:nowrap}
 .filters{display:flex;gap:8px;padding:11px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center}
 .filters input[type=search],.filters select{padding:5px 9px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
 .filters input[type=search]{min-width:190px}
+.filters .seg{display:flex;border:1px solid var(--line-strong);border-radius:var(--r);overflow:hidden}
+.filters .seg button{background:var(--surface);border:0;padding:5px 12px;font-size:13px;color:var(--muted)}
+.filters .seg button+button{border-left:1px solid var(--line-strong)}
+.filters .seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent-ink);font-weight:500}
+/* 준비 건은 목록에서 노란 테두리로 강조한다 (인쇄·엑셀에서도 같게 나온다) */
+tbody tr.is-prep td{background:var(--prep-soft);border-top:2px solid var(--prep-line);border-bottom:2px solid var(--prep-line)}
+tbody tr.is-prep:hover td{background:var(--prep-soft)}
+tbody tr.is-prep td:first-child{border-left:2px solid var(--prep-line)}
+tbody tr.is-prep td:last-child{border-right:2px solid var(--prep-line)}
+tfoot td{font-weight:600;background:var(--surface-2);border-top:1px solid var(--line-strong)}
+td.memo{white-space:pre-wrap;word-break:break-word;min-width:180px}
 
 /* ---------- settings ---------- */
 .settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;align-items:start}
@@ -282,7 +312,6 @@ td.t{font-family:"IBM Plex Mono",monospace;white-space:nowrap}
 .annex-name{flex:1;font-size:12px;min-width:0}
 .annex-row input{width:74px;padding:3px 6px;border:1px solid var(--line-strong);border-radius:4px;background:var(--surface);text-align:right}
 #annexList:not([hidden]){margin-top:8px;border-top:1px solid var(--line);padding-top:4px}
-#feeBreakdown:not([hidden]){margin-top:8px;border-top:1px solid var(--line);padding-top:6px}
 .fee-box h3{margin:0 0 7px;font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;font-weight:500}
 .fee-line{display:flex;justify-content:space-between;gap:12px;font-size:12px;padding:2px 0}
 .fee-line span:last-child{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
@@ -310,12 +339,84 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:12.5px;z-index:80;box-shadow:var(--shadow)}
 .toast[hidden]{display:none}
 
+/* ---------- 인쇄 ---------- */
+/* 인쇄 직전에 body 에 print-cal / print-list / print-detail 중 하나를 붙인다.
+   무엇을 인쇄할지는 인쇄 창(#printBox)에서 고른다 */
+.print-only{display:none}
+#printArea{display:none}
+.pd-head{display:flex;align-items:baseline;gap:10px;margin:0 0 8px;padding-bottom:5px;border-bottom:2px solid #000}
+.pd-head h1{margin:0;font-size:15px;font-weight:600}
+.pd-head span{font-size:11px;color:#444}
+.pd-day{border:1px solid #888;margin:0 0 7px;break-inside:avoid;page-break-inside:avoid}
+.pd-day>h3{
+  margin:0;padding:4px 8px;border-bottom:1px solid #888;background:#eee;
+  font-size:13px;font-weight:600;display:flex;align-items:baseline;gap:9px;
+}
+.pd-day>h3 .pd-sun{color:#B03A3A}
+.pd-day>h3 .pd-sat{color:#20558C}
+.pd-day>h3 small{font-weight:400;font-size:11px;color:#444;margin-left:auto}
+.pd-day table{width:100%;border-collapse:collapse;font-size:11px}
+.pd-day th,.pd-day td{border:1px solid #bbb;padding:3px 6px;text-align:left;vertical-align:top}
+.pd-day th{background:#f4f4f4;font-size:10px;font-weight:600;color:#333;white-space:nowrap}
+.pd-day tr.is-prep td{background:#FCF5E2;border-color:#C8961A;border-width:2px}
+.pd-day td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pd-day td.memo{background:#F3F6F8;font-size:11px;white-space:pre-wrap}
+.pd-day td.memo b{font-size:10px;letter-spacing:.06em;margin-right:6px}
+.pd-empty{padding:6px 8px;font-size:11px;color:#666}
+
 @media print{
-  .topbar,.rail,.filters,.item-actions,.btn,.tabs{display:none!important}
-  body{background:#fff}
-  .split{grid-template-columns:1fr}
-  .card{border-color:#bbb}
-  .grid{grid-auto-rows:minmax(112px,auto)}
+  .topbar,.recover,.toast,.backdrop,.item-actions,.btn,.chip-more,.fee-detail{display:none!important}
+  .legend{display:none!important}
+  /* 달력을 찍을 때는 시설 구분색이 무슨 시설인지 알려 주는 범례를 남긴다 */
+  body.print-cal .legend{display:flex!important;font-size:10px}
+  body.print-cal .legend .legend-sep,body.print-cal .legend span:not(.fac):not(#facLegend){display:none}
+  body{background:#fff;color:#000}
+  main{max-width:none;padding:0;margin:0}
+  .card{border:1px solid #888;border-radius:0;box-shadow:none}
+  .print-only{display:block}
+  .print-head{display:flex;align-items:baseline;gap:10px;margin:0 0 6px;padding-bottom:4px;border-bottom:2px solid #000}
+  .print-head h1{margin:0;font-size:15px;font-weight:600}
+  .print-head span{font-size:11px;color:#444}
+
+  /* ① 달력으로 인쇄 — 가로 용지로 칸을 최대한 크게 잡는다.
+     예전에는 우측 상세까지 함께 들어가 달력이 눌려서 글씨가 안 보였다 */
+  body.print-cal .rail,body.print-cal #pane-list,body.print-cal #pane-settings{display:none!important}
+  body.print-cal #pane-calendar{display:block!important}
+  body.print-cal .split{display:block}
+  body.print-cal .cal-head{padding:4px 6px}
+  body.print-cal .cal-title{font-size:15px}
+  body.print-cal #calOrgNote{display:inline!important;margin-left:10px}
+  body.print-cal .dow div{padding:3px 4px;font-size:11px}
+  /* 여섯 줄 × 25mm 면 A4 가로 한 장에 들어간다. 바쁜 날은 칸이 알아서 늘어난다 */
+  body.print-cal .grid{grid-auto-rows:minmax(25mm,auto)}
+  body.print-cal .cell{padding:3px 4px;gap:2px;border-color:#aaa}
+  body.print-cal .cell.out{background:#f2f2f2}
+  body.print-cal .cell-date{font-size:11px}
+  body.print-cal .cell-date b{font-size:13px;font-weight:700}
+  body.print-cal .cell.today .cell-date b{background:none;color:#000;border:1px solid #000;padding:0 3px}
+  body.print-cal .cell-count{font-size:9px}
+  body.print-cal .chip{font-size:12px;padding:2px 4px;line-height:1.32;box-shadow:inset 3px 0 0 var(--fc-line)}
+  body.print-cal .chip>span:first-child{font-size:10.5px;opacity:1}
+  body.print-cal .chip .t{font-size:10.5px}
+  body.print-cal .chip .n{font-size:12.5px;font-weight:600}
+
+  /* ② 목록으로 인쇄 */
+  body.print-list .rail,body.print-list #pane-calendar,body.print-list #pane-settings,body.print-list .filters{display:none!important}
+  body.print-list #pane-list{display:block!important}
+  body.print-list .table-wrap{overflow:visible}
+  body.print-list th{position:static;background:#f4f4f4;color:#000;border-bottom:1px solid #888}
+  body.print-list table{font-size:11px}
+  body.print-list td,body.print-list th{padding:3px 6px;border-bottom:1px solid #ccc}
+  body.print-list thead{display:table-header-group}
+  body.print-list tr{break-inside:avoid;page-break-inside:avoid}
+  /* 수정 단추가 있던 열은 종이에서 뺀다 */
+  body.print-list #listHead th:last-child,
+  body.print-list #listBody td:last-child,
+  body.print-list #listFoot td:last-child{display:none}
+
+  /* ③ 날짜별 상세로 인쇄 */
+  body.print-detail main{display:none!important}
+  body.print-detail #printArea{display:block!important}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -369,12 +470,11 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
           <div>
             <span class="cal-title" id="calTitle">—</span>
             <small id="calSubtitle"></small>
+            <small class="print-only" id="calOrgNote" style="display:none"></small>
           </div>
           <div class="legend" id="calLegend">
             <span id="facLegend"></span>
             <span class="legend-sep"></span>
-            <span><i class="lg-approved"></i>승인</span>
-            <span><i class="lg-pending"></i>신청</span>
             <span><i class="lg-cancel"></i>취소</span>
             <span><i class="lg-conflict"></i>시간 중복</span>
           </div>
@@ -392,7 +492,10 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
               <h2 id="railTitle">날짜를 선택하세요</h2>
               <div class="sub" id="railSub">달력에서 날짜를 누르면 그 날의 예약이 표시됩니다</div>
             </div>
-            <button type="button" class="btn btn-sm" id="railAdd" hidden>+ 추가</button>
+            <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end">
+              <button type="button" class="btn btn-sm" id="railHoliday" hidden>공휴일 지정</button>
+              <button type="button" class="btn btn-sm" id="railAdd" hidden>+ 추가</button>
+            </div>
           </div>
           <div class="rail-body" id="railBody">
             <p class="empty">선택된 날짜 없음</p>
@@ -409,9 +512,10 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
               <button type="button" class="btn btn-sm" id="importPaste" hidden>JSON 붙여넣기</button>
             </div>
             <div class="row2">
+              <button type="button" class="btn btn-sm" id="exportXls">이 달 엑셀</button>
               <button type="button" class="btn btn-sm" id="exportCsv">이 달 CSV</button>
-              <button type="button" class="btn btn-sm" onclick="window.print()">인쇄</button>
             </div>
+            <button type="button" class="btn btn-sm" id="printBtn">인쇄…</button>
             <p class="field hint" id="storageNote" style="margin:0"></p>
           </div>
         </div>
@@ -421,8 +525,16 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 
   <!-- ================= 목록 ================= -->
   <section class="pane" id="pane-list">
+    <div class="print-only print-head" id="printHeadList"></div>
     <div class="card">
       <div class="filters">
+        <!-- 목록은 두 가지로 본다.
+             조회용   — 무슨 행사인지 보는 화면. 메모까지 보이고 금액은 안 나온다
+             수익집계용 — 돈을 보는 화면. 이용료·부속시설·공과금을 따로 뗀다 -->
+        <div class="seg" id="listModeSeg" role="group" aria-label="목록 종류">
+          <button type="button" data-lm="view" aria-pressed="true">조회용</button>
+          <button type="button" data-lm="income" aria-pressed="false">수익집계용</button>
+        </div>
         <input type="search" id="q" placeholder="단체명 · 목적 · 메모 검색">
         <select id="fFacility"><option value="">전체 시설</option></select>
         <select id="fKindFilter">
@@ -431,26 +543,24 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
           <option value="준비">준비만</option>
         </select>
         <select id="fStatus">
-          <option value="">전체 상태</option>
-          <option value="신청">신청</option>
-          <option value="승인">승인</option>
-          <option value="취소">취소</option>
+          <option value="">취소 뺀 전체</option>
+          <option value="__all">취소 포함 전체</option>
+          <option value="취소">취소만</option>
         </select>
         <select id="fRange">
           <option value="month">선택한 달</option>
           <option value="all">전체 기간</option>
         </select>
+        <button type="button" class="btn btn-sm" id="listPrint">인쇄</button>
+        <button type="button" class="btn btn-sm" id="listXls">엑셀</button>
+        <button type="button" class="btn btn-sm" id="listCsv">CSV</button>
         <span class="savestate" id="listCount" style="margin-left:auto"></span>
       </div>
       <div class="table-wrap">
         <table>
-          <thead>
-            <tr>
-              <th>날짜</th><th>요일</th><th>시간</th><th>시설</th><th>구분</th><th>신청 단체</th>
-              <th>목적</th><th>인원</th><th>감면</th><th style="text-align:right">이용료</th><th>상태</th><th></th>
-            </tr>
-          </thead>
+          <thead id="listHead"></thead>
           <tbody id="listBody"></tbody>
+          <tfoot id="listFoot"></tfoot>
         </table>
       </div>
     </div>
@@ -625,9 +735,17 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
           <div class="hr"></div>
 
           <div class="field">
-            <label for="setHolidays">공휴일 (한 줄에 하나, YYYY-MM-DD)</label>
-            <textarea id="setHolidays" class="mono" placeholder="2026-09-24&#10;2026-10-03"></textarea>
-            <span class="hint">토요일과 일요일은 자동으로 처리되므로 여기에 적지 않아도 됩니다.</span>
+            <label for="setHolidays">따로 넣은 공휴일 (한 줄에 하나, YYYY-MM-DD)</label>
+            <textarea id="setHolidays" class="mono" placeholder="2027-05-06&#10;2028-10-05"></textarea>
+            <span class="hint">신정·삼일절·어린이날·현충일·광복절·개천절·한글날·성탄절과 설날·부처님오신날·추석은
+              <b>2040년까지 자동으로 잡힙니다</b>. 토·일요일도 자동입니다.
+              대체공휴일·임시공휴일만 여기에 적거나, 달력에서 날짜를 누르고 ‘공휴일 지정’ 을 누르세요.</span>
+            <span class="hint" id="holidayAutoNote"></span>
+          </div>
+          <div class="field" id="holidayOffBox" hidden>
+            <label for="setHolidayOff">공휴일에서 뺀 날</label>
+            <textarea id="setHolidayOff" class="mono"></textarea>
+            <span class="hint">자동으로 잡힌 공휴일 중 공휴일로 보지 않기로 한 날입니다.</span>
           </div>
         </div>
       </div>
@@ -796,24 +914,6 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
         <span class="hint" id="useTypeHint"></span>
       </div>
 
-      <div class="prepbox" id="prepBox" hidden>
-        <label class="prep-toggle">
-          <input type="checkbox" id="fPrepOn">
-          <span>준비시간 함께 등록</span>
-        </label>
-        <div class="row2" id="prepFields" hidden>
-          <div class="field">
-            <label for="fPrepBefore">행사 전 (시간)</label>
-            <input type="number" id="fPrepBefore" min="0" max="12" step="0.5" value="0" class="mono">
-          </div>
-          <div class="field">
-            <label for="fPrepAfter">행사 후 (시간)</label>
-            <input type="number" id="fPrepAfter" min="0" max="12" step="0.5" value="0" class="mono">
-          </div>
-        </div>
-        <p class="hint" id="prepSummary" style="margin:0"></p>
-      </div>
-
       <div class="row21">
         <div class="field">
           <label for="fApplicant">신청 단체</label>
@@ -851,18 +951,6 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
         <textarea id="fMemo" placeholder="비품 요청, 특이사항 등"></textarea>
       </div>
 
-      <div class="fee-box">
-        <div class="fee-head">
-          <h3>산정 이용료</h3>
-          <button type="button" class="btn btn-quiet btn-sm" id="feeToggle" aria-expanded="false">상세보기</button>
-        </div>
-        <div class="fee-sum">
-          <span class="fee-amount mono" id="feeTotal">0원</span>
-          <span class="fee-note" id="feeNote"></span>
-        </div>
-        <div id="feeBreakdown" hidden></div>
-      </div>
-
       <div class="fee-box" id="annexBox" style="margin-top:2px">
         <div class="fee-head">
           <h3>부속시설 · 전기 · 수도 (별표 6)</h3>
@@ -888,8 +976,9 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
       </div>
 
       <div class="field">
-        <label for="fOverride">이용료 직접 입력 (비워두면 위 산정액 사용)</label>
+        <label for="fOverride">이용료 직접 입력 (비워두면 조례대로 자동 산정)</label>
         <input type="number" id="fOverride" min="0" step="10" class="mono" placeholder="원">
+        <span class="hint">산정 금액과 그 근거 조문은 달력에서 날짜를 누른 뒤 ‘산정 상세’, 또는 목록의 수익집계용에서 봅니다</span>
       </div>
     </div>
     <div class="modal-foot">
@@ -917,6 +1006,46 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
     </div>
   </div>
 </div>
+
+<!-- ================= 인쇄 ================= -->
+<div class="backdrop" id="printBox" hidden>
+  <div class="modal" style="max-width:560px">
+    <div class="modal-head">
+      <h2>인쇄</h2>
+      <button type="button" class="btn btn-quiet btn-sm" id="printClose">닫기 ✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="printKind">인쇄 방식</label>
+        <select id="printKind">
+          <option value="cal">달력으로 인쇄 (가로 용지 · 한 달 전체)</option>
+          <option value="detail">날짜별 상세로 인쇄 (날짜를 골라서)</option>
+          <option value="list">목록으로 인쇄 (지금 목록 화면 그대로)</option>
+        </select>
+        <span class="hint" id="printHint"></span>
+      </div>
+      <div class="fee-box" id="printDateBox" hidden>
+        <div class="fee-head">
+          <h3>인쇄할 날짜</h3>
+          <div style="display:flex;gap:5px">
+            <button type="button" class="btn btn-quiet btn-sm" id="pdAll">전체 선택</button>
+            <button type="button" class="btn btn-quiet btn-sm" id="pdNone">전체 해제</button>
+          </div>
+        </div>
+        <div id="printDateList" style="max-height:280px;overflow:auto;margin-top:6px"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="printCancel">취소</button>
+      <button type="button" class="btn btn-primary" id="printGo">인쇄</button>
+    </div>
+  </div>
+</div>
+
+<!-- 날짜별 상세 인쇄용 영역. 화면에는 보이지 않고 인쇄할 때만 나온다 -->
+<div id="printArea"></div>
+<style id="printPage"></style>
 
 <input type="file" id="fileInput" accept="application/json" hidden>
 <div class="toast" id="toast" hidden></div>
@@ -975,6 +1104,64 @@ const BYULPYO6 = [
 /* 예전 자료의 시설명을 별표 1 의 이름으로 맞춘다 */
 const FAC_ALIAS = { "야구장": "한밭야구장" };
 
+/* 시설을 늘 이 차례로 보여준다 — 달력 범례·등록창 고르기·목록·내보내기 모두 같다.
+   여기 없는 시설은 뒤에 붙되 서로의 차례는 그대로 둔다 */
+const FAC_ORDER = ["충무체육관", "한밭체육관", "한밭야구장"];
+function facRank(name) {
+  const i = FAC_ORDER.indexOf(name);
+  return i < 0 ? FAC_ORDER.length : i;
+}
+function sortFacilities(list) {
+  return list
+    .map((f, i) => ({ f: f, i: i }))
+    .sort((a, b) => (facRank(a.f.name) - facRank(b.f.name)) || (a.i - b.i))
+    .map(x => x.f);
+}
+/* 예약을 시설 차례로 줄 세울 때 쓴다 */
+function facIndexOf(id) {
+  const i = state.facilities.findIndex(f => f.id === id);
+  return i < 0 ? 99 : i;
+}
+
+/* ── 공휴일 ────────────────────────────────────────────────
+   「관공서의 공휴일에 관한 규정」 제2조. 토·일요일은 달력에서 스스로 알아보므로
+   여기에는 적지 않는다.
+   설날·부처님오신날·추석은 음력이라 해마다 날짜가 달라서, 한국천문연구원 음양력
+   자료로 2040년까지 미리 뽑아 두었다. 값은 [설 전날, 설날, 설 다음날,
+   부처님오신날, 추석 전날, 추석, 추석 다음날] 차례다.
+   **대체공휴일과 임시공휴일은 미리 알 수 없다** — 달력에서 날짜를 누르고
+   ‘공휴일 지정’ 을 눌러 손으로 넣는다 */
+const FIXED_HOLIDAYS = {
+  "01-01": "신정", "03-01": "삼일절", "05-05": "어린이날", "06-06": "현충일",
+  "08-15": "광복절", "10-03": "개천절", "10-09": "한글날", "12-25": "성탄절"
+};
+const LUNAR_HOLIDAY_NAMES = ["설날 연휴", "설날", "설날 연휴", "부처님오신날", "추석 연휴", "추석", "추석 연휴"];
+const LUNAR_HOLIDAYS = {
+  2026:["02-16","02-17","02-18","05-24","09-24","09-25","09-26"],
+  2027:["02-06","02-07","02-08","05-13","09-14","09-15","09-16"],
+  2028:["01-26","01-27","01-28","05-02","10-02","10-03","10-04"],
+  2029:["02-12","02-13","02-14","05-20","09-21","09-22","09-23"],
+  2030:["02-02","02-03","02-04","05-09","09-11","09-12","09-13"],
+  2031:["01-22","01-23","01-24","05-28","09-30","10-01","10-02"],
+  2032:["02-10","02-11","02-12","05-16","09-18","09-19","09-20"],
+  2033:["01-30","01-31","02-01","05-06","09-07","09-08","09-09"],
+  2034:["02-18","02-19","02-20","05-25","09-26","09-27","09-28"],
+  2035:["02-07","02-08","02-09","05-15","09-15","09-16","09-17"],
+  2036:["01-27","01-28","01-29","05-03","10-03","10-04","10-05"],
+  2037:["02-14","02-15","02-16","05-22","09-23","09-24","09-25"],
+  2038:["02-03","02-04","02-05","05-11","09-12","09-13","09-14"],
+  2039:["01-23","01-24","01-25","04-30","10-01","10-02","10-03"],
+  2040:["02-11","02-12","02-13","05-18","09-20","09-21","09-22"]
+};
+/* 자동으로 잡히는 공휴일 이름. 아니면 "" */
+function autoHolidayName(dateStr) {
+  const md = dateStr.slice(5);
+  if (FIXED_HOLIDAYS[md]) return FIXED_HOLIDAYS[md];
+  const arr = LUNAR_HOLIDAYS[Number(dateStr.slice(0, 4))];
+  if (arr) { const i = arr.indexOf(md); if (i >= 0) return LUNAR_HOLIDAY_NAMES[i]; }
+  return "";
+}
+
 /* 제13조 — 사용료의 감면.
    조례가 정한 비율은 전부 면제 / 80% 감경 / 50% 감경 세 가지뿐이다.
    호별로 목록을 늘리지 않고 비율로만 고르게 한다 — 어느 호에 해당하는지는
@@ -999,7 +1186,7 @@ function facSeed(id, name, color, prepAllowed) {
 }
 
 const DEFAULT_STATE = {
-  version: 4,
+  version: 5,
   settings: {
     rounding: 10,
 
@@ -1030,7 +1217,8 @@ const DEFAULT_STATE = {
     annexItems: structuredClone(BYULPYO6),
     discountAnnex: true,   // 부속시설·전기·수도에도 감면을 적용할지 (아래 주석 참고)
 
-    holidays: [],
+    holidays: [],          // 손으로 넣은 공휴일 (대체공휴일·임시공휴일)
+    holidayOff: [],        // 자동 공휴일 중 손으로 뺀 날
     prepSurcharge: true,   // 준비시간에도 가산·감산을 적용할지
     articles: {
       base:    "별표 2 (제11조제1항 관련)",
@@ -1056,7 +1244,8 @@ const DEFAULT_STATE = {
 };
 
 let state = structuredClone(DEFAULT_STATE);
-let view = { year: new Date().getFullYear(), month: new Date().getMonth() + 1, selected: null, pane: "calendar", editingId: null };
+let view = { year: new Date().getFullYear(), month: new Date().getMonth() + 1, selected: null, pane: "calendar", editingId: null,
+             listMode: "view" };   // 목록 종류: view 조회용 / income 수익집계용
 
 /* 저장 위치
    shared  = 이 페이지(공유 링크)에 함께 저장 — 링크를 가진 담당자 모두가 같은 자료를 봅니다
@@ -1135,6 +1324,11 @@ function migrate(d) {
   st.hours.winter = Object.assign({}, base.settings.hours.winter, st.hours.winter || {});
   st.articles = Object.assign({}, base.settings.articles, (d.settings || {}).articles || {});
   if (!Array.isArray(st.annexItems) || !st.annexItems.length) st.annexItems = structuredClone(BYULPYO6);
+  if (!Array.isArray(st.holidays)) st.holidays = [];
+  if (!Array.isArray(st.holidayOff)) st.holidayOff = [];
+  // 공휴일은 2040년까지 자동으로 잡히므로, 예전에 손으로 적어둔 것 중
+  // 자동과 겹치는 날은 지운다. 대체공휴일처럼 자동에 없는 날만 남긴다
+  st.holidays = st.holidays.filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x) && !autoHolidayName(x));
   // 제11조제1항이 부속시설 사용료도 "사용료"에 넣고 있어 제13조 감면 대상이다.
   // 처음에는 실비 성격을 걱정해 꺼두었으나, 담당자 확인으로 켜는 것으로 정했다
   if (old < 3) st.discountAnnex = true;
@@ -1154,7 +1348,8 @@ function migrate(d) {
   }
   delete st.minHours; delete st.nightStart; delete st.holidayRate; delete st.surchargeArticle;
 
-  return { version: 4, settings: st, facilities: facs, discounts: dcs, reservations: res };
+  // 시설은 늘 충무 → 한밭 → 야구장 차례로 둔다
+  return { version: 5, settings: st, facilities: sortFacilities(facs), discounts: dcs, reservations: res };
 }
 
 function readLocal() {
@@ -1514,7 +1709,28 @@ function parseYmd(s) { const [y, m, d] = s.split("-").map(Number); return new Da
 function toMin(t) { if (!t) return 0; const [h, m] = t.split(":").map(Number); return h * 60 + m; }
 function fmtMin(n) { return pad(Math.floor(n / 60)) + ":" + pad(n % 60); }
 function isWeekend(dateStr) { const w = parseYmd(dateStr).getDay(); return w === 0 || w === 6; }
-function isHoliday(dateStr) { return (state.settings.holidays || []).includes(dateStr); }
+/* 공휴일 이름. 없으면 "".
+   자동 표(2040년까지) → 손으로 뺀 날(holidayOff) 은 제외 → 손으로 넣은 날(holidays) 은 추가.
+   대체공휴일·임시공휴일은 예측할 수 없어서 손으로 넣는 쪽에 기댄다 */
+function holidayName(dateStr) {
+  const off = state.settings.holidayOff || [];
+  if ((state.settings.holidays || []).includes(dateStr)) return autoHolidayName(dateStr) || "공휴일";
+  if (off.includes(dateStr)) return "";
+  return autoHolidayName(dateStr);
+}
+function isHoliday(dateStr) { return !!holidayName(dateStr); }
+/* 달력에서 누른 날을 공휴일로 넣거나 뺀다 */
+function toggleHoliday(dateStr) {
+  const s = state.settings;
+  s.holidays = s.holidays || []; s.holidayOff = s.holidayOff || [];
+  const on = isHoliday(dateStr);
+  s.holidays = s.holidays.filter(x => x !== dateStr);
+  s.holidayOff = s.holidayOff.filter(x => x !== dateStr);
+  if (on) { if (autoHolidayName(dateStr)) s.holidayOff.push(dateStr); }
+  else s.holidays.push(dateStr);
+  s.holidays.sort(); s.holidayOff.sort();
+  return !on;
+}
 function facilityOf(id) { return state.facilities.find(f => f.id === id) || null; }
 function discountOf(id) { return state.discounts.find(d => d.id === id) || state.discounts[0] || { name: "-", rate: 0, article: "" }; }
 function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
@@ -1562,7 +1778,8 @@ function bandsOf(r) {
    일요일은 「관공서의 공휴일에 관한 규정」 제2조제1호의 공휴일이므로 기본으로 포함한다 */
 function isSurchargeDay(dateStr) {
   const w = parseYmd(dateStr).getDay();
-  if (isHoliday(dateStr)) return { yes: true, why: "공휴일로 등록된 날", tag: "공휴일" };
+  const hn = holidayName(dateStr);
+  if (hn) return { yes: true, why: hn + " · 관공서의 공휴일에 관한 규정 제2조", tag: hn };
   if (w === 6) return { yes: true, why: "", tag: "토요일" };
   if (w === 0 && state.settings.sundayAsHoliday !== false)
     return { yes: true, why: "관공서의 공휴일에 관한 규정 제2조제1호", tag: "일요일" };
@@ -1758,7 +1975,8 @@ function calcFee(r) {
   }
 
   // ⑥⑦⑧ 부속시설 사용료 (별표 6) — 행사 종료 후 7일 이내에 징수한다 (제11조제2항)
-  let annexSum = 0;
+  // 목록(수익집계용)에서 부속시설과 공과금(전기+수도)을 따로 떼어 보여주려고 나눠 센다
+  let annexSum = 0, annexOnly = 0, utilSum = 0;
   const qty = (r.annex && typeof r.annex === "object") ? r.annex : {};
   if (!isPrep) {
     (s.annexItems || []).forEach(it => {
@@ -1770,7 +1988,7 @@ function calcFee(r) {
         why: won(it.fee) + "원 × " + n + " · " + (it.article || A.annex),
         amount: amt
       });
-      annexSum += amt;
+      annexSum += amt; annexOnly += amt;
     });
     const pw = Number(r.power) || 0;
     if (pw > 0) {
@@ -1779,7 +1997,7 @@ function calcFee(r) {
         why: "실제 사용량을 확인해 직접 입력한 실비 · " + A.annex,
         amount: pw
       });
-      annexSum += pw;
+      annexSum += pw; utilSum += pw;
     }
     const wt = Number(r.water) || 0;
     if (wt > 0) {
@@ -1788,7 +2006,7 @@ function calcFee(r) {
         why: "실제 사용량을 확인해 직접 입력한 실비 · " + A.annex + " · 1일 1회 수도사용 (전용사용 시)",
         amount: wt
       });
-      annexSum += wt;
+      annexSum += wt; utilSum += wt;
     }
   }
   out.annex = annexSum;
@@ -1811,8 +2029,27 @@ function calcFee(r) {
 
   out.note = bd.band.season + " · " + bandTxt + (sur.yes && applySur ? " · " + sur.tag : "");
   const unit = Math.max(1, Number(s.rounding) || 1);
-  out.total = Math.max(0, Math.floor((sum - cut) / unit + 1e-9) * unit);
+  const floorUnit = v => Math.max(0, Math.floor(v / unit + 1e-9) * unit);
+  out.total = floorUnit(sum - cut);
+
+  /* 목록(수익집계용)에서 따로 떼어 보는 금액.
+     세 조각을 더하면 언제나 합계와 같아지도록, 부속시설·공과금을 먼저 절사하고
+     전용사용료를 나머지로 둔다 */
+  const dcOn = (Number(dc.rate) > 0 && dcAnnex) ? (1 - Number(dc.rate) / 100) : 1;
+  const partAnnex = floorUnit(annexOnly * dcOn);
+  const partUtil  = floorUnit(utilSum  * dcOn);
+  out.parts = { annex: partAnnex, util: partUtil, use: Math.max(0, out.total - partAnnex - partUtil) };
   return out;
+}
+/* 이용료를 전용사용료 · 부속시설 · 공과금(전기+수도) 으로 나눠 돌려준다.
+   직접 입력한 금액이 있으면 그것이 합계가 되고, 나머지를 전용사용료로 본다 */
+function feeParts(r) {
+  const f = calcFee(r);
+  const ov = (r.feeOverride !== "" && r.feeOverride != null && !isNaN(r.feeOverride)) ? Number(r.feeOverride) : null;
+  const total = ov == null ? f.total : ov;
+  const annex = Math.min(f.parts.annex, total);
+  const util  = Math.min(f.parts.util, total - annex);
+  return { total: total, annex: annex, util: util, use: Math.max(0, total - annex - util), calc: f };
 }
 function feeOf(r) {
   if (r.feeOverride !== "" && r.feeOverride != null && !isNaN(r.feeOverride)) return Number(r.feeOverride);
@@ -1840,13 +2077,20 @@ let conflicts = new Set();
    5. 달력
    ========================================================= */
 const CAL_CHIPS = 4;   // 달력 한 칸에 보여줄 행사 개수. 넘으면 "+N건 더"
+/* 인쇄 중일 때만 켜진다. all 이 켜지면 달력 칸에 그 날 것을 다 펴서 그린다 */
+const PRINT = { all: false };
 
 /* 시간순 정렬. 시작시각 → 종료시각 → 행사 먼저(준비는 뒤) 순으로 본다.
    문자열 비교가 아니라 분으로 바꿔 비교하므로 "9:00" 처럼 앞의 0 이 빠져도 맞게 정렬된다 */
 function byTime(a, b) {
   return (toMin(a.start) - toMin(b.start))
       || (toMin(a.end) - toMin(b.end))
-      || ((a.kind === "준비" ? 1 : 0) - (b.kind === "준비" ? 1 : 0));
+      || ((a.kind === "준비" ? 1 : 0) - (b.kind === "준비" ? 1 : 0))
+      || (facIndexOf(a.facilityId) - facIndexOf(b.facilityId));   // 시설 차례를 지킨다
+}
+/* 목록·내보내기 정렬. 날짜 → 시각 → 시설 차례 */
+function byDateTime(a, b) {
+  return a.date.localeCompare(b.date) || byTime(a, b);
 }
 
 function monthReservations(y, m) {
@@ -1867,6 +2111,7 @@ function renderCalendar() {
   const nEv = mr.filter(r => r.kind !== "준비").length, nPr = mr.length - nEv;
   const sum = mr.reduce((a, r) => a + feeOf(r), 0);
   $("#calSubtitle").textContent = "행사 " + nEv + "건" + (nPr ? " · 준비 " + nPr + "건" : "") + " · 이용료 " + won(sum) + "원";
+  $("#calOrgNote").textContent = state.settings.orgNote || "";   // 인쇄할 때만 보인다
 
   const byDate = {};
   monthReservations(y, m).forEach(r => (byDate[r.date] = byDate[r.date] || []).push(r));
@@ -1886,26 +2131,32 @@ function renderCalendar() {
     const dayAll = byDate[date] || (out ? state.reservations.filter(r => r.date === date) : []);
     const items = dayAll.filter(r => (r.kind || "행사") !== "준비");
     const prepCount = dayAll.length - items.length;
-    const shown = items.slice(0, CAL_CHIPS);
+    // 인쇄할 때는 "+N건 더" 로 감추지 않고 그 날 것을 다 펴서 보여준다
+    const cap = PRINT.all ? items.length : CAL_CHIPS;
+    const shown = items.slice(0, cap);
     const chips = shown.map(r => {
       const f = facilityOf(r.facilityId);
-      const cls = r.status === "승인" ? "" : (r.status === "취소" ? " cancelled" : " pending");
+      // 상태는 화면에서 쓰지 않는다. 취소만 흐리게 남긴다 (테두리는 전부 실선)
+      const cls = r.status === "취소" ? " cancelled" : "";
       const cf = conflicts.has(r.id) ? " conflict" : "";
       return '<button type="button" class="chip' + cls + cf + '" data-fc="' + colorOf(f) + '" data-edit="' + r.id + '" title="' +
         esc(r.start + "–" + r.end + " " + (f ? f.name : "") + " / " + r.applicant) + '">' +
         '<span><span class="t">' + esc(r.start) + "–" + esc(r.end) + "</span>" + esc(f ? f.name : "?") + "</span>" +
         '<span class="n">' + esc(r.applicant) + "</span></button>";
     }).join("");
-    const more = items.length > CAL_CHIPS
-      ? '<button type="button" class="chip-more" data-day="' + date + '">+ ' + (items.length - CAL_CHIPS) + "건 더</button>"
+    const more = items.length > cap
+      ? '<button type="button" class="chip-more" data-day="' + date + '">+ ' + (items.length - cap) + "건 더</button>"
       : "";
 
+    // 바탕은 전부 흰색이다. 토요일은 파랑, 일요일·공휴일은 빨강 — 날짜 숫자에만 쓴다
+    const hn = holidayName(date);
     cells.push(
-      '<div class="cell' + (out ? " out" : "") + ((dow === 0 || dow === 6) ? " weekend" : "") +
+      '<div class="cell' + (out ? " out" : "") +
+      (dow === 6 ? " sat" : "") + (dow === 0 ? " sun" : "") + (hn ? " hol" : "") +
       (date === todayStr ? " today" : "") + (date === view.selected ? " selected" : "") +
       '" data-day="' + date + '" role="button" tabindex="0">' +
         '<div class="cell-date"><b>' + label + "</b>" +
-          (isHoliday(date) ? '<span class="holiday-tag">공휴일</span>' : "") +
+          (hn ? '<span class="holiday-tag">' + esc(hn) + "</span>" : "") +
           ((items.length || prepCount)
             ? '<span class="cell-count">' +
                 (items.length ? "행사 <b>" + items.length + "</b>" : "") +
@@ -1928,14 +2179,15 @@ function renderSummary() {
   const live = mr.filter(r => r.status !== "취소");
   const ev = live.filter(r => r.kind !== "준비");
   const pr = live.filter(r => r.kind === "준비");
-  const hrs = a => Math.round(a.reduce((n, r) => n + Math.max(0, (toMin(r.end) - toMin(r.start)) / 60), 0) * 10) / 10;
   const fee = a => a.reduce((n, r) => n + feeOf(r), 0);
+  // 공과금 = 전기료 + 수도료 (실비). 이용료와 따로 볼 수 있게 떼어 놓는다
+  const util = live.reduce((n, r) => n + feeParts(r).util, 0);
   $("#summary").innerHTML =
     stat("행사", ev.length + '<small>건 ·</small>') +
     stat("준비시간", pr.length + '<small>건 .</small>') +
     stat("행사 이용료", won(fee(ev)) + '<small>원</small>') +
     stat("준비시간 이용료", won(fee(pr)) + '<small>원</small>') +
-    stat("승인 대기", mr.filter(r => r.status === "신청").length + '<small>건</small>') +
+    stat("공과금 (전기+수도)", won(util) + '<small>원</small>') +
     stat("합계", won(fee(live)) + '<small>원</small>');
 }
 function stat(k, v) { return '<div class="stat"><dt>' + k + "</dt><dd>" + v + "</dd></div>"; }
@@ -1949,12 +2201,20 @@ function renderRail() {
     $("#railTitle").textContent = "날짜를 선택하세요";
     $("#railSub").textContent = "달력에서 날짜를 누르면 그 날의 예약이 표시됩니다";
     $("#railAdd").hidden = true;
+    $("#railHoliday").hidden = true;
     $("#railBody").innerHTML = '<p class="empty">선택된 날짜 없음</p>';
     return;
   }
   const dt = parseYmd(d);
-  $("#railTitle").textContent = (dt.getMonth() + 1) + "월 " + dt.getDate() + "일 (" + DOW[dt.getDay()] + ")";
+  const hn = holidayName(d);
+  $("#railTitle").textContent = (dt.getMonth() + 1) + "월 " + dt.getDate() + "일 (" + DOW[dt.getDay()] + ")" +
+    (hn ? " · " + hn : "");
   $("#railAdd").hidden = false;
+  // 대체공휴일·임시공휴일은 미리 알 수 없어서 여기서 손으로 넣고 뺀다
+  const hb = $("#railHoliday");
+  hb.hidden = false;
+  hb.textContent = hn ? "공휴일 해제" : "공휴일 지정";
+  hb.title = hn ? hn + " 로 잡혀 있습니다. 누르면 공휴일에서 뺍니다" : "이 날을 공휴일로 지정합니다 (토·일·법정공휴일은 자동)";
 
   // 행사와 준비시간을 함께 보여준다. 시간순 정렬
   const items = state.reservations.filter(r => r.date === d).sort(byTime);
@@ -1971,22 +2231,25 @@ function renderRail() {
     const f = facilityOf(r.facilityId);
     const dc = discountOf(r.discountId);
     const cf = conflicts.has(r.id);
-    const fc = calcFee(r);
+    const fp = feeParts(r), fc = fp.calc;
     return '<div class="item' + (cf ? " is-conflict" : "") + (r.kind === "준비" ? " is-prep" : "") +
       '" data-fc="' + colorOf(f) + '">' +
       '<div class="item-top">' +
         '<span class="item-time">' + esc(r.start) + "–" + esc(r.end) + "</span>" +
         (r.kind === "준비" ? '<span class="kindtag">준비</span>' : "") +
-        '<span class="status ' + (r.status === "승인" ? "approved" : r.status === "취소" ? "cancelled" : "") + '">' + esc(r.status) + "</span>" +
+        (r.status === "취소" ? '<span class="status cancelled">취소</span>' : "") +
         '<span class="item-fac">' + esc(f ? f.name : "시설 없음") + "</span>" +
       "</div>" +
       '<div class="item-name">' + esc(r.applicant) + (r.purpose ? ' <span class="item-fac">' + esc(r.purpose) + "</span>" : "") + "</div>" +
       '<div class="item-meta">' +
         (r.headcount ? "<span>" + r.headcount + "명</span>" : "") +
         (Number(dc.rate) > 0 ? "<span>감면 " + esc(dc.name) + " " + dc.rate + "%</span>" : "") +
+        (fp.util ? "<span>공과금 " + won(fp.util) + "원</span>" : "") +
       "</div>" +
-      '<div class="item-fee">' + won(feeOf(r)) + "원" + (r.feeOverride !== "" && r.feeOverride != null ? " (직접 입력)" : "") +
+      '<div class="item-fee">' + won(fp.total) + "원" + (r.feeOverride !== "" && r.feeOverride != null ? " (직접 입력)" : "") +
         (fc.note ? ' <span class="item-fac">' + esc(fc.note) + "</span>" : "") + "</div>" +
+      // 메모는 일정 바로 밑에 강조해서 붙인다 — 여기부터 보는 직원이 많다
+      (r.memo ? '<div class="item-memo"><b>메모</b>' + esc(r.memo) + "</div>" : "") +
       (cf ? '<div class="warn">⚠ 같은 시설에 시간이 겹치는 예약이 있습니다</div>' : "") +
       '<div class="fee-box fee-detail" data-fee="' + r.id + '" hidden>' + feeLinesHtml(fc) +
         (r.feeOverride !== "" && r.feeOverride != null
@@ -2002,43 +2265,125 @@ function renderRail() {
 }
 
 /* =========================================================
-   7. 목록
-   ========================================================= */
-function renderList() {
+   7. 목록 — 조회용 / 수익집계용 두 가지
+   =========================================================
+   같은 자료를 보는 눈이 둘이라 화면을 나눴다.
+     조회용    무슨 행사인지 본다. 메모까지 보이고 감면·이용료·상태는 빼놓았다
+     수익집계용 돈을 본다. 이용료(전용사용료)·부속시설·공과금(전기+수도)을 따로 뗀다
+   열 정의를 한 곳에 두고 화면·인쇄·엑셀·CSV 가 모두 이것을 쓴다 —
+   화면에서 본 것과 뽑은 종이가 달라지지 않게 하려는 것이다 */
+const LIST_MODES = {
+  view:   { name: "조회용",    cols: ["date", "dow", "time", "fac", "kind", "applicant", "purpose", "head", "memo"] },
+  income: { name: "수익집계용", cols: ["date", "dow", "time", "fac", "kind", "applicant", "head", "discount", "use", "annex", "util", "total"] }
+};
+const LIST_COLS = {
+  date:      { label: "날짜",   cls: "t" },
+  dow:       { label: "요일",   cls: "" },
+  time:      { label: "시간",   cls: "t" },
+  fac:       { label: "시설",   cls: "" },
+  kind:      { label: "구분",   cls: "" },
+  applicant: { label: "신청 단체", cls: "" },
+  purpose:   { label: "목적",   cls: "" },
+  head:      { label: "인원",   cls: "num" },
+  memo:      { label: "메모",   cls: "memo" },
+  discount:  { label: "감면",   cls: "" },
+  use:       { label: "이용료", cls: "num", sum: true },
+  annex:     { label: "부속시설", cls: "num", sum: true, blankZero: true },
+  util:      { label: "공과금", cls: "num", sum: true, blankZero: true },
+  total:     { label: "합계",   cls: "num", sum: true }
+};
+
+/* 한 예약을 열 이름 → 값으로 푼다. 숫자 열은 원 단위 정수로 돌려준다 */
+function listRow(r) {
+  const f = facilityOf(r.facilityId), dc = discountOf(r.discountId);
+  const fp = feeParts(r);
+  return {
+    r: r,
+    date: r.date,
+    dow: DOW[parseYmd(r.date).getDay()],
+    time: r.start + "–" + r.end,
+    fac: f ? f.name : "-",
+    kind: (r.kind || "행사"),
+    applicant: r.applicant || "",
+    purpose: r.purpose || "",
+    head: r.headcount || "",
+    memo: (r.memo || ""),
+    discount: Number(dc.rate) > 0 ? dc.name + (String(dc.name).includes(dc.rate + "%") ? "" : " " + dc.rate + "%") : "",
+    use: fp.use, annex: fp.annex, util: fp.util, total: fp.total
+  };
+}
+function listCellText(row, key) {
+  const c = LIST_COLS[key], v = row[key];
+  if (!c.sum) return String(v == null ? "" : v);
+  return (c.blankZero && !Number(v)) ? "" : won(v);
+}
+
+/* 지금 목록 화면의 조건에 맞는 예약 */
+function listRows() {
   const q = $("#q").value.trim().toLowerCase();
   const fFac = $("#fFacility").value, fSt = $("#fStatus").value, rng = $("#fRange").value;
   const fKind = $("#fKindFilter").value;
   let rows = state.reservations.slice();
   if (rng === "month") rows = rows.filter(r => r.date.startsWith(view.year + "-" + pad(view.month)));
   if (fFac) rows = rows.filter(r => r.facilityId === fFac);
-  if (fSt) rows = rows.filter(r => r.status === fSt);
+  // 상태는 화면에서 쓰지 않기로 했다. 취소만 넣고 뺀다
+  if (fSt === "취소") rows = rows.filter(r => r.status === "취소");
+  else if (fSt !== "__all") rows = rows.filter(r => r.status !== "취소");
   if (fKind) rows = rows.filter(r => (r.kind || "행사") === fKind);
   if (q) rows = rows.filter(r => [r.applicant, r.purpose, r.memo].join(" ").toLowerCase().includes(q));
-  rows.sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
+  rows.sort(byDateTime);
+  return rows;
+}
 
-  const live = rows.filter(r => r.status !== "취소");
-  const evF = live.filter(r => r.kind !== "준비").reduce((a, r) => a + feeOf(r), 0);
-  const prF = live.filter(r => r.kind === "준비").reduce((a, r) => a + feeOf(r), 0);
-  $("#listCount").textContent = rows.length + "건 · 행사 " + won(evF) + "원" + (prF ? " · 준비 " + won(prF) + "원" : "") + " · 합계 " + won(evF + prF) + "원";
+function renderList() {
+  const mode = LIST_MODES[view.listMode] ? view.listMode : "view";
+  const cols = LIST_MODES[mode].cols;
+  const rows = listRows().map(listRow);
 
-  $("#listBody").innerHTML = rows.length ? rows.map(r => {
-    const f = facilityOf(r.facilityId), dc = discountOf(r.discountId);
-    const dt = parseYmd(r.date);
-    return "<tr" + (conflicts.has(r.id) ? ' style="background:var(--alert-soft)"' : "") + ">" +
-      '<td class="t">' + esc(r.date) + "</td>" +
-      "<td>" + DOW[dt.getDay()] + "</td>" +
-      '<td class="t">' + esc(r.start) + "–" + esc(r.end) + "</td>" +
-      "<td>" + esc(f ? f.name : "-") + "</td>" +
-      "<td>" + (r.kind === "준비" ? '<span class="kindtag">준비</span>' : "행사") + "</td>" +
-      "<td>" + esc(r.applicant) + "</td>" +
-      "<td>" + esc(r.purpose || "") + "</td>" +
-      '<td class="num">' + (r.headcount || "") + "</td>" +
-      "<td>" + (Number(dc.rate) > 0 ? esc(dc.name) + " " + dc.rate + "%" : "") + "</td>" +
-      '<td class="num">' + won(feeOf(r)) + "</td>" +
-      '<td><span class="status ' + (r.status === "승인" ? "approved" : r.status === "취소" ? "cancelled" : "") + '">' + esc(r.status) + "</span></td>" +
+  $$("#listModeSeg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lm === mode)));
+
+  $("#listHead").innerHTML = "<tr>" + cols.map(k =>
+    "<th" + (LIST_COLS[k].cls === "num" ? ' style="text-align:right"' : "") + ">" + LIST_COLS[k].label + "</th>"
+  ).join("") + "<th></th></tr>";
+
+  $("#listBody").innerHTML = rows.length ? rows.map(row => {
+    const r = row.r;
+    return "<tr" + (conflicts.has(r.id) ? ' style="background:var(--alert-soft)"' : "") +
+      ((r.kind || "행사") === "준비" ? ' class="is-prep"' : "") + ">" +
+      cols.map(k => {
+        const c = LIST_COLS[k];
+        if (k === "kind") return "<td>" + (r.kind === "준비" ? '<span class="kindtag">준비</span>' : "행사") + "</td>";
+        if (k === "applicant" && r.status === "취소")
+          return "<td><s>" + esc(row.applicant) + "</s></td>";
+        return '<td class="' + c.cls + '">' + esc(listCellText(row, k)) + "</td>";
+      }).join("") +
       '<td><button type="button" class="btn btn-sm" data-edit="' + r.id + '">수정</button></td>' +
     "</tr>";
-  }).join("") : '<tr><td colspan="11" class="empty">조건에 맞는 예약이 없습니다</td></tr>';
+  }).join("") : '<tr><td colspan="' + (cols.length + 1) + '" class="empty">조건에 맞는 예약이 없습니다</td></tr>';
+
+  // 합계 줄 — 금액 열이 있을 때만 (수익집계용)
+  const sumCols = cols.filter(k => LIST_COLS[k].sum);
+  $("#listFoot").innerHTML = (rows.length && sumCols.length)
+    ? "<tr>" + cols.map((k, i) => {
+        if (LIST_COLS[k].sum) return '<td class="num">' + won(rows.reduce((a, x) => a + Number(x[k] || 0), 0)) + "</td>";
+        return "<td>" + (i === 0 ? rows.length + "건 합계" : "") + "</td>";
+      }).join("") + "<td></td></tr>"
+    : "";
+
+  const useSum = rows.reduce((a, x) => a + x.use, 0);
+  const anSum  = rows.reduce((a, x) => a + x.annex, 0);
+  const utSum  = rows.reduce((a, x) => a + x.util, 0);
+  $("#listCount").textContent = rows.length + "건 · 이용료 " + won(useSum) + "원" +
+    (anSum ? " · 부속시설 " + won(anSum) + "원" : "") +
+    (utSum ? " · 공과금 " + won(utSum) + "원" : "") +
+    " · 합계 " + won(useSum + anSum + utSum) + "원";
+
+  $("#printHeadList").innerHTML = "<h1>" + esc(listPeriodLabel()) + " 시설 예약 " + LIST_MODES[mode].name + " 목록</h1>" +
+    "<span>" + esc($("#listCount").textContent) + "</span>" +
+    '<span style="margin-left:auto">' + esc(state.settings.orgNote || "") + "</span>";
+}
+function listPeriodLabel() {
+  return $("#fRange").value === "month" ? view.year + "년 " + view.month + "월" : "전체 기간";
 }
 
 /* =========================================================
@@ -2083,6 +2428,19 @@ function renderSettings() {
   $("#setAdmOther").value = s.admOtherRate;
   $("#setAdmSchool").value = s.admSchoolCut;
   $("#setHolidays").value = (s.holidays || []).join("\n");
+  $("#setHolidayOff").value = (s.holidayOff || []).join("\n");
+  $("#holidayOffBox").hidden = !(s.holidayOff || []).length;
+  const autoThisYear = [];
+  for (let mm = 1; mm <= 12; mm++) {
+    const last = new Date(view.year, mm, 0).getDate();
+    for (let dd = 1; dd <= last; dd++) {
+      const k = ymd(view.year, mm, dd), n = autoHolidayName(k);
+      if (n) autoThisYear.push(mm + "/" + dd + " " + n);
+    }
+  }
+  $("#holidayAutoNote").textContent = autoThisYear.length
+    ? view.year + "년 자동 공휴일: " + autoThisYear.join(" · ")
+    : view.year + "년은 자동 공휴일 표(2026~2040년) 밖입니다. 직접 적어 주세요.";
   $("#setOrgNote").value = s.orgNote || "";
 
   $("#facilityList").innerHTML = state.facilities.map(f => {
@@ -2177,9 +2535,9 @@ function openModal(id, presetDate) {
 
   $("#fDate").value = r ? r.date : (presetDate || view.selected || ymd(view.year, view.month, 1));
   setTimeVal("fStart", r ? r.start : "09:00");
-  setTimeVal("fEnd", r ? r.end : "12:00");
+  setTimeVal("fEnd", r ? r.end : "18:00");      // 종료는 18시가 기본이다
   $("#fFac").value = r ? r.facilityId : (state.facilities[0] ? state.facilities[0].id : "");
-  $("#fStatusSel").value = r ? r.status : "신청";
+  $("#fStatusSel").value = r ? r.status : "승인";
   $("#fApplicant").value = r ? r.applicant : "";
   $("#fHead").value = r ? (r.headcount || "") : "";
   $("#fPurpose").value = r ? (r.purpose || "") : "";
@@ -2196,17 +2554,6 @@ function openModal(id, presetDate) {
   $("#annexList").hidden = !(r && r.annex && Object.keys(r.annex).length);
   $("#annexToggle").textContent = $("#annexList").hidden ? "부속시설 고르기" : "접기";
   $("#annexToggle").setAttribute("aria-expanded", String(!$("#annexList").hidden));
-  $("#feeBreakdown").hidden = true;
-  $("#feeToggle").textContent = "상세보기";
-  $("#feeToggle").setAttribute("aria-expanded", "false");
-
-  // 이미 등록된 준비시간 읽어오기
-  const kids = r ? state.reservations.filter(x => x.linkId === r.id && x.kind === "준비") : [];
-  const before = kids.filter(x => toMin(x.end) <= toMin(r.start) && x.date === r.date);
-  const after = kids.filter(x => toMin(x.start) >= toMin(r.end) && x.date === r.date);
-  $("#fPrepOn").checked = kids.length > 0;
-  $("#fPrepBefore").value = before.length ? (toMin(before[0].end) - toMin(before[0].start)) / 60 : 0;
-  $("#fPrepAfter").value = after.length ? (toMin(after[0].end) - toMin(after[0].start)) / 60 : 0;
   updateKindUI();
 
   $("#saveRes").hidden = !RUNTIME.writable;
@@ -2291,45 +2638,11 @@ function updateKindUI() {
   $("#kindHint").textContent = allowed ? "" : (fac ? fac.name + "은 준비시간 없음" : "");
 
   const isEvent = kindSel.value === "행사";
-  $("#prepBox").hidden = !(allowed && isEvent);
   $("#admBox").hidden = !isEvent;
   $("#annexBox").hidden = !isEvent;
   $("#useTypeHint").textContent = $("#fUseType").value === "체육경기"
     ? "국가·지방자치단체 및 대한체육회·장애인체육회 산하단체가 주관하는 경기"
     : "직장단체·동호인 등 다수인이 참여하는 경기 및 행사 (콘서트·공연·전람·전시 포함)";
-  $("#prepFields").hidden = !$("#fPrepOn").checked;
-
-  const b = Number($("#fPrepBefore").value) || 0, a = Number($("#fPrepAfter").value) || 0;
-  if (!$("#prepBox").hidden && $("#fPrepOn").checked && (b || a)) {
-    const st = toMin(timeVal("fStart")), en = toMin(timeVal("fEnd"));
-    const parts = [];
-    if (b) parts.push("전 " + minToHm(st - b * 60) + "–" + minToHm(st));
-    if (a) parts.push("후 " + minToHm(en) + "–" + minToHm(en + a * 60));
-    $("#prepSummary").textContent = parts.join(" · ") + " 로 준비시간이 따로 등록됩니다";
-  } else if (!$("#prepBox").hidden) {
-    $("#prepSummary").textContent = $("#fPrepOn").checked ? "시간을 입력하세요" : "";
-  }
-}
-/* 함께 등록될 준비시간의 요금까지 미리 보여준다 */
-function prepPreview(parent, eventTotal) {
-  if (parent.kind !== "행사" || $("#prepBox").hidden || !$("#fPrepOn").checked) return "";
-  const b = Number($("#fPrepBefore").value) || 0, a = Number($("#fPrepAfter").value) || 0;
-  if (!b && !a) return "";
-  const st = toMin(parent.start), en = toMin(parent.end);
-  const mk = (s1, e1) => Object.assign({}, parent, { id: "_p", kind: "준비", start: minToHm(s1), end: minToHm(e1) });
-  let sum = 0, rows = "";
-  if (b > 0 && st - b * 60 >= 0) {
-    const v = calcFee(mk(st - b * 60, st)).total; sum += v;
-    rows += '<div class="fee-line"><span>준비 ' + minToHm(st - b * 60) + "–" + minToHm(st) + " (" + b + "시간)</span><span>" + won(v) + "</span></div>";
-  }
-  if (a > 0 && en + a * 60 <= 24 * 60) {
-    const v = calcFee(mk(en, en + a * 60)).total; sum += v;
-    rows += '<div class="fee-line"><span>정리 ' + minToHm(en) + "–" + minToHm(en + a * 60) + " (" + a + "시간)</span><span>" + won(v) + "</span></div>";
-  }
-  if (!rows) return "";
-  return '<div class="fee-line" style="margin-top:8px"><span class="why" style="display:block">함께 등록되는 준비시간 (별도 건으로 저장)</span><span></span></div>' +
-    rows +
-    '<div class="fee-line total"><span>행사 + 준비 합계</span><span>' + won(eventTotal + sum) + "원</span></div>";
 }
 
 function minToHm(m) {
@@ -2337,28 +2650,9 @@ function minToHm(m) {
   return pad(Math.floor(x / 60)) + ":" + pad(x % 60);
 }
 
-/* 행사에 딸린 준비시간 예약을 다시 만든다 */
-function rebuildPrepRows(parent) {
-  state.reservations = state.reservations.filter(x => x.linkId !== parent.id);
-  if (parent.kind !== "행사" || !$("#fPrepOn").checked) return 0;
-  const fac = facilityOf(parent.facilityId);
-  if (!fac || !fac.prep || !fac.prep.allowed) return 0;
-
-  const mk = (startM, endM, tag) => ({
-    id: uid(), kind: "준비", linkId: parent.id,
-    date: parent.date, start: minToHm(startM), end: minToHm(endM),
-    facilityId: parent.facilityId, status: parent.status,
-    applicant: parent.applicant,
-    headcount: null, purpose: (parent.purpose || "행사") + " " + tag,
-    discountId: parent.discountId, memo: "", feeOverride: null
-  });
-  const b = Number($("#fPrepBefore").value) || 0, a = Number($("#fPrepAfter").value) || 0;
-  const st = toMin(parent.start), en = toMin(parent.end);
-  let n = 0;
-  if (b > 0 && st - b * 60 >= 0) { state.reservations.push(mk(st - b * 60, st, "준비")); n++; }
-  if (a > 0 && en + a * 60 <= 24 * 60) { state.reservations.push(mk(en, en + a * 60, "정리")); n++; }
-  return n;
-}
+/* 준비시간은 '건 구분: 준비' 로 따로 등록한다.
+   행사 등록창에서 함께 만들던 방식은 담당자 요청으로 뺐다 —
+   예전 자료에 남아 있는 linkId 연결은 그대로 살려 둔다(행사를 지우면 함께 지워진다) */
 
 /* 산정 내역 표. 등록창과 우측 상세가 같은 함수를 쓴다 —
    "왜 이 금액인지" 를 두 곳에서 똑같이 보여주기 위해서다 */
@@ -2388,19 +2682,13 @@ function keepFocusInPlace(redraw) {
   }
 }
 
+/* 등록창에는 산정 이용료를 띄우지 않는다 (담당자 요청).
+   금액과 근거 조문은 달력 우측 상세의 ‘산정 상세’ 와 목록(수익집계용)에서 본다.
+   여기서는 부속시설 합계와 시간 중복만 알려준다 */
 function updateFeePreview() {
   const r = formToRes();
-  const box = $("#feeBreakdown"), tot = $("#feeTotal"), note = $("#feeNote");
-  if (!r.date || !r.start || !r.end || toMin(r.end) <= toMin(r.start)) {
-    tot.textContent = "—";
-    note.textContent = "종료 시각이 시작 시각보다 늦어야 합니다";
-    box.innerHTML = "";
-  } else {
-    const f = calcFee(r);
-    tot.textContent = won(f.total) + "원";
-    note.textContent = (f.pending ? "기본액 미입력 · " : "") + (f.note || "");
-    $("#annexTotal").textContent = won(f.annex || 0) + "원";
-    keepFocusInPlace(() => { box.innerHTML = feeLinesHtml(f, { tail: prepPreview(r, f.total) }); });
+  if (r.date && r.start && r.end && toMin(r.end) > toMin(r.start)) {
+    keepFocusInPlace(() => { $("#annexTotal").textContent = won(calcFee(r).annex || 0) + "원"; });
   }
   // 중복 안내
   const others = state.reservations.filter(x => x.id !== r.id && x.status !== "취소" &&
@@ -2412,6 +2700,246 @@ function updateFeePreview() {
     n.textContent = "같은 시설에 시간이 겹치는 예약이 " + others.length + "건 있습니다: " +
       others.map(o => o.start + "–" + o.end + " " + o.applicant).join(", ");
   } else n.hidden = true;
+}
+
+/* =========================================================
+   9-B. 인쇄
+   =========================================================
+   달력을 그냥 인쇄하면 세로 용지에 우측 상세까지 끼어들어 칸이 눌리고
+   글씨가 안 보였다. 그래서 인쇄 방식을 골라서 찍는다.
+
+     달력      가로 용지 · 우측 상세를 빼고 칸을 키운다 · "+N건 더" 없이 다 편다
+     날짜별 상세 날짜를 골라 그 날 예약을 표로 찍는다 (메모까지 나온다)
+     목록      지금 보고 있는 목록 화면(조회용/수익집계용) 그대로
+   ───────────────────────────────────────────────────────── */
+function openPrintBox() {
+  $("#printKind").value = view.pane === "list" ? "list" : "cal";
+  renderPrintDatePicker();
+  updatePrintBoxUI();
+  $("#printBox").hidden = false;
+}
+function updatePrintBoxUI() {
+  const k = $("#printKind").value;
+  $("#printDateBox").hidden = k !== "detail";
+  $("#printHint").textContent =
+    k === "cal"    ? "가로 용지로 한 달 달력을 찍습니다. 한 칸에 그 날 행사를 모두 펼쳐 보여줍니다." :
+    k === "detail" ? "고른 날짜만 세로 용지에 표로 찍습니다. 메모와 공과금까지 함께 나옵니다." :
+                     "목록 탭에서 고른 종류(" + LIST_MODES[view.listMode].name + ")와 조건 그대로 찍습니다.";
+}
+/* 그 달에서 예약이 있는 날만 고를 수 있게 늘어놓는다 */
+function renderPrintDatePicker() {
+  const y = view.year, m = view.month;
+  const byDate = {};
+  monthReservations(y, m).forEach(r => (byDate[r.date] = byDate[r.date] || []).push(r));
+  const dates = Object.keys(byDate).sort();
+  if (!dates.length) {
+    $("#printDateList").innerHTML = '<p class="empty">이 달에는 예약이 없습니다</p>';
+    return;
+  }
+  $("#printDateList").innerHTML = dates.map(d => {
+    const all = byDate[d];
+    const ev = all.filter(r => (r.kind || "행사") !== "준비").length;
+    const pr = all.length - ev;
+    const dt = parseYmd(d), hn = holidayName(d);
+    return '<label class="prep-toggle" style="padding:2px 0">' +
+      '<input type="checkbox" data-pd="' + d + '" checked>' +
+      "<span>" + dt.getDate() + "일 (" + DOW[dt.getDay()] + ")" +
+      (hn ? " · " + esc(hn) : "") +
+      ' <span class="why" style="display:inline">행사 ' + ev + (pr ? " · 준비 " + pr : "") + "</span></span></label>";
+  }).join("");
+}
+function pickedPrintDates() {
+  return $$("#printDateList [data-pd]").filter(el => el.checked).map(el => el.dataset.pd);
+}
+
+/* 날짜별 상세 인쇄판을 만든다 */
+function buildPrintDetail(dates) {
+  const cols = LIST_MODES[view.listMode === "income" ? "income" : "view"].cols
+    .filter(k => k !== "date" && k !== "dow" && k !== "memo");
+  // 날마다 표가 따로라 그냥 두면 열 폭이 제각각이 된다. 폭을 정해 한 장처럼 맞춘다
+  const wOf = k => k === "time" ? 12 : k === "fac" ? 12 : k === "kind" ? 6 : k === "head" ? 6 :
+                   k === "purpose" ? 16 : k === "discount" ? 11 : LIST_COLS[k].sum ? 10 : 18;
+  const wsum = cols.reduce((a, k) => a + wOf(k), 0);
+  const group = "<colgroup>" + cols.map(k => '<col style="width:' + (wOf(k) / wsum * 100).toFixed(2) + '%">').join("") + "</colgroup>";
+  const head = "<tr>" + cols.map(k =>
+    "<th" + (LIST_COLS[k].cls === "num" ? ' style="text-align:right"' : "") + ">" + LIST_COLS[k].label + "</th>"
+  ).join("") + "</tr>";
+
+  const body = dates.map(d => {
+    const items = state.reservations.filter(r => r.date === d).sort(byTime);
+    const dt = parseYmd(d), w = dt.getDay(), hn = holidayName(d);
+    const dowCls = hn || w === 0 ? "pd-sun" : (w === 6 ? "pd-sat" : "");
+    const live = items.filter(r => r.status !== "취소");
+    const tot = live.reduce((a, r) => a + feeOf(r), 0);
+    const rows = items.map(row => {
+      const r = row, x = listRow(r);
+      const tds = cols.map(k => {
+        const c = LIST_COLS[k];
+        return '<td class="' + c.cls + '">' + esc(k === "kind" ? x.kind : listCellText(x, k)) + "</td>";
+      }).join("");
+      const memo = r.memo
+        ? '<tr class="' + ((r.kind || "행사") === "준비" ? "is-prep" : "") + '"><td class="memo" colspan="' + cols.length +
+          '"><b>메모</b>' + esc(r.memo) + "</td></tr>"
+        : "";
+      return '<tr class="' + ((r.kind || "행사") === "준비" ? "is-prep" : "") + '">' + tds + "</tr>" + memo;
+    }).join("");
+    return '<section class="pd-day">' +
+      "<h3><span class=\"" + dowCls + '">' + (dt.getMonth() + 1) + "월 " + dt.getDate() + "일 (" + DOW[w] + ")</span>" +
+      (hn ? '<span class="pd-sun">' + esc(hn) + "</span>" : "") +
+      "<small>" + items.length + "건 · 이용료 " + won(tot) + "원</small></h3>" +
+      (items.length ? '<table style="table-layout:fixed">' + group + head + rows + "</table>" : '<p class="pd-empty">예약 없음</p>') +
+      "</section>";
+  }).join("");
+
+  $("#printArea").innerHTML =
+    '<div class="pd-head"><h1>' + view.year + "년 " + view.month + "월 시설 예약 상세</h1>" +
+    "<span>" + dates.length + "일 · " + LIST_MODES[view.listMode === "income" ? "income" : "view"].name + "</span>" +
+    '<span style="margin-left:auto">' + esc(state.settings.orgNote || "") + "</span></div>" + body;
+}
+
+/* 인쇄 실행. 끝나면 화면을 원래대로 돌려놓는다 */
+function doPrint(kind) {
+  $("#printBox").hidden = true;
+  if (kind === "detail") {
+    const dates = pickedPrintDates();
+    if (!dates.length) { toast("인쇄할 날짜를 하나 이상 고르세요"); return; }
+    buildPrintDetail(dates);
+    $("#printPage").textContent = "@page{size:A4 portrait;margin:10mm}";
+    document.body.classList.add("print-detail");
+  } else if (kind === "list") {
+    if (view.pane !== "list") setPane("list");
+    renderList();
+    $("#printPage").textContent = "@page{size:A4 landscape;margin:8mm}";
+    document.body.classList.add("print-list");
+  } else {
+    if (view.pane !== "calendar") setPane("calendar");
+    PRINT.all = true;            // "+N건 더" 로 감추지 않고 다 편다
+    renderCalendar();
+    $("#printPage").textContent = "@page{size:A4 landscape;margin:7mm}";
+    document.body.classList.add("print-cal");
+  }
+  const done = () => {
+    document.body.classList.remove("print-cal", "print-list", "print-detail");
+    $("#printPage").textContent = "";
+    if (PRINT.all) { PRINT.all = false; renderCalendar(); }
+    $("#printArea").innerHTML = "";
+    window.removeEventListener("afterprint", done);
+  };
+  window.addEventListener("afterprint", done);
+  // 화면이 다시 그려진 다음에 인쇄 창을 띄운다
+  setTimeout(() => { window.print(); setTimeout(done, 800); }, 60);
+}
+
+/* =========================================================
+   9-C. 내보내기 (엑셀 · CSV)
+   =========================================================
+   엑셀은 표 모양 그대로 넘긴다 — 같은 날짜는 날짜·요일 칸을 하나로 합치고,
+   열 너비를 값의 길이에 맞추고, 준비 건은 노란 테두리로 강조한다.
+   CSV 는 글자만 담는 형식이라 색도 병합도 담을 수 없다. 같은 날짜의 날짜·요일을
+   비워 두는 것까지만 하고, 나머지가 필요하면 엑셀 쪽을 쓴다 */
+
+/* 한글은 두 칸으로 세어야 열 너비가 맞는다 */
+function textWidth(v) {
+  let n = 0;
+  for (const ch of String(v == null ? "" : v)) n += /[\u1100-\u11FF\u3000-\u303F\uAC00-\uD7AF\uFF00-\uFFEF]/.test(ch) ? 2 : 1;
+  return n;
+}
+function xesc(v) {
+  return esc(String(v == null ? "" : v)).replace(/\n/g, "<br>");
+}
+
+function exportTable(fmt, rows, mode, periodLabel) {
+  const m = LIST_MODES[mode] ? mode : "view";
+  const cols = LIST_MODES[m].cols;
+  const data = rows.map(listRow);
+  const head = cols.map(k => LIST_COLS[k].label);
+  const name = "예약내역_" + (periodLabel || "").replace(/[^0-9가-힣]/g, "") + "_" + LIST_MODES[m].name;
+
+  if (!data.length) { toast("내보낼 예약이 없습니다"); return; }
+
+  // 같은 날짜가 몇 줄 이어지는지 — 병합에 쓴다
+  const span = data.map(() => 1);
+  for (let i = 0; i < data.length; i++) {
+    if (span[i] === 0) continue;
+    let n = 1;
+    while (i + n < data.length && data[i + n].date === data[i].date) { span[i + n] = 0; n++; }
+    span[i] = n;
+  }
+
+  if (fmt === "csv") {
+    const body = data.map((row, i) => cols.map(k => {
+      // 같은 날짜의 둘째 줄부터는 날짜·요일을 비운다 (병합해서 보이도록)
+      if ((k === "date" || k === "dow") && span[i] === 0) return "";
+      if (k === "kind") return row.kind === "준비" ? "[준비]" : "행사";
+      return listCellText(row, k);
+    }));
+    const inViewer = (typeof claude !== "undefined" && !!claude.use);
+    if (inViewer) {
+      const tsv = [head, ...body].map(r => r.map(c => String(c).replace(/[\t\r\n]/g, " ")).join("\t")).join("\n");
+      download(name, tsv, "text/plain");
+    } else {
+      const csv = [head, ...body].map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(",")).join("\r\n");
+      download(name + ".csv", "\ufeff" + csv, "text/csv");
+    }
+    return;
+  }
+
+  // ── 엑셀 (표 서식을 담을 수 있는 형식으로 넘긴다. 엑셀에서 바로 열린다)
+  const inViewer = (typeof claude !== "undefined" && !!claude.use);
+  if (inViewer) {   // 게시된 화면에서는 파일 저장이 막혀 있어 붙여넣기용 표로 건넨다
+    const tsv = [head, ...data.map(row => cols.map(k => listCellText(row, k)))]
+      .map(r => r.map(c => String(c).replace(/[\t\r\n]/g, " ")).join("\t")).join("\n");
+    download(name, tsv, "text/plain");
+    return;
+  }
+  // 열 너비 — 그 열에 들어간 값 중 가장 긴 것에 맞춘다
+  const widths = cols.map(k => {
+    let w = textWidth(LIST_COLS[k].label);
+    data.forEach(row => {
+      const t = listCellText(row, k);
+      String(t).split("\n").forEach(line => { w = Math.max(w, textWidth(line)); });
+    });
+    return Math.min(60, w + 2) * 8;   // 글자 한 칸을 8px 로 본다
+  });
+
+  const YL = "#C8961A", YB = "#FCF5E2";
+  const body = data.map((row, i) => {
+    const prep = row.kind === "준비";
+    const plain = "border:.5pt solid #999999;";
+    const bd = prep ? "border:2px solid " + YL + ";background:" + YB + ";" : plain;
+    return "<tr>" + cols.map(k => {
+      const merged = (k === "date" || k === "dow");
+      if (merged && span[i] === 0) return "";
+      const rs = merged && span[i] > 1 ? ' rowspan="' + span[i] + '"' : "";
+      const c = LIST_COLS[k];
+      const align = c.cls === "num" ? "right" : "left";
+      const fmtAttr = c.sum ? ' x:num style="mso-number-format:\'#,##0\';' : ' style="';
+      const val = c.sum ? String(row[k] || 0) : listCellText(row, k);
+      // 날짜·요일은 여러 줄을 합친 칸이라 준비 강조 대신 보통 테두리를 쓴다
+      return "<td" + rs + fmtAttr + (merged ? plain : bd) + "text-align:" + align + ";vertical-align:top;" +
+        (c.cls === "memo" ? "mso-wrap-text:yes;" : "white-space:nowrap;") + '">' + xesc(val) + "</td>";
+    }).join("") + "</tr>";
+  }).join("");
+
+  const sums = cols.map(k => LIST_COLS[k].sum ? data.reduce((a, x) => a + Number(x[k] || 0), 0) : null);
+  const foot = sums.some(v => v != null)
+    ? '<tr><td style="border:.5pt solid #999999;background:#EEEEEE;font-weight:bold">' + data.length + "건 합계</td>" +
+      cols.slice(1).map((k, i) => '<td style="border:.5pt solid #999999;background:#EEEEEE;font-weight:bold;text-align:right">' +
+        (sums[i + 1] != null ? won(sums[i + 1]) : "") + "</td>").join("") + "</tr>"
+    : "";
+
+  const html =
+    '<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8">' +
+    "<style>td,th{font-family:'맑은 고딕';font-size:10pt}</style></head><body>" +
+    "<table border=1>" +
+    "<colgroup>" + widths.map(w => '<col width="' + w + '">').join("") + "</colgroup>" +
+    '<tr><td colspan="' + cols.length + '" style="font-size:13pt;font-weight:bold;border:none">' +
+      xesc((periodLabel || "") + " 시설 예약 " + LIST_MODES[m].name + " 목록") + "</td></tr>" +
+    "<tr>" + cols.map(k => '<th style="background:#DDDDDD;border:.5pt solid #999999;font-weight:bold">' +
+      xesc(LIST_COLS[k].label) + "</th>").join("") + "</tr>" +
+    body + foot +
+    "</table></body></html>";
+  download(name + ".xls", "\ufeff" + html, "application/vnd.ms-excel");
 }
 
 /* =========================================================
@@ -2558,13 +3086,37 @@ function init() {
   // 목록 필터
   ["#q", "#fFacility", "#fKindFilter", "#fStatus", "#fRange"].forEach(sel =>
     $(sel).addEventListener("input", renderList));
+  // 목록 종류 — 조회용 / 수익집계용
+  $("#listModeSeg").addEventListener("click", e => {
+    const b = e.target.closest("[data-lm]");
+    if (!b) return;
+    view.listMode = b.dataset.lm;
+    renderList();
+  });
+  $("#listPrint").addEventListener("click", () => doPrint("list"));
+  $("#listXls").addEventListener("click", () => exportTable("xls", listRows(), view.listMode, listPeriodLabel()));
+  $("#listCsv").addEventListener("click", () => exportTable("csv", listRows(), view.listMode, listPeriodLabel()));
+
+  // 공휴일 지정 — 대체공휴일·임시공휴일은 미리 알 수 없어서 손으로 넣는다
+  $("#railHoliday").addEventListener("click", () => {
+    if (!view.selected) return;
+    if (!RUNTIME.writable) { toast("조회 전용이라 고칠 수 없습니다"); return; }
+    const on = toggleHoliday(view.selected);
+    save(); saveNow(true);
+    if (view.pane === "settings") renderSettings();
+    renderAll();
+    toast(view.selected + (on ? " 을 공휴일로 지정했습니다" : " 을 공휴일에서 뺐습니다"));
+  });
 
   // 모달
   $("#closeModal").addEventListener("click", closeModal);
   $("#cancelModal").addEventListener("click", closeModal);
-  $("#modal").addEventListener("click", e => { if (e.target.id === "modal") closeModal(); });
+  /* 등록창은 바깥을 눌렀다고 닫지 않는다.
+     글자를 끌어 고르다가 손을 창 밖에서 떼면 그것도 바깥 클릭으로 잡혀서,
+     적던 내용이 통째로 날아갔다(‘튕김’). 닫기는 닫기 ✕ · 취소 · Esc 로만 한다 */
   document.addEventListener("keydown", e => {
     if (e.key === "Escape" && !$("#copyBox").hidden) { $("#copyBox").hidden = true; return; }
+    if (e.key === "Escape" && !$("#printBox").hidden) { $("#printBox").hidden = true; return; }
     if (e.key === "Escape" && !$("#modal").hidden) closeModal();
     if ($("#modal").hidden && !/input|select|textarea/i.test(document.activeElement.tagName)) {
       if (e.key === "ArrowLeft") shiftMonth(-1);
@@ -2584,16 +3136,6 @@ function init() {
     btn.setAttribute("aria-expanded", String(!box.hidden));
   });
 
-  // 산정 이용료 상세보기 — 어떻게 나온 금액인지 접었다 폈다 한다
-  $("#feeToggle").addEventListener("click", () => {
-    const box = $("#feeBreakdown"), btn = $("#feeToggle");
-    box.hidden = !box.hidden;
-    btn.textContent = box.hidden ? "상세보기" : "접기";
-    btn.setAttribute("aria-expanded", String(!box.hidden));
-  });
-  ["#fPrepOn", "#fPrepBefore", "#fPrepAfter"].forEach(sel =>
-    $(sel).addEventListener("input", () => { updateKindUI(); updateFeePreview(); }));
-
   $("#resForm").addEventListener("submit", e => {
     e.preventDefault();
     if (!RUNTIME.writable) { toast("조회 전용이라 저장할 수 없습니다"); return; }
@@ -2602,12 +3144,11 @@ function init() {
     if (!r.applicant) { toast("신청 단체를 입력하세요"); return; }
     const i = state.reservations.findIndex(x => x.id === r.id);
     if (i >= 0) state.reservations[i] = r; else state.reservations.push(r);
-    const n = rebuildPrepRows(r);
     save(); saveNow(true);      // 예약은 기다리지 않고 바로 서버에 올린다
     closeModal();
     view.year = Number(r.date.slice(0, 4)); view.month = Number(r.date.slice(5, 7)); view.selected = r.date;
     renderAll();
-    toast((i >= 0 ? "수정했습니다" : "등록했습니다") + (n ? " · 준비시간 " + n + "건 포함" : ""));
+    toast(i >= 0 ? "수정했습니다" : "등록했습니다");
   });
   $("#deleteRes").addEventListener("click", () => {
     if (!view.editingId || !RUNTIME.writable) return;
@@ -2675,8 +3216,9 @@ function init() {
       state.settings[map[t.id]] = map[t.id] === "orgNote" ? t.value : Number(t.value);
       save(); renderAll(); return;
     }
-    if (t.id === "setHolidays") {
-      state.settings.holidays = t.value.split("\n").map(x => x.trim()).filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x));
+    if (t.id === "setHolidays" || t.id === "setHolidayOff") {
+      const key = t.id === "setHolidays" ? "holidays" : "holidayOff";
+      state.settings[key] = t.value.split("\n").map(x => x.trim()).filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x));
       save(); renderAll();
     }
   });
@@ -2776,28 +3318,29 @@ function init() {
     download("예약대장_" + view.year + pad(view.month) + ".json",
       JSON.stringify(state, null, 2), "application/json");
   });
-  $("#exportCsv").addEventListener("click", () => {
-    const rows = monthReservations(view.year, view.month)
-      .sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
-    const head = ["날짜", "요일", "시작", "종료", "시설", "구분", "신청 단체", "목적", "인원", "감면", "이용료", "상태", "메모"];
-    const body = rows.map(r => {
-      const f = facilityOf(r.facilityId), d = discountOf(r.discountId);
-      return [r.date, DOW[parseYmd(r.date).getDay()], r.start, r.end, f ? f.name : "", r.kind || "행사", r.applicant,
-        r.purpose || "", r.headcount || "", d.name + (d.rate ? " " + d.rate + "%" : ""),
-        feeOf(r), r.status, (r.memo || "").replace(/\n/g, " ")];
-    });
-    const inViewer = (typeof claude !== "undefined" && !!claude.use);
-    if (inViewer) {
-      // 엑셀에 바로 붙여넣도록 탭으로 구분
-      const tsv = [head, ...body].map(r => r.map(c => String(c).replace(/[\t\r\n]/g, " ")).join("\t")).join("\n");
-      download("예약내역_" + view.year + pad(view.month), tsv, "text/plain");
-    } else {
-      const csv = [head, ...body].map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(",")).join("\r\n");
-      download("예약내역_" + view.year + pad(view.month) + ".csv", "﻿" + csv, "text/csv");
-    }
-  });
+  // 달력 화면의 내보내기는 그 달 전체를 수익집계용으로 뽑는다
+  const monthRows = () => monthReservations(view.year, view.month).slice().sort(byDateTime);
+  $("#exportXls").addEventListener("click", () =>
+    exportTable("xls", monthRows(), "income", view.year + "년 " + view.month + "월"));
+  $("#exportCsv").addEventListener("click", () =>
+    exportTable("csv", monthRows(), "income", view.year + "년 " + view.month + "월"));
+
+  // 인쇄 — 방식을 고른 뒤 찍는다
+  $("#printBtn").addEventListener("click", openPrintBox);
+  $("#printKind").addEventListener("change", updatePrintBoxUI);
+  $("#printClose").addEventListener("click", () => { $("#printBox").hidden = true; });
+  $("#printCancel").addEventListener("click", () => { $("#printBox").hidden = true; });
+  $("#printGo").addEventListener("click", () => doPrint($("#printKind").value));
+  $("#pdAll").addEventListener("click", () => $$("#printDateList [data-pd]").forEach(el => { el.checked = true; }));
+  $("#pdNone").addEventListener("click", () => $$("#printDateList [data-pd]").forEach(el => { el.checked = false; }));
+
   $("#copyClose").addEventListener("click", () => { $("#copyBox").hidden = true; });
-  $("#copyBox").addEventListener("click", e => { if (e.target.id === "copyBox") $("#copyBox").hidden = true; });
+  // 누른 자리와 뗀 자리가 모두 바깥일 때만 닫는다 (드래그로 닫히지 않게)
+  let copyDownOutside = false;
+  $("#copyBox").addEventListener("mousedown", e => { copyDownOutside = (e.target.id === "copyBox"); });
+  $("#copyBox").addEventListener("click", e => {
+    if (e.target.id === "copyBox" && copyDownOutside) $("#copyBox").hidden = true;
+  });
   $("#copyDo").addEventListener("click", async () => {
     const ta = $("#copyText");
     ta.focus(); ta.select();
