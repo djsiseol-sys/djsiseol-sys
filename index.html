@@ -166,17 +166,17 @@ main{max-width:1440px;margin:0 auto;padding:18px 20px 60px}
 .cell.selected{box-shadow:inset 0 0 0 2px var(--accent)}
 .cell-date{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2)}
 .cell.out .cell-date{color:var(--faint)}
-.cell-date b{font-weight:500;font-size:14px}
-.cell.sat .cell-date b{color:var(--sat)}
-.cell.sun .cell-date b,.cell.hol .cell-date b{color:var(--sun)}
-.cell.out .cell-date b{opacity:.55}
-.cell.today .cell-date b{background:var(--accent);color:var(--surface);border-radius:4px;padding:0 5px}
-.cell.today.sat .cell-date b,.cell.today.sun .cell-date b,.cell.today.hol .cell-date b{color:var(--surface)}
+.cell-date > b{font-weight:500;font-size:14px}
+.cell.sat .cell-date > b{color:var(--sat)}
+.cell.sun .cell-date > b,.cell.hol .cell-date > b{color:var(--sun)}
+.cell.out .cell-date > b{opacity:.55}
+.cell.today .cell-date > b{background:var(--accent);color:var(--surface);border-radius:4px;padding:0 5px}
+.cell.today.sat .cell-date > b,.cell.today.sun .cell-date > b,.cell.today.hol .cell-date > b{color:var(--surface)}
 .holiday-tag{font-size:10px;color:var(--sun);letter-spacing:-.01em}
 /* 그 날 할 일을 다 마쳤다는 표시. 우측 상세의 '확인' 으로 켜고 끈다 */
 .cell-done{
   position:absolute;right:5px;bottom:4px;line-height:1;
-  font-size:15px;font-weight:700;color:var(--accent);
+  font-size:15px;font-weight:700;color:var(--sun);
 }
 .cell.out .cell-done{opacity:.45}
 .cell.is-done{padding-bottom:21px}
@@ -266,14 +266,15 @@ td.t{font-family:"IBM Plex Mono",monospace;white-space:nowrap}
 .filters .seg button+button{border-left:1px solid var(--line-strong)}
 .filters .seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent-ink);font-weight:500}
 /* 준비 건은 목록에서 노란 테두리로 강조한다 (인쇄·엑셀에서도 같게 나온다) */
-tbody tr.is-prep td{background:var(--prep-soft);border-top:2px solid var(--prep-line);border-bottom:2px solid var(--prep-line)}
-tbody tr.is-prep:hover td{background:var(--prep-soft)}
+/* 준비 건은 테두리로만 구분한다. 바탕은 다른 줄과 같다 */
+tbody tr.is-prep td{border-top:2px solid var(--prep-line);border-bottom:2px solid var(--prep-line)}
 tbody tr.is-prep td:first-child{border-left:2px solid var(--prep-line)}
 tbody tr.is-prep td:last-child{border-right:2px solid var(--prep-line)}
 tfoot td{font-weight:600;background:var(--surface-2);border-top:1px solid var(--line-strong)}
+tfoot td.foot-label{white-space:nowrap;color:var(--ink-2)}
 td.memo{white-space:pre-wrap;word-break:break-word;min-width:180px}
 /* 목록 맨 왼쪽 — 그 날짜를 확인 완료로 표시했는지 */
-td.done,th.done{width:26px;text-align:center;padding-left:6px;padding-right:6px;color:var(--accent);font-weight:700}
+td.done,th.done{width:30px;text-align:center;padding-left:6px;padding-right:6px;color:var(--sun);font-weight:700}
 
 /* ---------- settings ---------- */
 .settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;align-items:start}
@@ -309,8 +310,10 @@ td.done,th.done{width:26px;text-align:center;padding-left:6px;padding-right:6px;
 .modal-foot{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;align-items:center}
 .modal-foot .spacer{margin-left:auto}
 .fee-box{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
-.timepick{display:flex;align-items:center;gap:5px}
-.timepick select{flex:0 1 auto;min-width:0;padding-right:4px}
+/* 24시간제 시·분 고르기. 칸이 좁아지면 글자가 잘리는 대신 두 줄로 접힌다
+   (설정 화면의 시간대 칸이 좁을 때) */
+.timepick{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.timepick select{flex:1 1 52px;width:auto;min-width:52px;padding-right:4px}
 .timepick span{font-size:12px;color:var(--muted);flex:0 0 auto}
 .fee-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .fee-head h3{margin:0}
@@ -375,7 +378,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 .pd-day table{width:100%;border-collapse:collapse;font-size:11px}
 .pd-day th,.pd-day td{border:1px solid #bbb;padding:3px 6px;text-align:left;vertical-align:top}
 .pd-day th{background:#f4f4f4;font-size:10px;font-weight:600;color:#333;white-space:nowrap}
-.pd-day tr.is-prep td{background:#FCF5E2;border-color:#C8961A;border-width:2px}
+.pd-day tr.is-prep td{border-color:#C8961A;border-width:2px}
 .pd-day td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .pd-day td.memo{background:#F3F6F8;font-size:11px;white-space:pre-wrap}
 .pd-day td.memo b{font-size:10px;letter-spacing:.06em;margin-right:6px}
@@ -411,8 +414,8 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
   .pc-page .cell{padding:3px 4px;gap:2px;border-color:#aaa}
   .pc-page .cell.out{background:#f2f2f2}
   .pc-page .cell-date{font-size:11px}
-  .pc-page .cell-date b{font-size:13px;font-weight:700}
-  .pc-page .cell.today .cell-date b{background:none;color:#000;border:1px solid #000;padding:0 3px}
+  .pc-page .cell-date > b{font-size:13px;font-weight:700}
+  .pc-page .cell.today .cell-date > b{background:none;color:#000;border:1px solid #000;padding:0 3px}
   .pc-page .cell-count{font-size:9px}
   .pc-page .cell-done{font-size:14px}
   .pc-page .chip{font-size:12px;padding:2px 4px;line-height:1.32;box-shadow:inset 3px 0 0 var(--fc-line)}
@@ -499,7 +502,6 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
           <div class="legend" id="calLegend">
             <span id="facLegend"></span>
             <span class="legend-sep"></span>
-            <span><i class="lg-cancel"></i>취소</span>
             <span><i class="lg-conflict"></i>시간 중복</span>
           </div>
         </div>
@@ -565,11 +567,6 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
           <option value="">행사 · 준비 전체</option>
           <option value="행사">행사만</option>
           <option value="준비">준비만</option>
-        </select>
-        <select id="fStatus">
-          <option value="">취소 뺀 전체</option>
-          <option value="__all">취소 포함 전체</option>
-          <option value="취소">취소만</option>
         </select>
         <select id="fRange">
           <option value="month">선택한 달</option>
@@ -669,30 +666,30 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
           </div>
           <div class="row3">
             <div class="field">
-              <label for="setSumEarly">하계 조기 시작</label>
-              <input type="time" id="setSumEarly" class="mono">
+              <label for="setSumEarlyH">하계 조기 시작</label>
+              <div class="timepick"><select id="setSumEarlyH" class="mono"></select><span>시</span><select id="setSumEarlyM" class="mono"></select><span>분</span></div>
             </div>
             <div class="field">
-              <label for="setSumDay">하계 주간 시작</label>
-              <input type="time" id="setSumDay" class="mono">
+              <label for="setSumDayH">하계 주간 시작</label>
+              <div class="timepick"><select id="setSumDayH" class="mono"></select><span>시</span><select id="setSumDayM" class="mono"></select><span>분</span></div>
             </div>
             <div class="field">
-              <label for="setSumNight">하계 야간 시작</label>
-              <input type="time" id="setSumNight" class="mono">
+              <label for="setSumNightH">하계 야간 시작</label>
+              <div class="timepick"><select id="setSumNightH" class="mono"></select><span>시</span><select id="setSumNightM" class="mono"></select><span>분</span></div>
             </div>
           </div>
           <div class="row3">
             <div class="field">
-              <label for="setWinEarly">동계 조기 시작</label>
-              <input type="time" id="setWinEarly" class="mono">
+              <label for="setWinEarlyH">동계 조기 시작</label>
+              <div class="timepick"><select id="setWinEarlyH" class="mono"></select><span>시</span><select id="setWinEarlyM" class="mono"></select><span>분</span></div>
             </div>
             <div class="field">
-              <label for="setWinDay">동계 주간 시작</label>
-              <input type="time" id="setWinDay" class="mono">
+              <label for="setWinDayH">동계 주간 시작</label>
+              <div class="timepick"><select id="setWinDayH" class="mono"></select><span>시</span><select id="setWinDayM" class="mono"></select><span>분</span></div>
             </div>
             <div class="field">
-              <label for="setWinNight">동계 야간 시작</label>
-              <input type="time" id="setWinNight" class="mono">
+              <label for="setWinNightH">동계 야간 시작</label>
+              <div class="timepick"><select id="setWinNightH" class="mono"></select><span>시</span><select id="setWinNightM" class="mono"></select><span>분</span></div>
             </div>
           </div>
           <div class="row2">
@@ -910,7 +907,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
         </div>
       </div>
 
-      <div class="row3">
+      <div class="row2">
         <div class="field">
           <label for="fFac">시설</label>
           <select id="fFac" required></select>
@@ -921,12 +918,6 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
             <option>행사</option><option>준비</option>
           </select>
           <span class="hint" id="kindHint"></span>
-        </div>
-        <div class="field">
-          <label for="fStatusSel">상태</label>
-          <select id="fStatusSel">
-            <option>신청</option><option>승인</option><option>취소</option>
-          </select>
         </div>
       </div>
 
@@ -1091,7 +1082,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 화면에 띄우는 판 번호. **내용을 고치면 여기를 올린다.**
    "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을 열고 있는 것인데,
    이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-08-23.3";
+const APP_VERSION = "2026-08-23.4";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -2252,8 +2243,8 @@ function renderSummary() {
   // 공과금 = 전기료 + 수도료 (실비). 이용료와 따로 볼 수 있게 떼어 놓는다
   const util = live.reduce((n, r) => n + feeParts(r).util, 0);
   $("#summary").innerHTML =
-    stat("행사", ev.length + '<small>건 ·</small>') +
-    stat("준비시간", pr.length + '<small>건 .</small>') +
+    stat("행사", ev.length + '<small>건</small>') +
+    stat("준비시간", pr.length + '<small>건</small>') +
     stat("행사 이용료", won(fee(ev)) + '<small>원</small>') +
     stat("준비시간 이용료", won(fee(pr)) + '<small>원</small>') +
     stat("공과금 (전기+수도)", won(util) + '<small>원</small>') +
@@ -2318,7 +2309,9 @@ function renderRail() {
       '<div class="item-name">' + esc(r.applicant) + (r.purpose ? ' <span class="item-fac">' + esc(r.purpose) + "</span>" : "") + "</div>" +
       '<div class="item-meta">' +
         (r.headcount ? "<span>" + r.headcount + "명</span>" : "") +
-        (Number(dc.rate) > 0 ? "<span>감면 " + esc(dc.name) + " " + dc.rate + "%</span>" : "") +
+        (Number(dc.rate) > 0
+          ? "<span>감면 " + esc(dc.name) + (String(dc.name).includes(dc.rate + "%") ? "" : " " + dc.rate + "%") + "</span>"
+          : "") +
         (fp.util ? "<span>공과금 " + won(fp.util) + "원</span>" : "") +
       "</div>" +
       '<div class="item-fee">' + won(fp.total) + "원" + (r.feeOverride !== "" && r.feeOverride != null ? " (직접 입력)" : "") +
@@ -2400,14 +2393,16 @@ function listCellText(row, key) {
 /* 지금 목록 화면의 조건에 맞는 예약 */
 function listRows() {
   const q = $("#q").value.trim().toLowerCase();
-  const fFac = $("#fFacility").value, fSt = $("#fStatus").value, rng = $("#fRange").value;
+  const fFac = $("#fFacility").value, rng = $("#fRange").value;
   const fKind = $("#fKindFilter").value;
   let rows = state.reservations.slice();
   if (rng === "month") rows = rows.filter(r => r.date.startsWith(view.year + "-" + pad(view.month)));
   if (fFac) rows = rows.filter(r => r.facilityId === fFac);
-  // 상태는 화면에서 쓰지 않기로 했다. 취소만 넣고 뺀다
-  if (fSt === "취소") rows = rows.filter(r => r.status === "취소");
-  else if (fSt !== "__all") rows = rows.filter(r => r.status !== "취소");
+  // 취소라는 개념을 쓰지 않기로 해서 거르기 선택창을 없앴다.
+  // 예전 자료에 취소가 남아 있으면 합계가 부풀지 않게 빼되, 몇 건인지는 알려 준다
+  const dropped = rows.filter(r => r.status === "취소").length;
+  rows = rows.filter(r => r.status !== "취소");
+  rows.cancelledHidden = dropped;
   if (fKind) rows = rows.filter(r => (r.kind || "행사") === fKind);
   if (q) rows = rows.filter(r => [r.applicant, r.purpose, r.memo].join(" ").toLowerCase().includes(q));
   rows.sort(byDateTime);
@@ -2417,7 +2412,8 @@ function listRows() {
 function renderList() {
   const mode = LIST_MODES[view.listMode] ? view.listMode : "view";
   const cols = LIST_MODES[mode].cols;
-  const rows = listRows().map(listRow);
+  const src = listRows();
+  const rows = src.map(listRow);
 
   $$("#listModeSeg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lm === mode)));
 
@@ -2431,7 +2427,6 @@ function renderList() {
       ((r.kind || "행사") === "준비" ? ' class="is-prep"' : "") + ">" +
       cols.map(k => {
         const c = LIST_COLS[k];
-        if (k === "kind") return "<td>" + (r.kind === "준비" ? '<span class="kindtag">준비</span>' : "행사") + "</td>";
         if (k === "applicant" && r.status === "취소")
           return "<td><s>" + esc(row.applicant) + "</s></td>";
         return '<td class="' + c.cls + '">' + esc(listCellText(row, k)) + "</td>";
@@ -2440,27 +2435,40 @@ function renderList() {
     "</tr>";
   }).join("") : '<tr><td colspan="' + (cols.length + 1) + '" class="empty">조건에 맞는 예약이 없습니다</td></tr>';
 
-  // 합계 줄 — 금액 열이 있을 때만 (수익집계용)
-  const sumCols = cols.filter(k => LIST_COLS[k].sum);
-  $("#listFoot").innerHTML = (rows.length && sumCols.length)
-    ? "<tr>" + cols.map((k, i) => {
+  // 합계 줄 — 금액 열이 있을 때만 (수익집계용).
+  // "N건 합계" 를 첫 칸에 넣으면 좁은 완료 칸에서 글자가 세로로 접힌다.
+  // 금액이 시작되기 전 칸을 하나로 합쳐서 한 줄로 눕힌다
+  const firstSum = cols.findIndex(k => LIST_COLS[k].sum);
+  $("#listFoot").innerHTML = (rows.length && firstSum >= 0)
+    ? "<tr>" +
+      '<td class="foot-label" colspan="' + firstSum + '">' + rows.length + "건 합계</td>" +
+      cols.slice(firstSum).map(k => {
         const c = LIST_COLS[k];
-        if (c.sum) {
-          const v = rows.reduce((a, x) => a + Number(x[k] || 0), 0);
-          // 칸을 비우는 열은 합계도 0이면 비운다. 위는 비었는데 아래만 0이면 어색하다
-          return '<td class="num">' + ((c.blankZero && !v) ? "" : won(v)) + "</td>";
-        }
-        return "<td>" + (i === 0 ? rows.length + "건 합계" : "") + "</td>";
+        if (!c.sum) return "<td></td>";
+        const v = rows.reduce((a, x) => a + Number(x[k] || 0), 0);
+        // 칸을 비우는 열은 합계도 0이면 비운다. 위는 비었는데 아래만 0이면 어색하다
+        return '<td class="num">' + ((c.blankZero && !v) ? "" : won(v)) + "</td>";
       }).join("") + "<td></td></tr>"
     : "";
 
-  const useSum = rows.reduce((a, x) => a + x.use, 0);
-  const anSum  = rows.reduce((a, x) => a + x.annex, 0);
-  const utSum  = rows.reduce((a, x) => a + x.util, 0);
-  $("#listCount").textContent = rows.length + "건 · 이용료 " + won(useSum) + "원" +
-    (anSum ? " · 부속시설 " + won(anSum) + "원" : "") +
-    (utSum ? " · 공과금 " + won(utSum) + "원" : "") +
-    " · 합계 " + won(useSum + anSum + utSum) + "원";
+  // 위쪽 요약도 보는 눈에 맞춘다.
+  // 조회용은 금액을 보는 화면이 아니므로 건수만 알려 준다
+  const nEv = rows.filter(x => x.kind !== "준비").length;
+  const hidden = src.cancelledHidden
+    ? " · 취소 " + src.cancelledHidden + "건 숨김"   // 예전 자료에 남아 있을 때만 나온다
+    : "";
+  if (mode === "income") {
+    const useSum = rows.reduce((a, x) => a + x.use, 0);
+    const anSum  = rows.reduce((a, x) => a + x.annex, 0);
+    const utSum  = rows.reduce((a, x) => a + x.util, 0);
+    $("#listCount").textContent = rows.length + "건 · 이용료 " + won(useSum) + "원" +
+      (anSum ? " · 부속시설 " + won(anSum) + "원" : "") +
+      (utSum ? " · 공과금 " + won(utSum) + "원" : "") +
+      " · 합계 " + won(useSum + anSum + utSum) + "원" + hidden;
+  } else {
+    $("#listCount").textContent = rows.length + "건 · 행사 " + nEv +
+      (rows.length - nEv ? " · 준비 " + (rows.length - nEv) : "") + hidden;
+  }
 
   $("#printHeadList").innerHTML = "<h1>" + esc(listPeriodLabel()) + " 시설 예약 " + LIST_MODES[mode].name + " 목록</h1>" +
     "<span>" + esc($("#listCount").textContent) + "</span>" +
@@ -2500,12 +2508,12 @@ function renderSettings() {
   $("#setSundayHoliday").checked = s.sundayAsHoliday !== false;
   $("#setSurchargeMode").value = s.surchargeMode || "multiply";
   $("#setPrepSurcharge").checked = !!s.prepSurcharge;
-  $("#setSumEarly").value = (H.summer || {}).early || "";
-  $("#setSumDay").value   = (H.summer || {}).day   || "";
-  $("#setSumNight").value = (H.summer || {}).night || "";
-  $("#setWinEarly").value = (H.winter || {}).early || "";
-  $("#setWinDay").value   = (H.winter || {}).day   || "";
-  $("#setWinNight").value = (H.winter || {}).night || "";
+  setTimeVal("setSumEarly", (H.summer || {}).early);
+  setTimeVal("setSumDay",   (H.summer || {}).day);
+  setTimeVal("setSumNight", (H.summer || {}).night);
+  setTimeVal("setWinEarly", (H.winter || {}).early);
+  setTimeVal("setWinDay",   (H.winter || {}).day);
+  setTimeVal("setWinNight", (H.winter || {}).night);
   $("#setSummerFrom").value = H.summerFrom;
   $("#setSummerTo").value = H.summerTo;
   $("#setAdmSports").value = s.admSportsRate;
@@ -2621,7 +2629,6 @@ function openModal(id, presetDate) {
   setTimeVal("fStart", r ? r.start : "09:00");
   setTimeVal("fEnd", r ? r.end : "18:00");      // 종료는 18시가 기본이다
   $("#fFac").value = r ? r.facilityId : (state.facilities[0] ? state.facilities[0].id : "");
-  $("#fStatusSel").value = r ? r.status : "승인";
   $("#fApplicant").value = r ? r.applicant : "";
   $("#fHead").value = r ? (r.headcount || "") : "";
   $("#fPurpose").value = r ? (r.purpose || "") : "";
@@ -2658,7 +2665,7 @@ function formToRes() {
     start: timeVal("fStart"),
     end: timeVal("fEnd"),
     facilityId: $("#fFac").value,
-    status: $("#fStatusSel").value,
+    status: prev ? prev.status : "승인",   // 취소를 쓰지 않는다. 예전 자료의 상태는 그대로 둔다
     applicant: $("#fApplicant").value.trim(),
     headcount: $("#fHead").value ? Number($("#fHead").value) : null,
     purpose: $("#fPurpose").value.trim(),
@@ -2697,11 +2704,14 @@ function readAnnexQty() {
    <input type="time"> 은 브라우저 지역 설정에 따라 12시간제로 나오는데,
    그걸 코드로 강제할 방법이 없다. **다시 type="time" 으로 돌리지 않는다.** */
 const TIME_MIN_STEP = 10;
+/* 시·분 고르기를 쓰는 칸. 등록창과 설정 화면(별표 1의2 시간대)이 같은 방식을 쓴다 */
+const TIME_FIELDS = ["fStart", "fEnd",
+  "setSumEarly", "setSumDay", "setSumNight", "setWinEarly", "setWinDay", "setWinNight"];
 function fillTimeSelects() {
   const hrs = Array.from({ length: 24 }, (_, i) => '<option value="' + i + '">' + pad(i) + "</option>").join("");
   const mins = Array.from({ length: 60 / TIME_MIN_STEP }, (_, i) =>
     '<option value="' + i * TIME_MIN_STEP + '">' + pad(i * TIME_MIN_STEP) + "</option>").join("");
-  ["fStart", "fEnd"].forEach(k => { $("#" + k + "H").innerHTML = hrs; $("#" + k + "M").innerHTML = mins; });
+  TIME_FIELDS.forEach(k => { $("#" + k + "H").innerHTML = hrs; $("#" + k + "M").innerHTML = mins; });
 }
 function timeVal(k) { return pad(Number($("#" + k + "H").value)) + ":" + pad(Number($("#" + k + "M").value)); }
 function setTimeVal(k, hhmm) {
@@ -3206,7 +3216,7 @@ function init() {
   });
 
   // 목록 필터
-  ["#q", "#fFacility", "#fKindFilter", "#fStatus", "#fRange"].forEach(sel =>
+  ["#q", "#fFacility", "#fKindFilter", "#fRange"].forEach(sel =>
     $(sel).addEventListener("input", renderList));
   // 목록 종류 — 조회용 / 수익집계용
   $("#listModeSeg").addEventListener("click", e => {
@@ -3245,7 +3255,7 @@ function init() {
       if (e.key === "ArrowRight") shiftMonth(1);
     }
   });
-  ["#fDate", "#fStartH", "#fStartM", "#fEndH", "#fEndM", "#fFac", "#fDiscount", "#fStatusSel", "#fOverride", "#fKind",
+  ["#fDate", "#fStartH", "#fStartM", "#fEndH", "#fEndM", "#fFac", "#fDiscount", "#fOverride", "#fKind",
    "#fUseType", "#fAdmission", "#fSchoolGame", "#fPower", "#fWater"].forEach(sel =>
     $(sel).addEventListener("input", () => { updateKindUI(); updateFeePreview(); }));
   $("#annexList").addEventListener("input", () => updateFeePreview());
@@ -3316,18 +3326,19 @@ function init() {
       setAdmSports: "admSportsRate", setAdmOther: "admOtherRate", setAdmSchool: "admSchoolCut",
       setOrgNote: "orgNote"
     };
-    // 별표 1의2 의 시간대
+    // 별표 1의2 의 시간대. 시·분 고르기라서 id 뒤에 H/M 이 붙는다
     const hmap = {
       setSumEarly: ["summer", "early"], setSumDay: ["summer", "day"], setSumNight: ["summer", "night"],
       setWinEarly: ["winter", "early"], setWinDay: ["winter", "day"], setWinNight: ["winter", "night"]
     };
+    const hKey = /^(set(?:Sum|Win)(?:Early|Day|Night))[HM]$/.exec(t.id);
     if (t.id === "setPrepSurcharge") { state.settings.prepSurcharge = t.checked; save(); renderAll(); return; }
     if (t.id === "setSundayHoliday") { state.settings.sundayAsHoliday = t.checked; save(); renderAll(); return; }
     if (t.id === "setDiscountAnnex") { state.settings.discountAnnex = t.checked; save(); renderAll(); return; }
     if (t.id === "setSurchargeMode") { state.settings.surchargeMode = t.value; save(); renderAll(); return; }
-    if (hmap[t.id]) {
-      const [season, key] = hmap[t.id];
-      state.settings.hours[season][key] = t.value;
+    if (hKey && hmap[hKey[1]]) {
+      const [season, key] = hmap[hKey[1]];
+      state.settings.hours[season][key] = timeVal(hKey[1]);
       save(); renderAll(); return;
     }
     if (t.id === "setSummerFrom" || t.id === "setSummerTo") {
