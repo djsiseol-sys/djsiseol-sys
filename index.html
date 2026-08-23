@@ -284,6 +284,7 @@ td.t{font-family:"IBM Plex Mono",monospace;white-space:nowrap}
 .fee-line{display:flex;justify-content:space-between;gap:12px;font-size:12px;padding:2px 0}
 .fee-line span:last-child{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
 .fee-line.total{border-top:1px solid var(--line-strong);margin-top:6px;padding-top:6px;font-weight:600;font-size:14px}
+.fee-line.sub{border-top:1px dashed var(--line-strong);margin-top:3px;padding-top:4px;color:var(--ink-2)}
 .fee-line .why{color:var(--faint);font-size:10.5px;display:block}
 .notice{font-size:12px;padding:8px 10px;border-radius:var(--r);background:var(--alert-soft);color:var(--alert);border:1px solid var(--alert)}
 
@@ -1083,9 +1084,16 @@ function migrate(d) {
     });
 
   // 감면 유형은 조례 제13조가 정한다. 예전 자료(제13조 이전 임의 목록)는 갈아끼운다
-  const dcs = (old < 2 || !Array.isArray(d.discounts) || !d.discounts.length)
-    ? structuredClone(DISCOUNTS_13)
-    : d.discounts;
+  const replaceDcs = old < 2 || !Array.isArray(d.discounts) || !d.discounts.length;
+  const dcs = replaceDcs ? structuredClone(DISCOUNTS_13) : d.discounts;
+  if (replaceDcs) {
+    // 예전 목록의 d1·d2 는 조례 목록의 d1·d2 와 뜻이 다르다.
+    // id 를 그대로 두면 감면율 0% 이던 예약에 100% 면제가 붙어버린다.
+    // 담당자가 조례 목록에서 다시 고르도록 "해당 없음"으로 되돌린다 —
+    // 예전 목록은 감면율이 모두 0 이었으므로 금액은 달라지지 않는다.
+    const ok = new Set(dcs.map(x => x.id));
+    res.forEach(r => { if (!ok.has(r.discountId) || old < 2) r.discountId = dcs[0].id; });
+  }
 
   const st = Object.assign({}, base.settings, d.settings || {});
   st.hours    = Object.assign({}, base.settings.hours, (d.settings || {}).hours || {});
@@ -1561,19 +1569,33 @@ function calcFee(r) {
   if (applySur && sur.yes && Number(s.weekendRate) > 0) {
     const amt = base * Number(s.weekendRate) / 100;
     out.lines.push({
-      label: "② 토요일·공휴일(주간) 가산 " + s.weekendRate + "%",
+      label: "② 토요일·공휴일 가산 " + s.weekendRate + "%",
       why: r.date + " " + DOW[parseYmd(r.date).getDay()] + "요일" + (sur.why ? " · " + sur.why : "") + " · " + A.weekend,
       amount: amt
     });
     sum += amt;
   }
 
+  // 조례는 야간·조기를 "당일 주간 전용사용료"에서 출발해 계산한다.
+  // 그 중간값을 보여줘야 산식을 따라갈 수 있다
+  const needDaySubtotal = applySur && ((bd.night && Number(s.nightRate) > 0) ||
+                                       (bd.early && !bd.day && Number(s.earlyRate) > 0));
+  if (needDaySubtotal) {
+    out.lines.push({
+      subtotal: true,
+      label: "＝ 당일 주간 전용사용료",
+      why: sur.yes ? "기본액 " + won(base) + "원 + 토·공휴일 가산 " + won(sum - base) + "원"
+                   : "평일이므로 기본액과 같다 · " + won(base) + "원",
+      amount: sum
+    });
+  }
+
   if (applySur && bd.night && Number(s.nightRate) > 0) {
     const amt = base * Number(s.nightRate) / 100;
     out.lines.push({
       label: "③ 야간사용 가산 " + s.nightRate + "%",
-      why: bd.band.season + " 야간 " + fmtMin(bd.band.night) + " 이후에 걸침 · 당일 주간 사용료에 기본액의 " +
-           s.nightRate + "% 가산 · " + A.night,
+      why: bd.band.season + " 야간 " + fmtMin(bd.band.night) + " 이후에 걸침 · 당일 주간 전용사용료 " +
+           won(sum) + "원에 기본액의 " + s.nightRate + "% 를 가산 · " + A.night,
       amount: amt
     });
     sum += amt;
@@ -1581,7 +1603,8 @@ function calcFee(r) {
     const amt = -base * Number(s.earlyRate) / 100;
     out.lines.push({
       label: "③ 조기사용 감산 " + s.earlyRate + "%",
-      why: bd.band.season + " 조기 " + fmtMin(bd.band.early) + "–" + fmtMin(bd.band.day) + " 안에서만 사용 · " + A.early,
+      why: bd.band.season + " 조기 " + fmtMin(bd.band.early) + "–" + fmtMin(bd.band.day) + " 안에서만 사용 · 당일 주간 전용사용료 " +
+           won(sum) + "원에서 기본액의 " + s.earlyRate + "% 를 감산 · " + A.early,
       amount: amt
     });
     sum += amt;
@@ -2213,7 +2236,8 @@ function feeLinesHtml(f, opts) {
   const o = opts || {};
   return (f.pending ? '<div class="fee-line"><span class="needs-fee">기본액 미입력</span><span></span></div>' : "") +
     f.lines.map(l =>
-      '<div class="fee-line"><span>' + esc(l.label) + (l.why ? '<span class="why">' + esc(l.why) + "</span>" : "") + "</span>" +
+      '<div class="fee-line' + (l.subtotal ? " sub" : "") + '"><span>' + esc(l.label) +
+      (l.why ? '<span class="why">' + esc(l.why) + "</span>" : "") + "</span>" +
       "<span>" + (l.amount < 0 ? "−" : "") + won(Math.abs(l.amount)) + "</span></div>"
     ).join("") +
     '<div class="fee-line total"><span>산정 이용료</span><span>' + won(f.total) + "원</span></div>" +
