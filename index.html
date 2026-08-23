@@ -1,0 +1,2014 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>시설 예약 관리대장</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#F7F8F8; --surface:#FFFFFF; --surface-2:#F1F3F4; --sunk:#EDEFF1;
+  --ink:#14171A; --ink-2:#3E464D; --muted:#727C85; --faint:#9AA3AB;
+  --line:#E1E5E8; --line-strong:#C9D0D6;
+  --accent:#2C5D7C; --accent-soft:#E7EEF3; --accent-ink:#1E4459;
+  --alert:#A8574C; --alert-soft:#F6EBE9;
+  --shadow:0 1px 2px rgba(20,23,26,.05),0 8px 24px -12px rgba(20,23,26,.18);
+  --r:6px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1113; --surface:#15191C; --surface-2:#1B2024; --sunk:#101416;
+    --ink:#E7EBED; --ink-2:#BFC7CD; --muted:#8B959D; --faint:#69737B;
+    --line:#262D32; --line-strong:#39424A;
+    --accent:#8BB8D6; --accent-soft:#1B2A34; --accent-ink:#B9D5E8;
+    --alert:#D08A80; --alert-soft:#2C201E;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px -14px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1113; --surface:#15191C; --surface-2:#1B2024; --sunk:#101416;
+  --ink:#E7EBED; --ink-2:#BFC7CD; --muted:#8B959D; --faint:#69737B;
+  --line:#262D32; --line-strong:#39424A;
+  --accent:#8BB8D6; --accent-soft:#1B2A34; --accent-ink:#B9D5E8;
+  --alert:#D08A80; --alert-soft:#2C201E;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px -14px rgba(0,0,0,.7);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans KR",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  font-size:14px; line-height:1.55; -webkit-font-smoothing:antialiased;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.mono{font-family:"IBM Plex Mono","IBM Plex Sans KR",monospace;font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---------- top bar ---------- */
+.topbar{
+  position:sticky;top:0;z-index:40;background:var(--surface);
+  border-bottom:1px solid var(--line);
+}
+.topbar-inner{
+  max-width:1440px;margin:0 auto;padding:10px 20px;
+  display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+}
+.brand{display:flex;align-items:baseline;gap:9px;margin-right:2px}
+.brand h1{font-size:15px;font-weight:600;letter-spacing:-.01em;margin:0}
+.brand span{font-size:10px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase}
+.period{display:flex;align-items:center;gap:6px}
+.period input[type=number]{
+  width:74px;padding:5px 8px;border:1px solid var(--line);border-radius:var(--r);
+  background:var(--surface);text-align:right;
+}
+.period select{padding:5px 8px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.stepper{display:flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.stepper button{background:var(--surface);border:0;padding:5px 11px;color:var(--ink-2)}
+.stepper button+button{border-left:1px solid var(--line)}
+.stepper button:hover{background:var(--surface-2)}
+.tabs{display:flex;gap:2px;margin-left:auto}
+.tabs button{
+  background:transparent;border:1px solid transparent;border-radius:var(--r);
+  padding:6px 13px;color:var(--muted);font-size:13px;
+}
+.tabs button:hover{color:var(--ink);background:var(--surface-2)}
+.tabs button[aria-selected="true"]{background:var(--accent-soft);color:var(--accent-ink);border-color:transparent;font-weight:500}
+.topbar-tools{display:flex;align-items:center;gap:8px}
+.savenow{position:relative}
+.savenow.dirty{border-color:var(--accent);color:var(--accent-ink);font-weight:500}
+.savenow.dirty::after{
+  content:"";position:absolute;top:-3px;right:-3px;width:7px;height:7px;
+  border-radius:50%;background:var(--accent);
+}
+body.ro .savenow{display:none!important}
+.savestate{font-size:11px;color:var(--faint);letter-spacing:.02em;min-width:96px;text-align:right}
+
+/* ---------- buttons ---------- */
+.btn{
+  border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);
+  padding:6px 12px;border-radius:var(--r);font-size:13px;line-height:1.4;
+}
+.btn:hover{background:var(--surface-2)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+:root[data-theme="dark"] .btn-primary,
+:root:not([data-theme="light"]) .btn-primary{color:#0E1113}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .btn-primary{color:#fff}}
+.btn-primary:hover{filter:brightness(1.08)}
+.btn-quiet{border-color:transparent;background:transparent;color:var(--muted)}
+.btn-quiet:hover{background:var(--surface-2);color:var(--ink)}
+.btn-danger{border-color:var(--alert);color:var(--alert);background:transparent}
+.btn-danger:hover{background:var(--alert-soft)}
+.btn-sm{padding:3px 9px;font-size:12px}
+
+/* ---------- layout ---------- */
+main{max-width:1440px;margin:0 auto;padding:18px 20px 60px}
+.pane{display:none}
+.pane.active{display:block}
+.split{display:grid;grid-template-columns:minmax(0,1fr) 336px;gap:18px;align-items:start}
+@media (max-width:1080px){.split{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px}
+
+/* ---------- calendar ---------- */
+.cal-head{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:12px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap;
+}
+.cal-title{font-size:19px;font-weight:600;letter-spacing:-.02em}
+.cal-title small{font-size:12px;font-weight:400;color:var(--muted);margin-left:8px;letter-spacing:0}
+.legend{display:flex;gap:14px;font-size:11px;color:var(--muted);flex-wrap:wrap}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.lg-approved{background:var(--accent)}
+.lg-pending{background:transparent;border:1px solid var(--accent)}
+.lg-prep{background:var(--accent-soft);box-shadow:inset 2px 0 0 var(--accent)}
+.lg-cancel{background:var(--line-strong)}
+.lg-conflict{background:var(--alert)}
+
+.dow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-bottom:1px solid var(--line);background:var(--surface-2)}
+.dow div{padding:7px 8px;font-size:11px;letter-spacing:.08em;color:var(--muted);text-align:center}
+.dow div:first-child,.dow div:last-child{color:var(--ink-2)}
+.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:minmax(112px,auto)}
+.cell{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px;display:flex;flex-direction:column;gap:4px;background:var(--surface);text-align:left;font:inherit;color:inherit;border-top:0;border-left:0;position:relative}
+.cell:nth-child(7n){border-right:0}
+.cell.out{background:var(--sunk)}
+.cell.weekend{background:linear-gradient(0deg,var(--surface-2),var(--surface-2))}
+.cell.out.weekend{background:var(--sunk)}
+.cell:hover{box-shadow:inset 0 0 0 1px var(--line-strong)}
+.cell.selected{box-shadow:inset 0 0 0 2px var(--accent)}
+.cell-date{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-2)}
+.cell.out .cell-date{color:var(--faint)}
+.cell-date b{font-weight:500;font-size:13px}
+.cell.today .cell-date b{background:var(--accent);color:var(--surface);border-radius:4px;padding:0 5px}
+.holiday-tag{font-size:10px;color:var(--alert);letter-spacing:-.01em}
+.cell-count{margin-left:auto;font-size:10px;color:var(--faint)}
+.chip{
+  display:block;width:100%;text-align:left;border:1px solid var(--accent);
+  background:var(--accent);color:var(--surface);
+  border-radius:3px;padding:2px 5px;font-size:11px;line-height:1.35;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.chip .t{font-family:"IBM Plex Mono",monospace;opacity:.85;margin-right:4px;font-size:10px}
+.chip.pending{background:transparent;color:var(--accent-ink);border-style:dashed}
+.chip.prep{background:var(--accent-soft);color:var(--accent-ink);border-color:var(--accent-soft);box-shadow:inset 2px 0 0 var(--accent)}
+.chip.prep.pending{border:1px dashed var(--accent)}
+.chip.cancelled{background:transparent;border-color:var(--line-strong);color:var(--faint);text-decoration:line-through}
+.chip.conflict{border-color:var(--alert);box-shadow:inset 2px 0 0 var(--alert)}
+.chip-more{font-size:10px;color:var(--muted);background:none;border:0;padding:1px 4px;text-align:left}
+
+/* ---------- side rail ---------- */
+.rail{position:sticky;top:70px;display:flex;flex-direction:column;gap:14px}
+.rail-head{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.rail-head h2{margin:0;font-size:14px;font-weight:600}
+.rail-head .sub{font-size:11px;color:var(--muted)}
+.rail-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px;max-height:calc(100vh - 260px);overflow:auto}
+.empty{padding:22px 14px;text-align:center;color:var(--faint);font-size:12px}
+.item{border:1px solid var(--line);border-radius:var(--r);padding:9px 10px;display:flex;flex-direction:column;gap:5px;background:var(--surface)}
+.item.is-conflict{border-color:var(--alert);background:var(--alert-soft)}
+.item-top{display:flex;align-items:baseline;gap:8px}
+.item-time{font-family:"IBM Plex Mono",monospace;font-size:12px;font-variant-numeric:tabular-nums}
+.item-fac{font-size:12px;color:var(--muted);margin-left:auto}
+.item-name{font-size:13px;font-weight:500}
+.item-meta{font-size:11px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
+.item-fee{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-2)}
+.item-actions{display:flex;gap:4px;margin-top:2px}
+.status{font-size:10px;letter-spacing:.04em;padding:1px 6px;border-radius:999px;border:1px solid var(--line-strong);color:var(--muted)}
+.kindtag{font-size:10px;letter-spacing:.04em;padding:1px 6px;border-radius:3px;background:var(--accent-soft);color:var(--accent-ink)}
+.prepbox{border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:flex;flex-direction:column;gap:9px;background:var(--surface-2)}
+.prepbox[hidden]{display:none}
+.prep-toggle{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer}
+.prep-toggle input{width:15px;height:15px;accent-color:var(--accent);margin:0}
+.needs-fee{font-size:10px;letter-spacing:.02em;padding:1px 6px;border-radius:3px;border:1px dashed var(--alert);color:var(--alert)}
+.status.approved{background:var(--accent-soft);border-color:transparent;color:var(--accent-ink)}
+.status.cancelled{text-decoration:line-through}
+.warn{font-size:11px;color:var(--alert);display:flex;gap:5px;align-items:flex-start}
+
+/* ---------- summary ---------- */
+.summary{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.stat{background:var(--surface);padding:11px 13px}
+.stat dt{font-size:10px;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;margin:0}
+.stat dd{margin:3px 0 0;font-family:"IBM Plex Mono",monospace;font-size:19px;font-weight:500;letter-spacing:-.02em}
+.stat dd small{font-size:11px;color:var(--muted);font-weight:400;margin-left:3px;font-family:"IBM Plex Sans KR",sans-serif}
+
+/* ---------- tables ---------- */
+.table-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:11px;letter-spacing:.06em;color:var(--muted);font-weight:500;background:var(--surface-2);position:sticky;top:0;white-space:nowrap}
+tbody tr:hover{background:var(--surface-2)}
+td.num{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+td.t{font-family:"IBM Plex Mono",monospace;white-space:nowrap}
+.filters{display:flex;gap:8px;padding:11px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center}
+.filters input[type=search],.filters select{padding:5px 9px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.filters input[type=search]{min-width:190px}
+
+/* ---------- settings ---------- */
+.settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;align-items:start}
+.sec-head{padding:12px 14px;border-bottom:1px solid var(--line)}
+.sec-head h2{margin:0;font-size:14px;font-weight:600}
+.sec-head p{margin:3px 0 0;font-size:11.5px;color:var(--muted)}
+.sec-body{padding:12px 14px;display:flex;flex-direction:column;gap:11px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:11px;color:var(--muted);letter-spacing:.02em}
+.field input,.field select,.field textarea{
+  padding:6px 9px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);width:100%;
+}
+.field textarea{resize:vertical;min-height:52px}
+.field .hint{font-size:10.5px;color:var(--faint)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.row21{display:grid;grid-template-columns:2fr 1fr;gap:10px}
+@media (max-width:520px){.row2,.row3,.row21{grid-template-columns:1fr}}
+.article{
+  font-size:11px;color:var(--muted);border-left:2px solid var(--line-strong);
+  padding:2px 0 2px 8px;font-style:normal;
+}
+.hr{height:1px;background:var(--line);margin:2px 0}
+
+/* ---------- modal ---------- */
+.backdrop{position:fixed;inset:0;background:rgba(15,18,20,.45);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;z-index:60;overflow:auto}
+.backdrop[hidden]{display:none}
+.modal{background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);width:100%;max-width:620px}
+.modal-head{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+.modal-head h2{margin:0;font-size:15px;font-weight:600}
+.modal-body{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.modal-foot{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;align-items:center}
+.modal-foot .spacer{margin-left:auto}
+.fee-box{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.fee-box h3{margin:0 0 7px;font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;font-weight:500}
+.fee-line{display:flex;justify-content:space-between;gap:12px;font-size:12px;padding:2px 0}
+.fee-line span:last-child{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+.fee-line.total{border-top:1px solid var(--line-strong);margin-top:6px;padding-top:6px;font-weight:600;font-size:14px}
+.fee-line .why{color:var(--faint);font-size:10.5px;display:block}
+.notice{font-size:12px;padding:8px 10px;border-radius:var(--r);background:var(--alert-soft);color:var(--alert);border:1px solid var(--alert)}
+
+.rob{font-size:10px;letter-spacing:.06em;padding:2px 8px;border-radius:999px;border:1px solid var(--line-strong);color:var(--muted)}
+.recover{
+  max-width:1440px;margin:12px auto -4px;padding:9px 14px;display:flex;align-items:center;gap:10px;
+  border:1px solid var(--alert);background:var(--alert-soft);color:var(--alert);border-radius:8px;font-size:12.5px;
+}
+.recover[hidden]{display:none}
+.recover span{margin-right:auto}
+body.ro #newBtn,body.ro #railAdd,body.ro .item-actions,body.ro #resetAll,body.ro #importJson,
+body.ro #addFacility,body.ro #addDiscount,body.ro [data-delfac],body.ro [data-deldc],body.ro #importPaste,
+body.ro #deleteRes,body.ro #saveRes{display:none!important}
+body.ro #pane-settings input,body.ro #pane-settings select,body.ro #pane-settings textarea,
+body.ro #resForm input,body.ro #resForm select,body.ro #resForm textarea{pointer-events:none;opacity:.72}
+body.ro #copyText{pointer-events:auto;opacity:1}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:12.5px;z-index:80;box-shadow:var(--shadow)}
+.toast[hidden]{display:none}
+
+@media print{
+  .topbar,.rail,.filters,.item-actions,.btn,.tabs{display:none!important}
+  body{background:#fff}
+  .split{grid-template-columns:1fr}
+  .card{border-color:#bbb}
+  .grid{grid-auto-rows:minmax(96px,auto)}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <h1>시설 예약 관리대장</h1>
+      <span>internal</span>
+    </div>
+
+    <div class="period">
+      <div class="stepper">
+        <button type="button" id="prevMonth" title="이전 달 (←)">‹</button>
+        <button type="button" id="nextMonth" title="다음 달 (→)">›</button>
+      </div>
+      <input type="number" id="yearInput" min="2000" max="2100" step="1" class="mono" aria-label="연도">
+      <select id="monthInput" aria-label="월"></select>
+      <button type="button" class="btn btn-sm" id="todayBtn">이번 달</button>
+    </div>
+
+    <nav class="tabs" role="tablist">
+      <button type="button" role="tab" data-pane="calendar" aria-selected="true">달력</button>
+      <button type="button" role="tab" data-pane="list" aria-selected="false">목록</button>
+      <button type="button" role="tab" data-pane="settings" aria-selected="false">시설 · 요금 기준</button>
+    </nav>
+
+    <div class="topbar-tools">
+      <span class="rob" id="roBadge" hidden>조회 전용</span>
+      <span class="savestate" id="saveState">—</span>
+      <button type="button" class="btn btn-sm savenow" id="saveNow" title="지금 저장 (Ctrl+S)">저장</button>
+      <button type="button" class="btn btn-sm" id="themeBtn" title="화면 모드 전환">◐</button>
+      <button type="button" class="btn btn-primary btn-sm" id="newBtn">+ 예약 등록</button>
+    </div>
+  </div>
+</header>
+
+<div class="recover" id="recoverBar" hidden>
+  <span id="recoverText"></span>
+  <button type="button" class="btn btn-sm" id="recoverApply">다시 넣기</button>
+  <button type="button" class="btn btn-quiet btn-sm" id="recoverDrop">버리기</button>
+</div>
+
+<main>
+  <!-- ================= 달력 ================= -->
+  <section class="pane active" id="pane-calendar">
+    <div class="split">
+      <div class="card">
+        <div class="cal-head">
+          <div>
+            <span class="cal-title" id="calTitle">—</span>
+            <small id="calSubtitle"></small>
+          </div>
+          <div class="legend">
+            <span><i class="lg-approved"></i>승인</span>
+            <span><i class="lg-pending"></i>신청</span>
+            <span><i class="lg-prep"></i>준비</span>
+            <span><i class="lg-cancel"></i>취소</span>
+            <span><i class="lg-conflict"></i>시간 중복</span>
+          </div>
+        </div>
+        <div class="dow">
+          <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+        </div>
+        <div class="grid" id="calGrid"></div>
+      </div>
+
+      <aside class="rail">
+        <div class="card">
+          <div class="rail-head">
+            <div>
+              <h2 id="railTitle">날짜를 선택하세요</h2>
+              <div class="sub" id="railSub">달력에서 날짜를 누르면 그 날의 예약이 표시됩니다</div>
+            </div>
+            <button type="button" class="btn btn-sm" id="railAdd" hidden>+ 추가</button>
+          </div>
+          <div class="rail-body" id="railBody">
+            <p class="empty">선택된 날짜 없음</p>
+          </div>
+        </div>
+
+        <dl class="summary" id="summary"></dl>
+
+        <div class="card">
+          <div class="sec-body">
+            <div class="row2">
+              <button type="button" class="btn btn-sm" id="exportJson">JSON 내보내기</button>
+              <button type="button" class="btn btn-sm" id="importJson">JSON 불러오기</button>
+              <button type="button" class="btn btn-sm" id="importPaste" hidden>JSON 붙여넣기</button>
+            </div>
+            <div class="row2">
+              <button type="button" class="btn btn-sm" id="exportCsv">이 달 CSV</button>
+              <button type="button" class="btn btn-sm" onclick="window.print()">인쇄</button>
+            </div>
+            <p class="field hint" id="storageNote" style="margin:0"></p>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ================= 목록 ================= -->
+  <section class="pane" id="pane-list">
+    <div class="card">
+      <div class="filters">
+        <input type="search" id="q" placeholder="단체명 · 목적 · 메모 검색">
+        <select id="fFacility"><option value="">전체 시설</option></select>
+        <select id="fKindFilter">
+          <option value="">행사 · 준비 전체</option>
+          <option value="행사">행사만</option>
+          <option value="준비">준비만</option>
+        </select>
+        <select id="fStatus">
+          <option value="">전체 상태</option>
+          <option value="신청">신청</option>
+          <option value="승인">승인</option>
+          <option value="취소">취소</option>
+        </select>
+        <select id="fRange">
+          <option value="month">선택한 달</option>
+          <option value="all">전체 기간</option>
+        </select>
+        <span class="savestate" id="listCount" style="margin-left:auto"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>날짜</th><th>요일</th><th>시간</th><th>시설</th><th>구분</th><th>신청 단체</th>
+              <th>목적</th><th>인원</th><th>감면</th><th style="text-align:right">이용료</th><th>상태</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="listBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 설정 ================= -->
+  <section class="pane" id="pane-settings">
+    <div class="settings">
+
+      <div class="card">
+        <div class="sec-head">
+          <h2>시설 · 단가</h2>
+          <p>조례상 사용료 표를 그대로 옮겨 적는 곳입니다. 여기 값이 계산의 기준이 됩니다.</p>
+        </div>
+        <div class="sec-body" id="facilityList"></div>
+        <div class="sec-body" style="border-top:1px solid var(--line)">
+          <button type="button" class="btn" id="addFacility">+ 시설 추가</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="sec-head">
+          <h2>할증 · 감면 기준</h2>
+          <p>각 항목에 근거 조문을 함께 적어두면, 계산 내역에 근거가 같이 표시됩니다.</p>
+        </div>
+        <div class="sec-body">
+          <div class="row3">
+            <div class="field">
+              <label for="setMinHours">최소 이용시간</label>
+              <input type="number" id="setMinHours" min="0" step="0.5" class="mono">
+            </div>
+            <div class="field">
+              <label for="setRounding">절사 단위(원)</label>
+              <input type="number" id="setRounding" min="1" step="1" class="mono">
+            </div>
+            <div class="field">
+              <label for="setNightStart">야간 기준 시각</label>
+              <input type="time" id="setNightStart" class="mono">
+            </div>
+          </div>
+          <div class="row3">
+            <div class="field">
+              <label for="setNightRate">야간 할증(%)</label>
+              <input type="number" id="setNightRate" min="0" step="1" class="mono">
+            </div>
+            <div class="field">
+              <label for="setWeekendRate">주말 할증(%)</label>
+              <input type="number" id="setWeekendRate" min="0" step="1" class="mono">
+            </div>
+            <div class="field">
+              <label for="setHolidayRate">공휴일 할증(%)</label>
+              <input type="number" id="setHolidayRate" min="0" step="1" class="mono">
+            </div>
+          </div>
+          <label class="prep-toggle">
+            <input type="checkbox" id="setPrepSurcharge">
+            <span>준비시간에도 야간·주말 할증 적용</span>
+          </label>
+          <div class="field">
+            <label for="setSurchargeArticle">할증 근거 조문</label>
+            <input type="text" id="setSurchargeArticle" placeholder="예: ○○시 공공시설 관리 조례 제12조제2항">
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="field">
+            <label>감면 유형</label>
+            <div class="hint">감면율은 할증까지 합산한 금액에 적용됩니다.</div>
+          </div>
+          <div id="discountList" style="display:flex;flex-direction:column;gap:9px"></div>
+          <button type="button" class="btn btn-sm" id="addDiscount" style="align-self:flex-start">+ 감면 유형 추가</button>
+
+          <div class="hr"></div>
+
+          <div class="field">
+            <label for="setHolidays">공휴일 (한 줄에 하나, YYYY-MM-DD)</label>
+            <textarea id="setHolidays" class="mono" placeholder="2026-09-24&#10;2026-10-03"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="sec-head">
+          <h2>서버 연결</h2>
+          <p>여러 사람이 같은 대장을 보려면 서버에 연결합니다. 등록·수정은 로그인한 담당자만 할 수 있습니다.</p>
+        </div>
+        <div class="sec-body">
+          <div class="fee-line" style="padding:0">
+            <span>상태</span><span id="srvState" class="mono">확인 중</span>
+          </div>
+          <div class="hr"></div>
+
+          <div class="field">
+            <label for="srvUrl">Project URL</label>
+            <input type="text" id="srvUrl" placeholder="https://xxxxxxxx.supabase.co" spellcheck="false">
+          </div>
+          <div class="field">
+            <label for="srvKey">Publishable key (공개용 키)</label>
+            <input type="text" id="srvKey" placeholder="sb_publishable_..." spellcheck="false">
+            <span class="hint">sb_publishable_ 로 시작하는 키입니다. 공개돼도 됩니다. 옛 anon 키도 됩니다.<br>sb_secret_ / service_role 키는 넣지 마세요.</span>
+          </div>
+          <button type="button" class="btn btn-sm" id="srvSaveCfg" style="align-self:flex-start">주소·키 저장하고 다시 연결</button>
+
+          <div class="hr"></div>
+
+          <div id="srvLoggedOut">
+            <div class="row2">
+              <div class="field">
+                <label for="srvEmail">담당자 이메일</label>
+                <input type="email" id="srvEmail" autocomplete="username" spellcheck="false">
+              </div>
+              <div class="field">
+                <label for="srvPw">비밀번호</label>
+                <input type="password" id="srvPw" autocomplete="current-password">
+              </div>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" id="srvLogin" style="margin-top:9px">로그인</button>
+          </div>
+
+          <div id="srvLoggedIn" hidden>
+            <p class="field hint" style="margin:0 0 8px">
+              <span id="srvWho" class="mono"></span> 으로 로그인되어 있습니다. 등록·수정이 가능합니다.
+            </p>
+            <button type="button" class="btn btn-sm" id="srvLogout">로그아웃</button>
+          </div>
+
+          <p class="field hint" id="srvMsg" style="margin:0"></p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="sec-head">
+          <h2>계산 방식</h2>
+          <p>지금 적용 중인 산식입니다. 조례가 다른 구조면 이 부분을 바꿔서 맞춥니다.</p>
+        </div>
+        <div class="sec-body">
+          <div class="fee-box">
+            <div class="fee-line"><span>① 이용시간</span><span>max(최소 이용시간, 종료−시작)</span></div>
+            <div class="fee-line"><span>② 기본 사용료</span><span>기본료 + 시간당 단가 × 이용시간</span></div>
+            <div class="fee-line"><span>③ 야간 할증</span><span>시간당 단가 × 야간시간 × 할증률</span></div>
+            <div class="fee-line"><span>④ 주말·공휴일 할증</span><span>② × 할증률</span></div>
+            <div class="fee-line"><span>⑤ 감면</span><span>(②+③+④) × 감면율</span></div>
+            <div class="fee-line total"><span>합계</span><span>(②+③+④−⑤) 절사</span></div>
+          </div>
+          <div class="fee-box" style="margin-top:2px">
+            <h3>준비시간</h3>
+            <div class="fee-line"><span>대상</span><span>준비시간 허용 시설만</span></div>
+            <div class="fee-line"><span>산정</span><span>별도 단가 · 본단가의 % · 무료 중 선택</span></div>
+            <div class="fee-line"><span>최소 이용시간</span><span>적용하지 않음 (실제 시간만)</span></div>
+            <div class="fee-line"><span>할증</span><span>위 설정에 따름 (기본: 미적용)</span></div>
+          </div>
+          <p class="field hint" style="margin:0">
+            일 단위로 받는 시설은 시설 설정에서 단위를 ‘일’로 바꾸면 시간 대신 일수로 계산합니다.
+            준비시간은 시설 단위와 관계없이 시간으로 셉니다.
+          </p>
+          <div class="hr"></div>
+          <div class="field">
+            <label for="setOrgNote">부서 · 대장 메모</label>
+            <textarea id="setOrgNote" placeholder="담당자, 조례 개정일, 인수인계 사항 등"></textarea>
+          </div>
+          <div class="hr"></div>
+          <button type="button" class="btn btn-danger btn-sm" id="resetAll" style="align-self:flex-start">전체 데이터 초기화</button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<!-- ================= 예약 등록/수정 ================= -->
+<div class="backdrop" id="modal" hidden>
+  <form class="modal" id="resForm" autocomplete="off">
+    <div class="modal-head">
+      <h2 id="modalTitle">예약 등록</h2>
+      <button type="button" class="btn btn-quiet btn-sm" id="closeModal">닫기 ✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="conflictNotice" class="notice" hidden></div>
+
+      <div class="row3">
+        <div class="field">
+          <label for="fDate">날짜</label>
+          <input type="date" id="fDate" required class="mono">
+        </div>
+        <div class="field">
+          <label for="fStart">시작</label>
+          <input type="time" id="fStart" required step="600" class="mono">
+        </div>
+        <div class="field">
+          <label for="fEnd">종료</label>
+          <input type="time" id="fEnd" required step="600" class="mono">
+        </div>
+      </div>
+
+      <div class="row3">
+        <div class="field">
+          <label for="fFac">시설</label>
+          <select id="fFac" required></select>
+        </div>
+        <div class="field">
+          <label for="fKind">이용구분</label>
+          <select id="fKind">
+            <option>행사</option><option>준비</option>
+          </select>
+          <span class="hint" id="kindHint"></span>
+        </div>
+        <div class="field">
+          <label for="fStatusSel">상태</label>
+          <select id="fStatusSel">
+            <option>신청</option><option>승인</option><option>취소</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="prepbox" id="prepBox" hidden>
+        <label class="prep-toggle">
+          <input type="checkbox" id="fPrepOn">
+          <span>준비시간 함께 등록</span>
+        </label>
+        <div class="row2" id="prepFields" hidden>
+          <div class="field">
+            <label for="fPrepBefore">행사 전 (시간)</label>
+            <input type="number" id="fPrepBefore" min="0" max="12" step="0.5" value="0" class="mono">
+          </div>
+          <div class="field">
+            <label for="fPrepAfter">행사 후 (시간)</label>
+            <input type="number" id="fPrepAfter" min="0" max="12" step="0.5" value="0" class="mono">
+          </div>
+        </div>
+        <p class="hint" id="prepSummary" style="margin:0"></p>
+      </div>
+
+      <div class="row21">
+        <div class="field">
+          <label for="fApplicant">신청 단체</label>
+          <input type="text" id="fApplicant" required placeholder="예: ○○구 배구연합회">
+          <span class="hint">단체명으로 적습니다. 개인 성명·연락처는 적지 않습니다</span>
+        </div>
+        <div class="field">
+          <label for="fHead">인원</label>
+          <input type="number" id="fHead" min="0" step="1" class="mono">
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label for="fPurpose">이용 목적</label>
+          <input type="text" id="fPurpose" placeholder="예: 직원 교육">
+        </div>
+        <div class="field">
+          <label for="fDiscount">감면 유형</label>
+          <select id="fDiscount"></select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="fMemo">메모</label>
+        <textarea id="fMemo" placeholder="비품 요청, 특이사항 등"></textarea>
+      </div>
+
+      <div class="fee-box">
+        <h3>이용료 산정</h3>
+        <div id="feeBreakdown"></div>
+      </div>
+
+      <div class="field">
+        <label for="fOverride">이용료 직접 입력 (비워두면 위 산정액 사용)</label>
+        <input type="number" id="fOverride" min="0" step="10" class="mono" placeholder="원">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-danger btn-sm" id="deleteRes" hidden>삭제</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="cancelModal">취소</button>
+      <button type="submit" class="btn btn-primary" id="saveRes">저장</button>
+    </div>
+  </form>
+</div>
+
+<div class="backdrop" id="copyBox" hidden>
+  <div class="modal">
+    <div class="modal-head">
+      <h2>내용 복사 — <span id="copyName" class="mono" style="font-weight:400;font-size:13px"></span></h2>
+      <button type="button" class="btn btn-quiet btn-sm" id="copyClose">닫기 ✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="field hint" style="margin:0">아래 내용을 복사해서 텍스트 파일로 저장하시면 백업이 됩니다. 표 내용은 엑셀에 그대로 붙여넣을 수 있습니다.</p>
+      <textarea id="copyText" class="mono" spellcheck="false" wrap="off" style="min-height:260px;padding:9px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);width:100%;font-size:12px"></textarea>
+    </div>
+    <div class="modal-foot">
+      <span class="spacer"></span>
+      <button type="button" class="btn btn-primary" id="copyDo">전체 복사</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept="application/json" hidden>
+<div class="toast" id="toast" hidden></div>
+<script>
+"use strict";
+
+/* =========================================================
+   1. 데이터 구조
+   ========================================================= */
+const STORAGE_KEY = "rsv.mgmt.v1";
+
+const DEFAULT_STATE = {
+  version: 1,
+  settings: {
+    minHours: 1,
+    rounding: 10,
+    nightStart: "18:00",
+    nightRate: 30,
+    weekendRate: 0,
+    holidayRate: 0,
+    surchargeArticle: "",
+    holidays: [],
+    prepSurcharge: false,
+    orgNote: ""
+  },
+  facilities: [
+    { id: "f1", name: "충무체육관", unit: "hour", baseFee: 0, unitFee: 0, capacity: 0, article: "",
+      prep: { allowed: true, mode: "fee", fee: 0, percent: 50, article: "" } },
+    { id: "f2", name: "한밭체육관", unit: "hour", baseFee: 0, unitFee: 0, capacity: 0, article: "",
+      prep: { allowed: true, mode: "fee", fee: 0, percent: 50, article: "" } },
+    { id: "f3", name: "야구장", unit: "hour", baseFee: 0, unitFee: 0, capacity: 0, article: "",
+      prep: { allowed: false, mode: "fee", fee: 0, percent: 50, article: "" } }
+  ],
+  discounts: [
+    { id: "d0", name: "해당 없음", rate: 0, article: "" },
+    { id: "d1", name: "공공기관", rate: 0, article: "" },
+    { id: "d2", name: "지역 비영리단체", rate: 0, article: "" }
+  ],
+  reservations: []
+};
+
+let state = structuredClone(DEFAULT_STATE);
+let view = { year: new Date().getFullYear(), month: new Date().getMonth() + 1, selected: null, pane: "calendar", editingId: null };
+
+/* 저장 위치
+   shared  = 이 페이지(공유 링크)에 함께 저장 — 링크를 가진 담당자 모두가 같은 자료를 봅니다
+   local   = 이 브라우저에만 저장 — 내려받은 HTML 파일로 열었을 때
+   readonly= 볼 수만 있는 사람                                            */
+const RUNTIME = { api: null, shared: false, server: false, writable: true, saving: false, dirty: false, timer: null, retries: 0 };
+const DATA_PATH = "data/state.json";
+const AUTOSAVE_MS = 10000;   // 마지막 변경 후 이만큼 조용하면 자동 저장
+const POLL_MS = 10000;       // 다른 사람이 저장했는지 확인하는 주기
+
+/* ── 서버(Supabase) 접속 정보 ──────────────────────────────
+   GitHub Pages 등에 올릴 때 여기 두 값을 채운다.
+   publishable key(sb_publishable_...) 또는 옛 anon key 를 넣는다. 공개되어도 되는 키다.
+   실제 권한은 서버의 RLS 정책이 정한다. secret / service_role 키는 절대 넣지 않는다.
+   비워두면 서버를 쓰지 않고 기존 방식(아티팩트 / 이 브라우저)으로 동작한다. */
+const SUPABASE_URL = "";
+const SUPABASE_ANON_KEY = "";
+const ROW_ID = "main";
+const PENDING_KEY = "rsv.pending.v1";
+
+function migrate(d) {
+  const base = structuredClone(DEFAULT_STATE);
+  const facs = (Array.isArray(d.facilities) && d.facilities.length ? d.facilities : base.facilities)
+    .map(f => Object.assign({ unit: "hour", baseFee: 0, unitFee: 0, capacity: 0, article: "" }, f, {
+      prep: Object.assign({ allowed: false, mode: "fee", fee: 0, percent: 50, article: "" }, f.prep || {})
+    }));
+  const res = (Array.isArray(d.reservations) ? d.reservations : [])
+    .map(r => {
+      const x = Object.assign({ kind: "행사", linkId: null }, r);
+      delete x.contact;          // 연락처 항목 폐지 — 예전 자료에 남아 있으면 함께 지운다
+      return x;
+    });
+  return {
+    version: 1,
+    settings: Object.assign(base.settings, d.settings || {}),
+    facilities: facs,
+    discounts: Array.isArray(d.discounts) && d.discounts.length ? d.discounts : base.discounts,
+    reservations: res
+  };
+}
+
+function readLocal() {
+  try { const raw = localStorage.getItem(STORAGE_KEY); if (raw) return migrate(JSON.parse(raw)); } catch (e) {}
+  return null;
+}
+function mirrorLocal() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+/* 변경이 생길 때마다 호출 */
+function save() {
+  mirrorLocal();
+  if (!RUNTIME.shared) {
+    setSaveState("이 브라우저에 저장됨 " + hhmm(new Date()));
+    markClean();
+    return;
+  }
+  if (!RUNTIME.writable) { setSaveState("읽기 전용 · 저장 안 됨"); return; }
+  RUNTIME.dirty = true;
+  markDirtyUI();
+  setSaveState("변경됨 · 곧 저장");
+  clearTimeout(RUNTIME.timer);
+  RUNTIME.timer = setTimeout(pushShared, AUTOSAVE_MS);
+}
+
+/* 저장 버튼 — 기다리지 않고 지금 저장 */
+function saveNow() {
+  if (!RUNTIME.shared) { mirrorLocal(); setSaveState("저장됨 " + hhmm(new Date())); toast("저장했습니다"); return; }
+  if (!RUNTIME.writable) { toast("조회 전용이라 저장할 수 없습니다"); return; }
+  if (!RUNTIME.dirty && !RUNTIME.saving) { toast("저장할 변경이 없습니다"); return; }
+  clearTimeout(RUNTIME.timer);
+  RUNTIME.dirty = true;
+  pushShared();
+}
+
+function markDirtyUI() { $("#saveNow").classList.add("dirty"); }
+function markClean() { $("#saveNow").classList.remove("dirty"); }
+
+async function pushShared() {
+  if (!RUNTIME.dirty || RUNTIME.saving) return;
+  if (!RUNTIME.server && !RUNTIME.api) return;
+  RUNTIME.saving = true; RUNTIME.dirty = false;
+  setSaveState("저장 중…");
+  try {
+    if (RUNTIME.server) await serverSave();
+    else await RUNTIME.api.publish({ [DATA_PATH]: JSON.stringify(state) });
+    RUNTIME.retries = 0;
+    markClean();
+    setSaveState((RUNTIME.server ? "서버에 저장됨 " : "모두에게 저장됨 ") + hhmm(new Date()));
+  } catch (err) {
+    const code = (err && err.code) || "upstream_error";
+    if (code === "conflict") {
+      stashPending();
+      setSaveState("다른 분이 먼저 저장함");
+      toast("다른 분이 먼저 저장했습니다. 최신 내용을 다시 불러옵니다.");
+    } else if (["not_writer", "not_granted", "not_declared", "consent_required"].includes(code)) {
+      stashPending();
+      RUNTIME.writable = false;
+      applyReadOnly();
+    } else if (["capability_disabled", "capability_removed"].includes(code)) {
+      RUNTIME.shared = false;
+      setSaveState("공유 저장 불가");
+      toast("이 화면에서는 함께 저장이 안 됩니다. 이 브라우저에만 저장했습니다.");
+      renderStorageNote();
+    } else if (code === "too_large") {
+      setSaveState("자료가 한도를 넘었습니다");
+      toast("자료가 너무 큽니다. 지난 연도는 JSON으로 내보낸 뒤 정리해 주세요.");
+    } else if (code === "rate_limited") {
+      RUNTIME.dirty = true;
+      clearTimeout(RUNTIME.timer);
+      RUNTIME.timer = setTimeout(pushShared, 8000);
+      setSaveState("저장 대기…");
+    } else if (RUNTIME.retries < 1) {
+      RUNTIME.retries++;
+      RUNTIME.dirty = true;
+      clearTimeout(RUNTIME.timer);
+      RUNTIME.timer = setTimeout(pushShared, 3000 + Math.random() * 2000);
+      setSaveState("저장 다시 시도 중…");
+    } else {
+      stashPending();
+      setSaveState("저장 실패");
+      toast("저장하지 못했습니다. 변경 내용을 따로 보관해 두었습니다.");
+    }
+  } finally {
+    RUNTIME.saving = false;
+  }
+}
+
+function setSaveState(t) { const el = $("#saveState"); if (el) el.textContent = t; }
+
+/* 저장 못 한 변경 임시 보관 → 다음에 열 때 복구 제안 */
+function stashPending() {
+  try {
+    localStorage.setItem(PENDING_KEY, JSON.stringify({ at: Date.now(), reservations: state.reservations }));
+  } catch (e) {}
+}
+function takePending() {
+  try {
+    const raw = localStorage.getItem(PENDING_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    if (!d || !Array.isArray(d.reservations)) return null;
+    if (Date.now() - d.at > 1000 * 60 * 60 * 24 * 7) { localStorage.removeItem(PENDING_KEY); return null; }
+    return d;
+  } catch (e) { return null; }
+}
+function clearPending() { try { localStorage.removeItem(PENDING_KEY); } catch (e) {} }
+
+function offerRecovery() {
+  const p = takePending();
+  if (!p) return;
+  const known = new Set(state.reservations.map(r => r.id));
+  const missing = p.reservations.filter(r => !known.has(r.id));
+  if (!missing.length) { clearPending(); return; }
+  const bar = $("#recoverBar");
+  $("#recoverText").textContent = "저장되지 않은 예약 " + missing.length + "건이 남아 있습니다.";
+  bar.hidden = false;
+  bar.dataset.count = missing.length;
+  $("#recoverApply").onclick = () => {
+    state.reservations = state.reservations.concat(missing);
+    clearPending(); bar.hidden = true; save(); renderAll();
+    toast(missing.length + "건을 다시 넣었습니다");
+  };
+  $("#recoverDrop").onclick = () => { clearPending(); bar.hidden = true; };
+}
+
+function applyReadOnly() {
+  document.body.classList.add("ro");
+  $("#roBadge").hidden = false;
+  clearTimeout(RUNTIME.timer);
+  RUNTIME.dirty = false;
+  markClean();
+  renderStorageNote();
+  setSaveState("읽기 전용");
+  toast("이 계정은 조회만 가능합니다. 등록·수정은 저장되지 않습니다.");
+}
+
+function renderStorageNote() {
+  const el = $("#storageNote");
+  if (!el) return;
+  if (RUNTIME.server) {
+    if (!SERVER.on) el.textContent = "서버에 연결하지 못했습니다. 설정 탭에서 주소와 키를 확인하세요.";
+    else if (!RUNTIME.writable) el.textContent = "조회 전용입니다. 등록·수정하려면 설정 탭에서 로그인하세요.";
+    else el.textContent = "서버에 저장됩니다. " + Math.round(POLL_MS / 1000) + "초마다 다른 분의 변경을 확인합니다.";
+    return;
+  }
+  if (RUNTIME.shared && RUNTIME.writable)
+    el.textContent = "이 링크를 함께 쓰는 분들과 같은 자료를 봅니다. 저장하면 다른 분 화면에도 반영됩니다.";
+  else if (RUNTIME.shared)
+    el.textContent = "조회 전용입니다. 등록·수정은 편집 권한이 있어야 합니다.";
+  else
+    el.textContent = "이 브라우저에만 저장됩니다. 다른 PC와 나누려면 JSON으로 주고받으세요.";
+}
+
+/* =========================================================
+   1-B. 서버 연결 (Supabase REST)
+   - 한 행에 대장 전체를 JSON 으로 담는다 (state 구조 그대로)
+   - 10초마다 updated_at 만 확인해서, 바뀌었을 때만 전체를 받아온다
+   ========================================================= */
+const SERVER = { token: null, email: null, seen: null, poll: null, on: false };
+const SERVER_CFG_KEY = "rsv.server.v1";
+const SERVER_SESSION_KEY = "rsv.session.v1";
+
+function serverCfg() {
+  try {
+    const raw = localStorage.getItem(SERVER_CFG_KEY);
+    if (raw) { const c = JSON.parse(raw); if (c && c.url && c.anonKey) return c; }
+  } catch (e) {}
+  if (SUPABASE_URL && SUPABASE_ANON_KEY) return { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY };
+  return null;
+}
+function saveServerCfg(url, anonKey) {
+  try { localStorage.setItem(SERVER_CFG_KEY, JSON.stringify({ url: url.trim().replace(/\/$/, ""), anonKey: anonKey.trim() })); } catch (e) {}
+}
+function loadSession() {
+  try { const d = JSON.parse(localStorage.getItem(SERVER_SESSION_KEY) || "null");
+        if (d && d.token) { SERVER.token = d.token; SERVER.refresh = d.refresh; SERVER.email = d.email; } } catch (e) {}
+}
+function storeSession() {
+  try {
+    if (SERVER.token) localStorage.setItem(SERVER_SESSION_KEY, JSON.stringify({ token: SERVER.token, refresh: SERVER.refresh, email: SERVER.email }));
+    else localStorage.removeItem(SERVER_SESSION_KEY);
+  } catch (e) {}
+}
+
+async function sbFetch(path, opts) {
+  const cfg = serverCfg();
+  if (!cfg) throw new Error("서버 설정 없음");
+  const o = opts || {};
+  // apikey 헤더는 항상, Authorization 은 로그인했을 때만 보낸다.
+  // 새 publishable 키(sb_publishable_...)는 Bearer 로 보내면 거부되기 때문에,
+  // 이렇게 해야 새 키와 옛 anon 키 양쪽에서 모두 동작한다.
+  const headers = Object.assign({
+    apikey: cfg.anonKey,
+    "Content-Type": "application/json"
+  }, o.headers || {});
+  if (SERVER.token) headers.Authorization = "Bearer " + SERVER.token;
+  return fetch(cfg.url + path, Object.assign({}, o, { headers: headers }));
+}
+
+/* 로그인한 담당자만 쓰기 권한을 갖는다 */
+async function serverLogin(email, password) {
+  const cfg = serverCfg();
+  const res = await fetch(cfg.url + "/auth/v1/token?grant_type=password", {
+    method: "POST",
+    headers: { apikey: cfg.anonKey, "Content-Type": "application/json" },
+    body: JSON.stringify({ email: email, password: password })
+  });
+  const d = await res.json().catch(() => ({}));
+  if (!res.ok || !d.access_token) throw new Error(d.error_description || d.msg || "로그인하지 못했습니다");
+  SERVER.token = d.access_token; SERVER.refresh = d.refresh_token; SERVER.email = email;
+  storeSession();
+  return d;
+}
+async function serverRefresh() {
+  if (!SERVER.refresh) return false;
+  const cfg = serverCfg();
+  const res = await fetch(cfg.url + "/auth/v1/token?grant_type=refresh_token", {
+    method: "POST",
+    headers: { apikey: cfg.anonKey, "Content-Type": "application/json" },
+    body: JSON.stringify({ refresh_token: SERVER.refresh })
+  });
+  const d = await res.json().catch(() => ({}));
+  if (!res.ok || !d.access_token) { serverLogout(); return false; }
+  SERVER.token = d.access_token; SERVER.refresh = d.refresh_token; storeSession();
+  return true;
+}
+function serverLogout() {
+  SERVER.token = null; SERVER.refresh = null; SERVER.email = null;
+  storeSession();
+}
+
+async function serverLoad() {
+  const res = await sbFetch("/rest/v1/ledger?id=eq." + ROW_ID + "&select=data,updated_at,updated_by");
+  if (!res.ok) throw new Error("불러오지 못했습니다 (" + res.status + ")");
+  const rows = await res.json();
+  if (!rows.length) return null;
+  SERVER.seen = rows[0].updated_at;
+  SERVER.lastBy = rows[0].updated_by || "";
+  return migrate(rows[0].data || {});
+}
+
+async function serverSave() {
+  const now = new Date().toISOString();
+  const body = [{ id: ROW_ID, data: state, updated_at: now, updated_by: SERVER.email || "" }];
+  let res = await sbFetch("/rest/v1/ledger", {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+    body: JSON.stringify(body)
+  });
+  if (res.status === 401 && await serverRefresh()) {
+    res = await sbFetch("/rest/v1/ledger", {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+      body: JSON.stringify(body)
+    });
+  }
+  if (res.status === 401 || res.status === 403) { const e = new Error("권한 없음"); e.code = "not_writer"; throw e; }
+  if (!res.ok) { const e = new Error("저장 실패 (" + res.status + ")"); e.code = "upstream_error"; throw e; }
+  const rows = await res.json().catch(() => []);
+  if (rows.length) SERVER.seen = rows[0].updated_at;
+  return true;
+}
+
+/* 다른 사람이 저장했는지 확인 — updated_at 만 받아서 가볍게 */
+async function serverPoll() {
+  if (RUNTIME.saving || RUNTIME.dirty) return;          // 내 변경이 먼저다
+  if (!$("#modal").hidden || !$("#copyBox").hidden) return;  // 편집 중에는 화면을 바꾸지 않는다
+  try {
+    const res = await sbFetch("/rest/v1/ledger?id=eq." + ROW_ID + "&select=updated_at,updated_by");
+    if (!res.ok) return;
+    const rows = await res.json();
+    if (!rows.length || rows[0].updated_at === SERVER.seen) return;
+    const fresh = await serverLoad();
+    if (!fresh) return;
+    state = fresh;
+    fillSelects(); renderAll();
+    if (view.pane === "settings") renderSettings();
+    setSaveState("갱신됨 " + hhmm(new Date()));
+    toast((SERVER.lastBy ? SERVER.lastBy + "님이 " : "") + "방금 수정한 내용을 불러왔습니다");
+  } catch (e) { /* 일시적인 통신 실패는 넘긴다 */ }
+}
+function startPolling() {
+  clearInterval(SERVER.poll);
+  SERVER.poll = setInterval(serverPoll, POLL_MS);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) serverPoll(); });
+}
+
+/* =========================================================
+   2. 유틸
+   ========================================================= */
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-3);
+const pad = n => String(n).padStart(2, "0");
+const hhmm = d => pad(d.getHours()) + ":" + pad(d.getMinutes());
+const won = n => Math.round(n).toLocaleString("ko-KR");
+const DOW = ["일", "월", "화", "수", "목", "금", "토"];
+
+function ymd(y, m, d) { return y + "-" + pad(m) + "-" + pad(d); }
+function parseYmd(s) { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); }
+function toMin(t) { if (!t) return 0; const [h, m] = t.split(":").map(Number); return h * 60 + m; }
+function isWeekend(dateStr) { const w = parseYmd(dateStr).getDay(); return w === 0 || w === 6; }
+function isHoliday(dateStr) { return (state.settings.holidays || []).includes(dateStr); }
+function facilityOf(id) { return state.facilities.find(f => f.id === id) || null; }
+function discountOf(id) { return state.discounts.find(d => d.id === id) || state.discounts[0] || { name: "-", rate: 0, article: "" }; }
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+function toast(msg) {
+  const el = $("#toast");
+  el.textContent = msg; el.hidden = false;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.hidden = true; }, 2200);
+}
+
+/* =========================================================
+   3. 이용료 계산 — 조례를 이 함수에 담는다
+   ========================================================= */
+function calcFee(r) {
+  const s = state.settings;
+  const fac = facilityOf(r.facilityId);
+  const out = { total: 0, lines: [], hours: 0 };
+  if (!fac) { out.lines.push({ label: "시설 정보 없음", amount: 0 }); return out; }
+
+  const startM = toMin(r.start), endM = toMin(r.end);
+  const rawMin = Math.max(0, endM - startM);
+  out.hours = rawMin / 60;
+
+  const isPrep = r.kind === "준비";
+  const prep = fac.prep || { allowed: false, mode: "fee", fee: 0, percent: 50, article: "" };
+
+  let qty, qtyLabel, unitWord;
+  if (fac.unit === "day" && !isPrep) {
+    qty = rawMin > 0 ? 1 : 0; unitWord = "일"; qtyLabel = qty + "일";
+  } else {
+    // 준비시간은 최소 이용시간을 적용하지 않고 실제 사용한 만큼만 센다
+    qty = isPrep ? rawMin / 60 : Math.max(Number(s.minHours) || 0, rawMin / 60);
+    unitWord = "시간";
+    qtyLabel = (Math.round(qty * 10) / 10) + "시간";
+    if (!isPrep && qty > rawMin / 60) qtyLabel += " (최소 이용시간 적용)";
+  }
+
+  // ② 기본 사용료 (행사) 또는 준비시간 사용료
+  let base = 0;
+  if (isPrep) {
+    if (!prep.allowed) {
+      out.lines.push({ label: fac.name + " · 준비시간 미적용 시설", why: "이 시설은 준비시간을 따로 받지 않는 것으로 설정돼 있습니다", amount: 0 });
+    } else if (prep.mode === "free") {
+      out.lines.push({ label: "준비시간 " + qtyLabel, why: "무료" + (prep.article ? " · " + prep.article : ""), amount: 0 });
+    } else if (prep.mode === "percent") {
+      base = (Number(fac.unitFee) || 0) * qty * (Number(prep.percent) || 0) / 100;
+      out.lines.push({
+        label: "준비시간 · " + fac.name + " " + qtyLabel,
+        why: "시간당 " + won(fac.unitFee) + "원의 " + (Number(prep.percent) || 0) + "%" + (prep.article ? " · " + prep.article : ""),
+        amount: base
+      });
+    } else {
+      base = (Number(prep.fee) || 0) * qty;
+      out.lines.push({
+        label: "준비시간 · " + fac.name + " " + qtyLabel,
+        why: won(prep.fee) + "원 × " + (Math.round(qty * 10) / 10) + "시간" + (prep.article ? " · " + prep.article : ""),
+        amount: base
+      });
+    }
+    if (prep.allowed && prep.mode !== "free" && !Number(prep.fee) && !(prep.mode === "percent" && Number(prep.percent)))
+      out.pending = true;
+  } else {
+    base = (Number(fac.baseFee) || 0) + (Number(fac.unitFee) || 0) * qty;
+    out.lines.push({
+      label: "기본 사용료 · " + fac.name + " " + qtyLabel,
+      why: (fac.baseFee ? "기본료 " + won(fac.baseFee) + "원 + " : "") +
+           won(fac.unitFee) + "원 × " + (Math.round(qty * 10) / 10) + unitWord +
+           (fac.article ? " · " + fac.article : ""),
+      amount: base
+    });
+    if (!Number(fac.unitFee) && !Number(fac.baseFee)) out.pending = true;
+  }
+
+  // ③④ 할증 — 준비시간은 설정에 따라 제외할 수 있다
+  let night = 0, extra = 0;
+  const surchargeApplies = !isPrep || s.prepSurcharge;
+
+  if (surchargeApplies && fac.unit === "hour" && Number(s.nightRate) > 0 && base > 0) {
+    const nStart = toMin(s.nightStart);
+    const nightMin = Math.max(0, Math.min(endM, 24 * 60) - Math.max(startM, nStart));
+    if (nightMin > 0) {
+      const hourlyBase = isPrep ? base / Math.max(qty, 0.0001) : (Number(fac.unitFee) || 0);
+      night = hourlyBase * (nightMin / 60) * (Number(s.nightRate) / 100);
+      out.lines.push({
+        label: "야간 할증 " + s.nightRate + "%",
+        why: s.nightStart + " 이후 " + (Math.round(nightMin / 6) / 10) + "시간" + (s.surchargeArticle ? " · " + s.surchargeArticle : ""),
+        amount: night
+      });
+    }
+  }
+
+  const holiday = isHoliday(r.date), weekend = isWeekend(r.date);
+  const dayRate = holiday ? Number(s.holidayRate) || 0 : (weekend ? Number(s.weekendRate) || 0 : 0);
+  if (surchargeApplies && dayRate > 0 && base > 0) {
+    extra = base * (dayRate / 100);
+    out.lines.push({
+      label: (holiday ? "공휴일" : "주말") + " 할증 " + dayRate + "%",
+      why: r.date + " " + DOW[parseYmd(r.date).getDay()] + "요일" + (s.surchargeArticle ? " · " + s.surchargeArticle : ""),
+      amount: extra
+    });
+  }
+
+  const subtotal = base + night + extra;
+
+  // ⑤ 감면
+  const dc = discountOf(r.discountId);
+  let cut = 0;
+  if (Number(dc.rate) > 0) {
+    cut = subtotal * (Number(dc.rate) / 100);
+    out.lines.push({
+      label: "감면 · " + dc.name + " " + dc.rate + "%",
+      why: dc.article || "근거 조문 미입력",
+      amount: -cut
+    });
+  }
+
+  const unit = Math.max(1, Number(s.rounding) || 1);
+  out.total = Math.max(0, Math.floor((subtotal - cut) / unit) * unit);
+  return out;
+}
+function feeOf(r) {
+  if (r.feeOverride !== "" && r.feeOverride != null && !isNaN(r.feeOverride)) return Number(r.feeOverride);
+  return calcFee(r).total;
+}
+
+/* =========================================================
+   4. 중복(충돌) 검사
+   ========================================================= */
+function conflictIds(list) {
+  const bad = new Set();
+  const act = list.filter(r => r.status !== "취소");
+  for (let i = 0; i < act.length; i++) {
+    for (let j = i + 1; j < act.length; j++) {
+      const a = act[i], b = act[j];
+      if (a.date !== b.date || a.facilityId !== b.facilityId) continue;
+      if (toMin(a.start) < toMin(b.end) && toMin(b.start) < toMin(a.end)) { bad.add(a.id); bad.add(b.id); }
+    }
+  }
+  return bad;
+}
+let conflicts = new Set();
+
+/* =========================================================
+   5. 달력
+   ========================================================= */
+function monthReservations(y, m) {
+  const p = y + "-" + pad(m);
+  return state.reservations.filter(r => r.date.startsWith(p));
+}
+function renderCalendar() {
+  const y = view.year, m = view.month;
+  const first = new Date(y, m - 1, 1);
+  const startDow = first.getDay();
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const prevDays = new Date(y, m - 1, 0).getDate();
+  const today = new Date();
+  const todayStr = ymd(today.getFullYear(), today.getMonth() + 1, today.getDate());
+
+  $("#calTitle").textContent = y + "년 " + m + "월";
+  const mr = monthReservations(y, m).filter(r => r.status !== "취소");
+  const nEv = mr.filter(r => r.kind !== "준비").length, nPr = mr.length - nEv;
+  const sum = mr.reduce((a, r) => a + feeOf(r), 0);
+  $("#calSubtitle").textContent = "행사 " + nEv + "건" + (nPr ? " · 준비 " + nPr + "건" : "") + " · 이용료 " + won(sum) + "원";
+
+  const byDate = {};
+  monthReservations(y, m).forEach(r => (byDate[r.date] = byDate[r.date] || []).push(r));
+  Object.values(byDate).forEach(a => a.sort((x, y2) => x.start.localeCompare(y2.start)));
+
+  const cells = [];
+  const total = Math.ceil((startDow + daysInMonth) / 7) * 7;
+  for (let i = 0; i < total; i++) {
+    const dnum = i - startDow + 1;
+    let date, out = false, label;
+    if (dnum < 1) { date = ymd(m === 1 ? y - 1 : y, m === 1 ? 12 : m - 1, prevDays + dnum); out = true; label = prevDays + dnum; }
+    else if (dnum > daysInMonth) { date = ymd(m === 12 ? y + 1 : y, m === 12 ? 1 : m + 1, dnum - daysInMonth); out = true; label = dnum - daysInMonth; }
+    else { date = ymd(y, m, dnum); label = dnum; }
+
+    const dow = (i % 7);
+    const items = byDate[date] || (out ? state.reservations.filter(r => r.date === date) : []);
+    const shown = items.slice(0, 3);
+    const chips = shown.map(r => {
+      const f = facilityOf(r.facilityId);
+      const cls = r.status === "승인" ? "" : (r.status === "취소" ? " cancelled" : " pending");
+      const pk = r.kind === "준비" ? " prep" : "";
+      const cf = conflicts.has(r.id) ? " conflict" : "";
+      return '<button type="button" class="chip' + cls + pk + cf + '" data-edit="' + r.id + '" title="' +
+        esc(r.start + "–" + r.end + " " + (f ? f.name : "") + " / " + r.applicant + (r.kind === "준비" ? " (준비시간)" : "")) + '">' +
+        '<span class="t">' + esc(r.start) + '</span>' + (r.kind === "준비" ? "[준비] " : "") +
+        esc(f ? f.name : "?") + " · " + esc(r.applicant) + "</button>";
+    }).join("");
+    const more = items.length > 3
+      ? '<button type="button" class="chip-more" data-day="' + date + '">+ ' + (items.length - 3) + "건 더</button>"
+      : "";
+
+    cells.push(
+      '<div class="cell' + (out ? " out" : "") + ((dow === 0 || dow === 6) ? " weekend" : "") +
+      (date === todayStr ? " today" : "") + (date === view.selected ? " selected" : "") +
+      '" data-day="' + date + '" role="button" tabindex="0">' +
+        '<div class="cell-date"><b>' + label + "</b>" +
+          (isHoliday(date) ? '<span class="holiday-tag">공휴일</span>' : "") +
+          (items.length ? '<span class="cell-count">' + items.length + "</span>" : "") +
+        "</div>" + chips + more +
+      "</div>"
+    );
+  }
+  $("#calGrid").innerHTML = cells.join("");
+  renderSummary();
+}
+
+function renderSummary() {
+  const mr = monthReservations(view.year, view.month);
+  const live = mr.filter(r => r.status !== "취소");
+  const ev = live.filter(r => r.kind !== "준비");
+  const pr = live.filter(r => r.kind === "준비");
+  const hrs = a => Math.round(a.reduce((n, r) => n + Math.max(0, (toMin(r.end) - toMin(r.start)) / 60), 0) * 10) / 10;
+  const fee = a => a.reduce((n, r) => n + feeOf(r), 0);
+  $("#summary").innerHTML =
+    stat("행사", ev.length + '<small>건 · ' + hrs(ev) + "시간</small>") +
+    stat("준비시간", pr.length + '<small>건 · ' + hrs(pr) + "시간</small>") +
+    stat("행사 이용료", won(fee(ev)) + '<small>원</small>') +
+    stat("준비시간 이용료", won(fee(pr)) + '<small>원</small>') +
+    stat("합계", won(fee(live)) + '<small>원</small>') +
+    stat("승인 대기", mr.filter(r => r.status === "신청").length + '<small>건</small>');
+}
+function stat(k, v) { return '<div class="stat"><dt>' + k + "</dt><dd>" + v + "</dd></div>"; }
+
+/* =========================================================
+   6. 우측 상세
+   ========================================================= */
+function renderRail() {
+  const d = view.selected;
+  if (!d) {
+    $("#railTitle").textContent = "날짜를 선택하세요";
+    $("#railSub").textContent = "달력에서 날짜를 누르면 그 날의 예약이 표시됩니다";
+    $("#railAdd").hidden = true;
+    $("#railBody").innerHTML = '<p class="empty">선택된 날짜 없음</p>';
+    return;
+  }
+  const dt = parseYmd(d);
+  $("#railTitle").textContent = (dt.getMonth() + 1) + "월 " + dt.getDate() + "일 (" + DOW[dt.getDay()] + ")";
+  $("#railAdd").hidden = false;
+
+  const items = state.reservations.filter(r => r.date === d)
+    .sort((a, b) => a.start.localeCompare(b.start));
+  const live = items.filter(r => r.status !== "취소");
+  $("#railSub").textContent = items.length
+    ? "예약 " + live.length + "건 · " + won(live.reduce((a, r) => a + feeOf(r), 0)) + "원"
+    : "예약 없음";
+
+  if (!items.length) {
+    $("#railBody").innerHTML = '<p class="empty">이 날은 예약이 없습니다</p>';
+    return;
+  }
+  $("#railBody").innerHTML = items.map(r => {
+    const f = facilityOf(r.facilityId);
+    const dc = discountOf(r.discountId);
+    const cf = conflicts.has(r.id);
+    return '<div class="item' + (cf ? " is-conflict" : "") + '">' +
+      '<div class="item-top">' +
+        '<span class="item-time">' + esc(r.start) + "–" + esc(r.end) + "</span>" +
+        (r.kind === "준비" ? '<span class="kindtag">준비</span>' : "") +
+        '<span class="status ' + (r.status === "승인" ? "approved" : r.status === "취소" ? "cancelled" : "") + '">' + esc(r.status) + "</span>" +
+        '<span class="item-fac">' + esc(f ? f.name : "시설 없음") + "</span>" +
+      "</div>" +
+      '<div class="item-name">' + esc(r.applicant) + (r.purpose ? ' <span class="item-fac">' + esc(r.purpose) + "</span>" : "") + "</div>" +
+      '<div class="item-meta">' +
+        (r.headcount ? "<span>" + r.headcount + "명</span>" : "") +
+        (Number(dc.rate) > 0 ? "<span>감면 " + esc(dc.name) + " " + dc.rate + "%</span>" : "") +
+      "</div>" +
+      '<div class="item-fee">' + won(feeOf(r)) + "원" + (r.feeOverride !== "" && r.feeOverride != null ? " (직접 입력)" : "") + "</div>" +
+      (cf ? '<div class="warn">⚠ 같은 시설에 시간이 겹치는 예약이 있습니다</div>' : "") +
+      '<div class="item-actions">' +
+        '<button type="button" class="btn btn-sm" data-edit="' + r.id + '">수정</button>' +
+        '<button type="button" class="btn btn-sm" data-copy="' + r.id + '">복제</button>' +
+      "</div></div>";
+  }).join("");
+}
+
+/* =========================================================
+   7. 목록
+   ========================================================= */
+function renderList() {
+  const q = $("#q").value.trim().toLowerCase();
+  const fFac = $("#fFacility").value, fSt = $("#fStatus").value, rng = $("#fRange").value;
+  const fKind = $("#fKindFilter").value;
+  let rows = state.reservations.slice();
+  if (rng === "month") rows = rows.filter(r => r.date.startsWith(view.year + "-" + pad(view.month)));
+  if (fFac) rows = rows.filter(r => r.facilityId === fFac);
+  if (fSt) rows = rows.filter(r => r.status === fSt);
+  if (fKind) rows = rows.filter(r => (r.kind || "행사") === fKind);
+  if (q) rows = rows.filter(r => [r.applicant, r.purpose, r.memo].join(" ").toLowerCase().includes(q));
+  rows.sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
+
+  const live = rows.filter(r => r.status !== "취소");
+  const evF = live.filter(r => r.kind !== "준비").reduce((a, r) => a + feeOf(r), 0);
+  const prF = live.filter(r => r.kind === "준비").reduce((a, r) => a + feeOf(r), 0);
+  $("#listCount").textContent = rows.length + "건 · 행사 " + won(evF) + "원" + (prF ? " · 준비 " + won(prF) + "원" : "") + " · 합계 " + won(evF + prF) + "원";
+
+  $("#listBody").innerHTML = rows.length ? rows.map(r => {
+    const f = facilityOf(r.facilityId), dc = discountOf(r.discountId);
+    const dt = parseYmd(r.date);
+    return "<tr" + (conflicts.has(r.id) ? ' style="background:var(--alert-soft)"' : "") + ">" +
+      '<td class="t">' + esc(r.date) + "</td>" +
+      "<td>" + DOW[dt.getDay()] + "</td>" +
+      '<td class="t">' + esc(r.start) + "–" + esc(r.end) + "</td>" +
+      "<td>" + esc(f ? f.name : "-") + "</td>" +
+      "<td>" + (r.kind === "준비" ? '<span class="kindtag">준비</span>' : "행사") + "</td>" +
+      "<td>" + esc(r.applicant) + "</td>" +
+      "<td>" + esc(r.purpose || "") + "</td>" +
+      '<td class="num">' + (r.headcount || "") + "</td>" +
+      "<td>" + (Number(dc.rate) > 0 ? esc(dc.name) + " " + dc.rate + "%" : "") + "</td>" +
+      '<td class="num">' + won(feeOf(r)) + "</td>" +
+      '<td><span class="status ' + (r.status === "승인" ? "approved" : r.status === "취소" ? "cancelled" : "") + '">' + esc(r.status) + "</span></td>" +
+      '<td><button type="button" class="btn btn-sm" data-edit="' + r.id + '">수정</button></td>' +
+    "</tr>";
+  }).join("") : '<tr><td colspan="11" class="empty">조건에 맞는 예약이 없습니다</td></tr>';
+}
+
+/* =========================================================
+   8. 설정
+   ========================================================= */
+function renderServerCard() {
+  const cfg = serverCfg();
+  const st = $("#srvState");
+  if (!st) return;
+  if (!cfg) st.textContent = "설정 안 됨";
+  else if (!SERVER.on) st.textContent = "연결 실패";
+  else if (SERVER.token) st.textContent = "연결됨 · 쓰기 가능";
+  else st.textContent = "연결됨 · 조회 전용";
+
+  if (cfg) { $("#srvUrl").value = cfg.url; $("#srvKey").value = cfg.anonKey; }
+  $("#srvLoggedIn").hidden = !SERVER.token;
+  $("#srvLoggedOut").hidden = !!SERVER.token;
+  if (SERVER.token) $("#srvWho").textContent = SERVER.email || "담당자";
+}
+
+function renderSettings() {
+  renderServerCard();
+  const s = state.settings;
+  $("#setMinHours").value = s.minHours;
+  $("#setRounding").value = s.rounding;
+  $("#setNightStart").value = s.nightStart;
+  $("#setNightRate").value = s.nightRate;
+  $("#setWeekendRate").value = s.weekendRate;
+  $("#setHolidayRate").value = s.holidayRate;
+  $("#setSurchargeArticle").value = s.surchargeArticle || "";
+  $("#setPrepSurcharge").checked = !!s.prepSurcharge;
+  $("#setHolidays").value = (s.holidays || []).join("\n");
+  $("#setOrgNote").value = s.orgNote || "";
+
+  $("#facilityList").innerHTML = state.facilities.map(f => {
+    const pr = f.prep || { allowed: false, mode: "fee", fee: 0, percent: 50, article: "" };
+    const noFee = !Number(f.unitFee) && !Number(f.baseFee);
+    return '<div class="item" data-fid="' + f.id + '">' +
+      '<div class="row2">' +
+        '<div class="field"><label>시설명 ' + (noFee ? '<span class="needs-fee">단가 미입력</span>' : "") + '</label><input data-k="name" value="' + esc(f.name) + '"></div>' +
+        '<div class="field"><label>과금 단위</label><select data-k="unit">' +
+          '<option value="hour"' + (f.unit === "hour" ? " selected" : "") + ">시간</option>" +
+          '<option value="day"' + (f.unit === "day" ? " selected" : "") + ">일</option>" +
+        "</select></div>" +
+      "</div>" +
+      '<div class="row3">' +
+        '<div class="field"><label>기본료(원)</label><input type="number" class="mono" data-k="baseFee" value="' + (f.baseFee || 0) + '"></div>' +
+        '<div class="field"><label>' + (f.unit === "day" ? "일당" : "시간당") + ' 단가(원)</label><input type="number" class="mono" data-k="unitFee" value="' + (f.unitFee || 0) + '"></div>' +
+        '<div class="field"><label>정원(명)</label><input type="number" class="mono" data-k="capacity" value="' + (f.capacity || 0) + '"></div>' +
+      "</div>" +
+      '<div class="field"><label>근거 조문</label><input data-k="article" value="' + esc(f.article || "") + '" placeholder="예: 조례 별표1 제1호"></div>' +
+
+      '<div class="prepbox">' +
+        '<label class="prep-toggle"><input type="checkbox" data-k="prep.allowed"' + (pr.allowed ? " checked" : "") + '><span>준비시간을 따로 받는 시설</span></label>' +
+        (pr.allowed ?
+          '<div class="row2">' +
+            '<div class="field"><label>산정 방식</label><select data-k="prep.mode">' +
+              '<option value="fee"' + (pr.mode === "fee" ? " selected" : "") + ">별도 단가</option>" +
+              '<option value="percent"' + (pr.mode === "percent" ? " selected" : "") + ">본단가의 %</option>" +
+              '<option value="free"' + (pr.mode === "free" ? " selected" : "") + ">무료</option>" +
+            "</select></div>" +
+            (pr.mode === "percent"
+              ? '<div class="field"><label>본단가 대비(%)</label><input type="number" class="mono" min="0" max="100" data-k="prep.percent" value="' + (pr.percent || 0) + '"></div>'
+              : pr.mode === "fee"
+              ? '<div class="field"><label>준비시간 단가(원/시간)</label><input type="number" class="mono" data-k="prep.fee" value="' + (pr.fee || 0) + '"></div>'
+              : '<div class="field"><label></label><div class="hint">요금을 받지 않습니다</div></div>') +
+          "</div>" +
+          '<div class="field"><label>준비시간 근거 조문</label><input data-k="prep.article" value="' + esc(pr.article || "") + '" placeholder="아직 정해지지 않았으면 비워두세요"></div>'
+        : '<div class="hint">준비시간을 쓰지 않는 시설입니다. 예약 등록창에서 ‘준비’를 고를 수 없습니다.</div>') +
+      "</div>" +
+
+      '<div class="item-actions"><button type="button" class="btn btn-danger btn-sm" data-delfac="' + f.id + '">시설 삭제</button></div>' +
+    "</div>";
+  }).join("");
+
+  $("#discountList").innerHTML = state.discounts.map((d, i) =>
+    '<div class="item" data-did="' + d.id + '">' +
+      '<div class="row2">' +
+        '<div class="field"><label>감면 유형</label><input data-k="name" value="' + esc(d.name) + '"></div>' +
+        '<div class="field"><label>감면율(%)</label><input type="number" class="mono" data-k="rate" min="0" max="100" value="' + (d.rate || 0) + '"></div>' +
+      "</div>" +
+      '<div class="field"><label>근거 조문</label><input data-k="article" value="' + esc(d.article || "") + '" placeholder="예: 조례 제13조제1항"></div>' +
+      (i === 0 ? '<div class="article">기본 항목이라 삭제할 수 없습니다</div>'
+               : '<div class="item-actions"><button type="button" class="btn btn-danger btn-sm" data-deldc="' + d.id + '">삭제</button></div>') +
+    "</div>"
+  ).join("");
+}
+
+/* =========================================================
+   9. 예약 등록 / 수정
+   ========================================================= */
+function fillSelects() {
+  const opts = state.facilities.map(f => '<option value="' + f.id + '">' + esc(f.name) + "</option>").join("");
+  $("#fFac").innerHTML = opts;
+  $("#fFacility").innerHTML = '<option value="">전체 시설</option>' + opts;
+  $("#fDiscount").innerHTML = state.discounts.map(d =>
+    '<option value="' + d.id + '">' + esc(d.name) + (d.rate ? " (" + d.rate + "%)" : "") + "</option>").join("");
+}
+function openModal(id, presetDate) {
+  view.editingId = id || null;
+  const r = id ? state.reservations.find(x => x.id === id) : null;
+  $("#modalTitle").textContent = r ? "예약 수정" : "예약 등록";
+  $("#deleteRes").hidden = !r;
+  fillSelects();
+
+  $("#fDate").value = r ? r.date : (presetDate || view.selected || ymd(view.year, view.month, 1));
+  $("#fStart").value = r ? r.start : "09:00";
+  $("#fEnd").value = r ? r.end : "12:00";
+  $("#fFac").value = r ? r.facilityId : (state.facilities[0] ? state.facilities[0].id : "");
+  $("#fStatusSel").value = r ? r.status : "신청";
+  $("#fApplicant").value = r ? r.applicant : "";
+  $("#fHead").value = r ? (r.headcount || "") : "";
+  $("#fPurpose").value = r ? (r.purpose || "") : "";
+  $("#fDiscount").value = r ? r.discountId : (state.discounts[0] ? state.discounts[0].id : "");
+  $("#fMemo").value = r ? (r.memo || "") : "";
+  $("#fOverride").value = r && r.feeOverride != null ? r.feeOverride : "";
+  $("#fKind").value = r ? (r.kind || "행사") : "행사";
+
+  // 이미 등록된 준비시간 읽어오기
+  const kids = r ? state.reservations.filter(x => x.linkId === r.id && x.kind === "준비") : [];
+  const before = kids.filter(x => toMin(x.end) <= toMin(r.start) && x.date === r.date);
+  const after = kids.filter(x => toMin(x.start) >= toMin(r.end) && x.date === r.date);
+  $("#fPrepOn").checked = kids.length > 0;
+  $("#fPrepBefore").value = before.length ? (toMin(before[0].end) - toMin(before[0].start)) / 60 : 0;
+  $("#fPrepAfter").value = after.length ? (toMin(after[0].end) - toMin(after[0].start)) / 60 : 0;
+  updateKindUI();
+
+  $("#saveRes").hidden = !RUNTIME.writable;
+  if (!RUNTIME.writable) $("#deleteRes").hidden = true;
+  $("#modal").hidden = false;
+  updateFeePreview();
+  setTimeout(() => $("#fApplicant").focus(), 30);
+}
+function closeModal() { $("#modal").hidden = true; view.editingId = null; }
+
+function formToRes() {
+  const prev = view.editingId ? state.reservations.find(x => x.id === view.editingId) : null;
+  return {
+    id: view.editingId || uid(),
+    kind: $("#fKind").value,
+    linkId: prev ? (prev.linkId || null) : null,
+    date: $("#fDate").value,
+    start: $("#fStart").value,
+    end: $("#fEnd").value,
+    facilityId: $("#fFac").value,
+    status: $("#fStatusSel").value,
+    applicant: $("#fApplicant").value.trim(),
+    headcount: $("#fHead").value ? Number($("#fHead").value) : null,
+    purpose: $("#fPurpose").value.trim(),
+    discountId: $("#fDiscount").value,
+    memo: $("#fMemo").value.trim(),
+    feeOverride: $("#fOverride").value === "" ? null : Number($("#fOverride").value)
+  };
+}
+function updateKindUI() {
+  const fac = facilityOf($("#fFac").value);
+  const allowed = !!(fac && fac.prep && fac.prep.allowed);
+  const kindSel = $("#fKind");
+
+  // 준비시간을 받지 않는 시설이면 '준비'를 고를 수 없다
+  kindSel.querySelector('option[value="준비"], option:nth-child(2)').disabled = !allowed;
+  if (!allowed && kindSel.value === "준비") kindSel.value = "행사";
+  $("#kindHint").textContent = allowed ? "" : (fac ? fac.name + "은 준비시간 없음" : "");
+
+  const isEvent = kindSel.value === "행사";
+  $("#prepBox").hidden = !(allowed && isEvent);
+  $("#prepFields").hidden = !$("#fPrepOn").checked;
+
+  const b = Number($("#fPrepBefore").value) || 0, a = Number($("#fPrepAfter").value) || 0;
+  if (!$("#prepBox").hidden && $("#fPrepOn").checked && (b || a)) {
+    const st = toMin($("#fStart").value), en = toMin($("#fEnd").value);
+    const parts = [];
+    if (b) parts.push("전 " + minToHm(st - b * 60) + "–" + minToHm(st));
+    if (a) parts.push("후 " + minToHm(en) + "–" + minToHm(en + a * 60));
+    $("#prepSummary").textContent = parts.join(" · ") + " 로 준비시간이 따로 등록됩니다";
+  } else if (!$("#prepBox").hidden) {
+    $("#prepSummary").textContent = $("#fPrepOn").checked ? "시간을 입력하세요" : "";
+  }
+}
+/* 함께 등록될 준비시간의 요금까지 미리 보여준다 */
+function prepPreview(parent, eventTotal) {
+  if (parent.kind !== "행사" || $("#prepBox").hidden || !$("#fPrepOn").checked) return "";
+  const b = Number($("#fPrepBefore").value) || 0, a = Number($("#fPrepAfter").value) || 0;
+  if (!b && !a) return "";
+  const st = toMin(parent.start), en = toMin(parent.end);
+  const mk = (s1, e1) => Object.assign({}, parent, { id: "_p", kind: "준비", start: minToHm(s1), end: minToHm(e1) });
+  let sum = 0, rows = "";
+  if (b > 0 && st - b * 60 >= 0) {
+    const v = calcFee(mk(st - b * 60, st)).total; sum += v;
+    rows += '<div class="fee-line"><span>준비 ' + minToHm(st - b * 60) + "–" + minToHm(st) + " (" + b + "시간)</span><span>" + won(v) + "</span></div>";
+  }
+  if (a > 0 && en + a * 60 <= 24 * 60) {
+    const v = calcFee(mk(en, en + a * 60)).total; sum += v;
+    rows += '<div class="fee-line"><span>정리 ' + minToHm(en) + "–" + minToHm(en + a * 60) + " (" + a + "시간)</span><span>" + won(v) + "</span></div>";
+  }
+  if (!rows) return "";
+  return '<div class="fee-line" style="margin-top:8px"><span class="why" style="display:block">함께 등록되는 준비시간 (별도 건으로 저장)</span><span></span></div>' +
+    rows +
+    '<div class="fee-line total"><span>행사 + 준비 합계</span><span>' + won(eventTotal + sum) + "원</span></div>";
+}
+
+function minToHm(m) {
+  const x = Math.max(0, Math.min(24 * 60, Math.round(m)));
+  return pad(Math.floor(x / 60)) + ":" + pad(x % 60);
+}
+
+/* 행사에 딸린 준비시간 예약을 다시 만든다 */
+function rebuildPrepRows(parent) {
+  state.reservations = state.reservations.filter(x => x.linkId !== parent.id);
+  if (parent.kind !== "행사" || !$("#fPrepOn").checked) return 0;
+  const fac = facilityOf(parent.facilityId);
+  if (!fac || !fac.prep || !fac.prep.allowed) return 0;
+
+  const mk = (startM, endM, tag) => ({
+    id: uid(), kind: "준비", linkId: parent.id,
+    date: parent.date, start: minToHm(startM), end: minToHm(endM),
+    facilityId: parent.facilityId, status: parent.status,
+    applicant: parent.applicant,
+    headcount: null, purpose: (parent.purpose || "행사") + " " + tag,
+    discountId: parent.discountId, memo: "", feeOverride: null
+  });
+  const b = Number($("#fPrepBefore").value) || 0, a = Number($("#fPrepAfter").value) || 0;
+  const st = toMin(parent.start), en = toMin(parent.end);
+  let n = 0;
+  if (b > 0 && st - b * 60 >= 0) { state.reservations.push(mk(st - b * 60, st, "준비")); n++; }
+  if (a > 0 && en + a * 60 <= 24 * 60) { state.reservations.push(mk(en, en + a * 60, "정리")); n++; }
+  return n;
+}
+
+function updateFeePreview() {
+  const r = formToRes();
+  const box = $("#feeBreakdown");
+  if (!r.date || !r.start || !r.end || toMin(r.end) <= toMin(r.start)) {
+    box.innerHTML = '<div class="fee-line"><span>종료 시각이 시작 시각보다 늦어야 합니다</span><span>—</span></div>';
+  } else {
+    const f = calcFee(r);
+    box.innerHTML = (f.pending ? '<div class="fee-line"><span class="needs-fee">단가 미입력</span><span></span></div>' : "") +
+    f.lines.map(l =>
+      '<div class="fee-line"><span>' + esc(l.label) + (l.why ? '<span class="why">' + esc(l.why) + "</span>" : "") + "</span>" +
+      "<span>" + (l.amount < 0 ? "−" : "") + won(Math.abs(l.amount)) + "</span></div>"
+    ).join("") +
+    '<div class="fee-line total"><span>산정 이용료</span><span>' + won(f.total) + "원</span></div>" + prepPreview(r, f.total);
+  }
+  // 중복 안내
+  const others = state.reservations.filter(x => x.id !== r.id && x.status !== "취소" &&
+    x.date === r.date && x.facilityId === r.facilityId &&
+    toMin(x.start) < toMin(r.end) && toMin(r.start) < toMin(x.end));
+  const n = $("#conflictNotice");
+  if (others.length && r.status !== "취소") {
+    n.hidden = false;
+    n.textContent = "같은 시설에 시간이 겹치는 예약이 " + others.length + "건 있습니다: " +
+      others.map(o => o.start + "–" + o.end + " " + o.applicant).join(", ");
+  } else n.hidden = true;
+}
+
+/* =========================================================
+   10. 렌더 총괄
+   ========================================================= */
+function renderAll() {
+  conflicts = conflictIds(state.reservations);
+  $("#yearInput").value = view.year;
+  $("#monthInput").value = view.month;
+  renderCalendar();
+  renderRail();
+  renderList();
+}
+
+/* =========================================================
+   11. 이벤트
+   ========================================================= */
+function setPane(p) {
+  view.pane = p;
+  $$(".tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.pane === p)));
+  $$(".pane").forEach(s => s.classList.toggle("active", s.id === "pane-" + p));
+  if (p === "settings") renderSettings();
+  if (p === "list") renderList();
+}
+function shiftMonth(d) {
+  let m = view.month + d, y = view.year;
+  if (m < 1) { m = 12; y--; } else if (m > 12) { m = 1; y++; }
+  view.year = y; view.month = m; view.selected = null;
+  renderAll();
+}
+
+document.addEventListener("DOMContentLoaded", boot);
+
+async function boot() {
+  // 공유 저장소가 있으면 그쪽 자료를 먼저 읽는다
+  try {
+    RUNTIME.api = (typeof claude !== "undefined" && claude.use) ? await claude.use("artifact") : null;
+  } catch (e) { RUNTIME.api = null; }
+
+  loadSession();
+
+  if (serverCfg()) {
+    // ① 서버(Supabase)가 설정돼 있으면 그쪽이 원본이다
+    RUNTIME.shared = true; RUNTIME.server = true;
+    RUNTIME.writable = !!SERVER.token;
+    try {
+      const fresh = await serverLoad();
+      state = fresh || readLocal() || structuredClone(DEFAULT_STATE);
+      SERVER.on = true;
+    } catch (e) {
+      SERVER.on = false;
+      state = readLocal() || structuredClone(DEFAULT_STATE);
+    }
+  } else if (RUNTIME.api) {
+    // ② 아티팩트 공유 저장
+    RUNTIME.shared = true;
+    try {
+      const res = await fetch(DATA_PATH, { cache: "no-store" });
+      if (res.ok) state = migrate(await res.json());
+    } catch (e) { /* 아직 저장된 자료가 없는 상태 */ }
+  } else {
+    // ③ 이 브라우저에만
+    state = readLocal() || structuredClone(DEFAULT_STATE);
+  }
+  init();
+  if (typeof claude !== "undefined" && claude.use) {
+    $("#importJson").hidden = true;
+    $("#importPaste").hidden = false;
+    $("#exportJson").textContent = "JSON 복사";
+    $("#exportCsv").textContent = "이 달 표 복사";
+  }
+  renderStorageNote();
+  if (RUNTIME.server) {
+    if (!SERVER.on) setSaveState("서버 연결 안 됨");
+    else if (!RUNTIME.writable) { applyReadOnly(); }
+    else setSaveState("서버에 연결됨");
+    startPolling();
+  } else {
+    setSaveState(RUNTIME.shared ? "함께 쓰는 대장" : "이 브라우저에 저장");
+  }
+  if (RUNTIME.shared) offerRecovery();
+}
+
+function init() {
+  $("#monthInput").innerHTML = Array.from({ length: 12 }, (_, i) => '<option value="' + (i + 1) + '">' + (i + 1) + "월</option>").join("");
+  fillSelects();
+  renderAll();
+
+  $$(".tabs button").forEach(b => b.addEventListener("click", () => setPane(b.dataset.pane)));
+  $("#prevMonth").addEventListener("click", () => shiftMonth(-1));
+  $("#nextMonth").addEventListener("click", () => shiftMonth(1));
+  $("#todayBtn").addEventListener("click", () => {
+    const t = new Date(); view.year = t.getFullYear(); view.month = t.getMonth() + 1;
+    view.selected = ymd(t.getFullYear(), t.getMonth() + 1, t.getDate()); renderAll();
+  });
+  $("#yearInput").addEventListener("change", e => { view.year = Number(e.target.value) || view.year; renderAll(); });
+  $("#monthInput").addEventListener("change", e => { view.month = Number(e.target.value); renderAll(); });
+  $("#newBtn").addEventListener("click", () => openModal(null));
+  $("#railAdd").addEventListener("click", () => openModal(null, view.selected));
+
+  $("#themeBtn").addEventListener("click", () => {
+    const cur = document.documentElement.getAttribute("data-theme");
+    const next = cur === "dark" ? "light" : cur === "light" ? "" : "dark";
+    if (next) document.documentElement.setAttribute("data-theme", next);
+    else document.documentElement.removeAttribute("data-theme");
+  });
+
+  // 달력 클릭
+  $("#calGrid").addEventListener("click", e => {
+    const edit = e.target.closest("[data-edit]");
+    if (edit) { e.stopPropagation(); openModal(edit.dataset.edit); return; }
+    const cell = e.target.closest("[data-day]");
+    if (cell) { view.selected = cell.dataset.day; renderCalendar(); renderRail(); }
+  });
+  $("#calGrid").addEventListener("keydown", e => {
+    if ((e.key === "Enter" || e.key === " ") && e.target.dataset.day) {
+      e.preventDefault(); view.selected = e.target.dataset.day; renderCalendar(); renderRail();
+    }
+  });
+
+  // 상세 / 목록 클릭
+  document.addEventListener("click", e => {
+    const ed = e.target.closest("#railBody [data-edit], #listBody [data-edit]");
+    if (ed) { openModal(ed.dataset.edit); return; }
+    const cp = e.target.closest("[data-copy]");
+    if (cp) {
+      const src = state.reservations.find(x => x.id === cp.dataset.copy);
+      if (src) {
+        const c = Object.assign({}, src, { id: uid(), status: "신청" });
+        state.reservations.push(c); save(); renderAll(); openModal(c.id);
+      }
+    }
+  });
+
+  // 목록 필터
+  ["#q", "#fFacility", "#fKindFilter", "#fStatus", "#fRange"].forEach(sel =>
+    $(sel).addEventListener("input", renderList));
+
+  // 모달
+  $("#closeModal").addEventListener("click", closeModal);
+  $("#cancelModal").addEventListener("click", closeModal);
+  $("#modal").addEventListener("click", e => { if (e.target.id === "modal") closeModal(); });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && !$("#copyBox").hidden) { $("#copyBox").hidden = true; return; }
+    if (e.key === "Escape" && !$("#modal").hidden) closeModal();
+    if ($("#modal").hidden && !/input|select|textarea/i.test(document.activeElement.tagName)) {
+      if (e.key === "ArrowLeft") shiftMonth(-1);
+      if (e.key === "ArrowRight") shiftMonth(1);
+    }
+  });
+  ["#fDate", "#fStart", "#fEnd", "#fFac", "#fDiscount", "#fStatusSel", "#fOverride", "#fKind"].forEach(sel =>
+    $(sel).addEventListener("input", () => { updateKindUI(); updateFeePreview(); }));
+  ["#fPrepOn", "#fPrepBefore", "#fPrepAfter"].forEach(sel =>
+    $(sel).addEventListener("input", () => { updateKindUI(); updateFeePreview(); }));
+
+  $("#resForm").addEventListener("submit", e => {
+    e.preventDefault();
+    if (!RUNTIME.writable) { toast("조회 전용이라 저장할 수 없습니다"); return; }
+    const r = formToRes();
+    if (toMin(r.end) <= toMin(r.start)) { toast("종료 시각이 시작 시각보다 늦어야 합니다"); return; }
+    if (!r.applicant) { toast("신청 단체를 입력하세요"); return; }
+    const i = state.reservations.findIndex(x => x.id === r.id);
+    if (i >= 0) state.reservations[i] = r; else state.reservations.push(r);
+    const n = rebuildPrepRows(r);
+    save(); closeModal();
+    view.year = Number(r.date.slice(0, 4)); view.month = Number(r.date.slice(5, 7)); view.selected = r.date;
+    renderAll();
+    toast((i >= 0 ? "수정했습니다" : "등록했습니다") + (n ? " · 준비시간 " + n + "건 포함" : ""));
+  });
+  $("#deleteRes").addEventListener("click", () => {
+    if (!view.editingId || !RUNTIME.writable) return;
+    const kids = state.reservations.filter(x => x.linkId === view.editingId).length;
+    if (!confirm(kids ? "이 예약과 함께 등록된 준비시간 " + kids + "건을 모두 삭제할까요?" : "이 예약을 삭제할까요?")) return;
+    const gone = view.editingId;
+    state.reservations = state.reservations.filter(x => x.id !== gone && x.linkId !== gone);
+    save(); closeModal(); renderAll(); toast("삭제했습니다");
+  });
+
+  // 설정 편집
+  $("#pane-settings").addEventListener("input", e => {
+    const t = e.target;
+    const facBox = t.closest("[data-fid]"), dcBox = t.closest("[data-did]");
+    if (facBox && t.dataset.k) {
+      const f = facilityOf(facBox.dataset.fid);
+      const k = t.dataset.k;
+      if (k.startsWith("prep.")) {
+        const sub = k.slice(5);
+        f.prep = f.prep || { allowed: false, mode: "fee", fee: 0, percent: 50, article: "" };
+        f.prep[sub] = t.type === "checkbox" ? t.checked : (["fee", "percent"].includes(sub) ? Number(t.value) : t.value);
+        save(); fillSelects(); renderSettings(); renderAll(); return;
+      }
+      f[k] = ["baseFee", "unitFee", "capacity"].includes(k) ? Number(t.value) : t.value;
+      const reRender = k === "unit";
+      save(); fillSelects(); renderAll();
+      if (reRender) renderSettings();
+      return;
+    }
+    if (dcBox && t.dataset.k) {
+      const d = state.discounts.find(x => x.id === dcBox.dataset.did);
+      d[t.dataset.k] = t.dataset.k === "rate" ? Number(t.value) : t.value;
+      save(); fillSelects(); renderAll(); return;
+    }
+    const map = {
+      setMinHours: "minHours", setRounding: "rounding", setNightStart: "nightStart",
+      setNightRate: "nightRate", setWeekendRate: "weekendRate", setHolidayRate: "holidayRate",
+      setSurchargeArticle: "surchargeArticle", setOrgNote: "orgNote"
+    };
+    if (t.id === "setPrepSurcharge") { state.settings.prepSurcharge = t.checked; save(); renderAll(); return; }
+    if (map[t.id]) {
+      const num = ["minHours", "rounding", "nightRate", "weekendRate", "holidayRate"].includes(map[t.id]);
+      state.settings[map[t.id]] = num ? Number(t.value) : t.value;
+      save(); renderAll(); return;
+    }
+    if (t.id === "setHolidays") {
+      state.settings.holidays = t.value.split("\n").map(x => x.trim()).filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x));
+      save(); renderAll();
+    }
+  });
+  $("#addFacility").addEventListener("click", () => {
+    state.facilities.push({ id: uid(), name: "새 시설", unit: "hour", baseFee: 0, unitFee: 0, capacity: 0, article: "",
+      prep: { allowed: false, mode: "fee", fee: 0, percent: 50, article: "" } });
+    save(); fillSelects(); renderSettings(); renderAll();
+  });
+  $("#addDiscount").addEventListener("click", () => {
+    state.discounts.push({ id: uid(), name: "새 감면 유형", rate: 0, article: "" });
+    save(); fillSelects(); renderSettings();
+  });
+  $("#pane-settings").addEventListener("click", e => {
+    const df = e.target.closest("[data-delfac]"), dd = e.target.closest("[data-deldc]");
+    if (df) {
+      const used = state.reservations.some(r => r.facilityId === df.dataset.delfac);
+      if (used && !confirm("이 시설을 쓰는 예약이 있습니다. 그래도 삭제할까요?")) return;
+      state.facilities = state.facilities.filter(f => f.id !== df.dataset.delfac);
+      save(); fillSelects(); renderSettings(); renderAll();
+    }
+    if (dd) {
+      state.discounts = state.discounts.filter(d => d.id !== dd.dataset.deldc);
+      save(); fillSelects(); renderSettings(); renderAll();
+    }
+  });
+  $("#resetAll").addEventListener("click", () => {
+    if (!confirm("모든 예약과 설정을 초기 상태로 되돌립니다. 계속할까요?")) return;
+    state = structuredClone(DEFAULT_STATE);
+    save(); fillSelects(); renderSettings(); renderAll(); toast("초기화했습니다");
+  });
+
+  // 내보내기 / 불러오기
+  $("#saveNow").addEventListener("click", saveNow);
+
+  $("#srvSaveCfg").addEventListener("click", () => {
+    const u = $("#srvUrl").value.trim(), k = $("#srvKey").value.trim();
+    if (!u || !k) { $("#srvMsg").textContent = "주소와 키를 모두 입력하세요."; return; }
+    saveServerCfg(u, k);
+    $("#srvMsg").textContent = "저장했습니다. 화면을 다시 불러옵니다…";
+    setTimeout(() => location.reload(), 600);
+  });
+  $("#srvLogin").addEventListener("click", async () => {
+    const em = $("#srvEmail").value.trim(), pw = $("#srvPw").value;
+    if (!em || !pw) { $("#srvMsg").textContent = "이메일과 비밀번호를 입력하세요."; return; }
+    $("#srvMsg").textContent = "로그인 중…";
+    try {
+      await serverLogin(em, pw);
+      $("#srvPw").value = "";
+      $("#srvMsg").textContent = "로그인했습니다. 화면을 다시 불러옵니다…";
+      setTimeout(() => location.reload(), 600);
+    } catch (err) {
+      $("#srvMsg").textContent = "로그인하지 못했습니다: " + err.message;
+    }
+  });
+  $("#srvLogout").addEventListener("click", () => {
+    if (RUNTIME.dirty && !confirm("저장하지 않은 변경이 있습니다. 그래도 로그아웃할까요?")) return;
+    serverLogout();
+    location.reload();
+  });
+  window.addEventListener("beforeunload", e => {
+    if (RUNTIME.dirty || RUNTIME.saving) { e.preventDefault(); e.returnValue = ""; }
+  });
+  document.addEventListener("keydown", e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); saveNow(); }
+  });
+
+  $("#exportJson").addEventListener("click", () => {
+    download("예약대장_" + view.year + pad(view.month) + ".json",
+      JSON.stringify(state, null, 2), "application/json");
+  });
+  $("#exportCsv").addEventListener("click", () => {
+    const rows = monthReservations(view.year, view.month)
+      .sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
+    const head = ["날짜", "요일", "시작", "종료", "시설", "구분", "신청 단체", "목적", "인원", "감면", "이용료", "상태", "메모"];
+    const body = rows.map(r => {
+      const f = facilityOf(r.facilityId), d = discountOf(r.discountId);
+      return [r.date, DOW[parseYmd(r.date).getDay()], r.start, r.end, f ? f.name : "", r.kind || "행사", r.applicant,
+        r.purpose || "", r.headcount || "", d.name + (d.rate ? " " + d.rate + "%" : ""),
+        feeOf(r), r.status, (r.memo || "").replace(/\n/g, " ")];
+    });
+    const inViewer = (typeof claude !== "undefined" && !!claude.use);
+    if (inViewer) {
+      // 엑셀에 바로 붙여넣도록 탭으로 구분
+      const tsv = [head, ...body].map(r => r.map(c => String(c).replace(/[\t\r\n]/g, " ")).join("\t")).join("\n");
+      download("예약내역_" + view.year + pad(view.month), tsv, "text/plain");
+    } else {
+      const csv = [head, ...body].map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(",")).join("\r\n");
+      download("예약내역_" + view.year + pad(view.month) + ".csv", "﻿" + csv, "text/csv");
+    }
+  });
+  $("#copyClose").addEventListener("click", () => { $("#copyBox").hidden = true; });
+  $("#copyBox").addEventListener("click", e => { if (e.target.id === "copyBox") $("#copyBox").hidden = true; });
+  $("#copyDo").addEventListener("click", async () => {
+    const ta = $("#copyText");
+    ta.focus(); ta.select();
+    try { await navigator.clipboard.writeText(ta.value); toast("복사했습니다"); }
+    catch (e) { toast("Ctrl+C 를 눌러 복사하세요"); }
+  });
+  $("#importPaste").addEventListener("click", () => {
+    const raw = prompt("내보낸 JSON 내용을 붙여넣으세요");
+    if (!raw) return;
+    try {
+      const d = JSON.parse(raw);
+      if (!confirm("현재 자료를 붙여넣은 내용으로 대체합니다. 계속할까요?")) return;
+      state = migrate(d); save(); fillSelects(); renderSettings(); renderAll(); toast("불러왔습니다");
+    } catch (err) { toast("내용을 읽지 못했습니다"); }
+  });
+  $("#importJson").addEventListener("click", () => $("#fileInput").click());
+  $("#fileInput").addEventListener("change", e => {
+    const file = e.target.files[0]; if (!file) return;
+    const fr = new FileReader();
+    fr.onload = () => {
+      try {
+        const d = JSON.parse(fr.result);
+        if (!confirm("현재 데이터를 불러온 파일로 대체합니다. 계속할까요?")) return;
+        state = migrate(d); save(); fillSelects(); renderSettings(); renderAll(); toast("불러왔습니다");
+      } catch (err) { toast("파일을 읽지 못했습니다"); }
+    };
+    fr.readAsText(file);
+    e.target.value = "";
+  });
+}
+
+async function download(name, text, mime) {
+  // 게시된 페이지: 파일 내려받기가 공유 제한에 걸리므로 복사창으로 건넨다.
+  // 내려받은 HTML 파일: 평소대로 파일로 저장한다.
+  const inViewer = (typeof claude !== "undefined" && !!claude.use);
+  if (inViewer) { openCopyBox(name, text); return; }
+  const blob = new Blob([text], { type: mime + ";charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+
+function openCopyBox(name, text) {
+  $("#copyName").textContent = name;
+  const ta = $("#copyText");
+  ta.value = text;
+  $("#copyBox").hidden = false;
+  ta.focus(); ta.select();
+}
+</script>
+</body>
+</html>
