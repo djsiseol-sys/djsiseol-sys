@@ -267,6 +267,13 @@ td.t{font-family:"IBM Plex Mono",monospace;white-space:nowrap}
 .modal-foot{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;align-items:center}
 .modal-foot .spacer{margin-left:auto}
 .fee-box{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.fee-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.fee-head h3{margin:0}
+.fee-sum{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:2px}
+.fee-amount{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
+.fee-note{font-size:11px;color:var(--muted)}
+.fee-box .fee-detail,.item .fee-detail{margin-top:6px;background:var(--surface);font-size:12px}
+#feeBreakdown:not([hidden]){margin-top:8px;border-top:1px solid var(--line);padding-top:6px}
 .fee-box h3{margin:0 0 7px;font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;font-weight:500}
 .fee-line{display:flex;justify-content:space-between;gap:12px;font-size:12px;padding:2px 0}
 .fee-line span:last-child{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
@@ -456,52 +463,121 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 
       <div class="card">
         <div class="sec-head">
-          <h2>할증 · 감면 기준</h2>
-          <p>각 항목에 근거 조문을 함께 적어두면, 계산 내역에 근거가 같이 표시됩니다.</p>
+          <h2>가산 · 감산 · 감면 기준</h2>
+          <p>대전광역시 체육시설 관리운영 조례 [시행 2024.12.27. 조례 제6358호] 기준으로 채워져 있습니다.
+             조례가 개정되면 여기 숫자만 바꾸면 됩니다.</p>
         </div>
         <div class="sec-body">
+          <div class="field">
+            <label>기본 전용사용료에 대한 가산·감산 <span class="hint" style="display:inline">별표 2 비고</span></label>
+            <div class="hint">모두 <b>기본 전용사용료(기본액)</b>를 기준으로 계산합니다.</div>
+          </div>
           <div class="row3">
             <div class="field">
-              <label for="setMinHours">최소 이용시간</label>
-              <input type="number" id="setMinHours" min="0" step="0.5" class="mono">
+              <label for="setWeekendRate">토·공휴일 가산(%)</label>
+              <input type="number" id="setWeekendRate" min="0" step="1" class="mono">
+            </div>
+            <div class="field">
+              <label for="setNightRate">야간사용 가산(%)</label>
+              <input type="number" id="setNightRate" min="0" step="1" class="mono">
+            </div>
+            <div class="field">
+              <label for="setEarlyRate">조기사용 감산(%)</label>
+              <input type="number" id="setEarlyRate" min="0" step="1" class="mono">
+            </div>
+          </div>
+          <div class="row3">
+            <div class="field">
+              <label for="setOverRate">초과 1시간당(%)</label>
+              <input type="number" id="setOverRate" min="0" step="1" class="mono">
+              <span class="hint">제11조제3항</span>
             </div>
             <div class="field">
               <label for="setRounding">절사 단위(원)</label>
               <input type="number" id="setRounding" min="1" step="1" class="mono">
             </div>
             <div class="field">
-              <label for="setNightStart">야간 기준 시각</label>
-              <input type="time" id="setNightStart" class="mono">
-            </div>
-          </div>
-          <div class="row3">
-            <div class="field">
-              <label for="setNightRate">야간 할증(%)</label>
-              <input type="number" id="setNightRate" min="0" step="1" class="mono">
-            </div>
-            <div class="field">
-              <label for="setWeekendRate">주말 할증(%)</label>
-              <input type="number" id="setWeekendRate" min="0" step="1" class="mono">
-            </div>
-            <div class="field">
-              <label for="setHolidayRate">공휴일 할증(%)</label>
-              <input type="number" id="setHolidayRate" min="0" step="1" class="mono">
+              <label>&nbsp;</label>
+              <label class="prep-toggle"><input type="checkbox" id="setSundayHoliday"><span>일요일을 공휴일로 봄</span></label>
+              <span class="hint">관공서의 공휴일에 관한 규정 제2조제1호</span>
             </div>
           </div>
           <label class="prep-toggle">
             <input type="checkbox" id="setPrepSurcharge">
-            <span>준비시간에도 야간·주말 할증 적용</span>
+            <span>준비시간에도 가산·감산 적용</span>
           </label>
+
+          <div class="hr"></div>
+
           <div class="field">
-            <label for="setSurchargeArticle">할증 근거 조문</label>
-            <input type="text" id="setSurchargeArticle" placeholder="예: ○○시 공공시설 관리 조례 제12조제2항">
+            <label>일일 사용시간 <span class="hint" style="display:inline">별표 1의2 (제10조제1항)</span></label>
+            <div class="hint">이 시간대로 조기·주간·야간을 가릅니다.</div>
+          </div>
+          <div class="row3">
+            <div class="field">
+              <label for="setSumEarly">하계 조기 시작</label>
+              <input type="time" id="setSumEarly" class="mono">
+            </div>
+            <div class="field">
+              <label for="setSumDay">하계 주간 시작</label>
+              <input type="time" id="setSumDay" class="mono">
+            </div>
+            <div class="field">
+              <label for="setSumNight">하계 야간 시작</label>
+              <input type="time" id="setSumNight" class="mono">
+            </div>
+          </div>
+          <div class="row3">
+            <div class="field">
+              <label for="setWinEarly">동계 조기 시작</label>
+              <input type="time" id="setWinEarly" class="mono">
+            </div>
+            <div class="field">
+              <label for="setWinDay">동계 주간 시작</label>
+              <input type="time" id="setWinDay" class="mono">
+            </div>
+            <div class="field">
+              <label for="setWinNight">동계 야간 시작</label>
+              <input type="time" id="setWinNight" class="mono">
+            </div>
+          </div>
+          <div class="row2">
+            <div class="field">
+              <label for="setSummerFrom">하계 시작 월</label>
+              <input type="number" id="setSummerFrom" min="1" max="12" step="1" class="mono">
+            </div>
+            <div class="field">
+              <label for="setSummerTo">하계 끝 월</label>
+              <input type="number" id="setSummerTo" min="1" max="12" step="1" class="mono">
+            </div>
           </div>
 
           <div class="hr"></div>
 
           <div class="field">
-            <label>감면 유형</label>
-            <div class="hint">감면율은 할증까지 합산한 금액에 적용됩니다.</div>
+            <label>관람료 수입에 따른 사용료 <span class="hint" style="display:inline">제12조</span></label>
+            <div class="hint">등록창에 관람료 수입을 적었을 때만 계산에 더해집니다.</div>
+          </div>
+          <div class="row3">
+            <div class="field">
+              <label for="setAdmSports">체육경기(%)</label>
+              <input type="number" id="setAdmSports" min="0" step="0.5" class="mono">
+            </div>
+            <div class="field">
+              <label for="setAdmOther">프로·일반행사(%)</label>
+              <input type="number" id="setAdmOther" min="0" step="0.5" class="mono">
+            </div>
+            <div class="field">
+              <label for="setAdmSchool">고교 이하 할인(%)</label>
+              <input type="number" id="setAdmSchool" min="0" step="1" class="mono">
+            </div>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="field">
+            <label>감면 유형 <span class="hint" style="display:inline">제13조</span></label>
+            <div class="hint">감면율은 ①~⑤를 모두 합한 금액에 적용됩니다. 등록창에서 해당 유형을 고르면 자동으로 빠집니다.</div>
           </div>
           <div id="discountList" style="display:flex;flex-direction:column;gap:9px"></div>
           <button type="button" class="btn btn-sm" id="addDiscount" style="align-self:flex-start">+ 감면 유형 추가</button>
@@ -511,6 +587,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
           <div class="field">
             <label for="setHolidays">공휴일 (한 줄에 하나, YYYY-MM-DD)</label>
             <textarea id="setHolidays" class="mono" placeholder="2026-09-24&#10;2026-10-03"></textarea>
+            <span class="hint">토요일과 일요일은 자동으로 처리되므로 여기에 적지 않아도 됩니다.</span>
           </div>
         </div>
       </div>
@@ -568,27 +645,37 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
       <div class="card">
         <div class="sec-head">
           <h2>계산 방식</h2>
-          <p>지금 적용 중인 산식입니다. 조례가 다른 구조면 이 부분을 바꿔서 맞춥니다.</p>
+          <p>대전광역시 체육시설 관리운영 조례를 그대로 옮긴 산식입니다.
+             등록창의 ‘산정 이용료 → 상세보기’ 에서 건별로 어떻게 나온 금액인지 볼 수 있습니다.</p>
         </div>
         <div class="sec-body">
           <div class="fee-box">
-            <div class="fee-line"><span>① 이용시간</span><span>max(최소 이용시간, 종료−시작)</span></div>
-            <div class="fee-line"><span>② 기본 사용료</span><span>기본료 + 시간당 단가 × 이용시간</span></div>
-            <div class="fee-line"><span>③ 야간 할증</span><span>시간당 단가 × 야간시간 × 할증률</span></div>
-            <div class="fee-line"><span>④ 주말·공휴일 할증</span><span>② × 할증률</span></div>
-            <div class="fee-line"><span>⑤ 감면</span><span>(②+③+④) × 감면율</span></div>
-            <div class="fee-line total"><span>합계</span><span>(②+③+④−⑤) 절사</span></div>
+            <div class="fee-line"><span>① 기본 전용사용료<span class="why">별표 2 · 체육경기 / 체육경기 외로 갈린다. 1회 금액이며 시간에 비례하지 않는다</span></span><span>별표 2 의 1회 금액</span></div>
+            <div class="fee-line"><span>② 토·공휴일 가산<span class="why">별표 2 비고 · 토요일ㆍ공휴일(주간)</span></span><span>+ 기본액 × 50%</span></div>
+            <div class="fee-line"><span>③ 야간 가산 / 조기 감산<span class="why">별표 2 비고 · 별표 1의2 의 시간대로 판정</span></span><span>± 기본액 × 50% / 30%</span></div>
+            <div class="fee-line"><span>④ 초과사용료<span class="why">제11조제3항 · 1시간 미만은 1시간으로 본다</span></span><span>+ 기본액 × 20% × 초과시간</span></div>
+            <div class="fee-line"><span>⑤ 관람료 수입 사용료<span class="why">제12조 · 관람료를 받는 행사만</span></span><span>+ 수입 × 10% 또는 12.5%</span></div>
+            <div class="fee-line"><span>⑥ 감면<span class="why">제13조 · 등록창에서 고른 유형</span></span><span>− (①~⑤) × 감면율</span></div>
+            <div class="fee-line total"><span>합계</span><span>(①~⑤ − ⑥) 절사</span></div>
+          </div>
+          <div class="fee-box" style="margin-top:2px">
+            <h3>시간대 판정 (별표 1의2)</h3>
+            <div class="fee-line"><span>야간에 걸치면</span><span>야간 가산</span></div>
+            <div class="fee-line"><span>조기 안에서만 쓰면</span><span>조기 감산</span></div>
+            <div class="fee-line"><span>그 밖</span><span>주간 (가산·감산 없음)</span></div>
+            <div class="fee-line"><span>조기와 주간에 걸치면</span><span>주간으로 본다</span></div>
           </div>
           <div class="fee-box" style="margin-top:2px">
             <h3>준비시간</h3>
+            <div class="fee-line"><span>근거</span><span>조례에 규정 없음 · 기관 내부 기준</span></div>
             <div class="fee-line"><span>대상</span><span>준비시간 허용 시설만</span></div>
-            <div class="fee-line"><span>산정</span><span>별도 단가 · 본단가의 % · 무료 중 선택</span></div>
-            <div class="fee-line"><span>최소 이용시간</span><span>적용하지 않음 (실제 시간만)</span></div>
-            <div class="fee-line"><span>할증</span><span>위 설정에 따름 (기본: 미적용)</span></div>
+            <div class="fee-line"><span>산정</span><span>기본액의 % · 시간당 별도 단가 · 무료</span></div>
+            <div class="fee-line"><span>가산·감산</span><span>위 설정에 따름 (기본: 미적용)</span></div>
           </div>
           <p class="field hint" style="margin:0">
-            일 단위로 받는 시설은 시설 설정에서 단위를 ‘일’로 바꾸면 시간 대신 일수로 계산합니다.
-            준비시간은 시설 단위와 관계없이 시간으로 셉니다.
+            기본 전용사용료는 <b>1회</b> 금액입니다. 사용시간이 길어져도 금액이 늘지 않고,
+            시설에 <b>1회 기준 시간</b>을 넣어둔 경우에만 그 시간을 넘긴 만큼 초과사용료가 붙습니다.
+            충무체육관·한밭체육관·한밭야구장은 별표 2 에 기준 시간이 정해져 있지 않아 0(제한 없음)으로 두었습니다.
           </p>
           <div class="hr"></div>
           <div class="field">
@@ -635,7 +722,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
           <select id="fFac" required></select>
         </div>
         <div class="field">
-          <label for="fKind">이용구분</label>
+          <label for="fKind">건 구분</label>
           <select id="fKind">
             <option>행사</option><option>준비</option>
           </select>
@@ -647,6 +734,14 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
             <option>신청</option><option>승인</option><option>취소</option>
           </select>
         </div>
+      </div>
+
+      <div class="field" id="useTypeBox">
+        <label for="fUseType">사용 구분 (별표 2)</label>
+        <select id="fUseType">
+          <option>체육경기</option><option>체육경기 외</option>
+        </select>
+        <span class="hint" id="useTypeHint"></span>
       </div>
 
       <div class="prepbox" id="prepBox" hidden>
@@ -690,14 +785,30 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
         </div>
       </div>
 
+      <div class="field" id="admBox">
+        <label for="fAdmission">관람료 수입 (없으면 비워두세요)</label>
+        <input type="number" id="fAdmission" min="0" step="1000" class="mono" placeholder="원">
+        <label class="prep-toggle" style="margin-top:6px">
+          <input type="checkbox" id="fSchoolGame"><span>고등학교 이하의 경기 (20% 할인 · 제12조제3항)</span>
+        </label>
+        <span class="hint">관람료를 받는 행사만 적습니다. 수입액의 10%(체육경기) 또는 12.5%(프로·일반행사)가 사용료로 더해집니다 · 제12조제2항</span>
+      </div>
+
       <div class="field">
         <label for="fMemo">메모</label>
         <textarea id="fMemo" placeholder="비품 요청, 특이사항 등"></textarea>
       </div>
 
       <div class="fee-box">
-        <h3>이용료 산정</h3>
-        <div id="feeBreakdown"></div>
+        <div class="fee-head">
+          <h3>산정 이용료</h3>
+          <button type="button" class="btn btn-quiet btn-sm" id="feeToggle" aria-expanded="false">상세보기</button>
+        </div>
+        <div class="fee-sum">
+          <span class="fee-amount mono" id="feeTotal">0원</span>
+          <span class="fee-note" id="feeNote"></span>
+        </div>
+        <div id="feeBreakdown" hidden></div>
       </div>
 
       <div class="field">
@@ -755,33 +866,94 @@ function colorOf(f) {
   return i >= 0 ? FAC_COLOR_IDS[i % 3] : "none";
 }
 
+/* ── 조례가 정한 값의 기본치 ────────────────────────────────
+   대전광역시 체육시설 관리운영 조례 [시행 2024.12.27. 조례 제6358호]
+   여기 값은 "처음 열었을 때 채워지는 기본치"일 뿐이고, 전부 설정 화면에서 고칠 수 있다.
+   조례가 개정되면 설정 화면에서 숫자만 바꾸면 되고, 이 상수는 새 저장소를 만들 때만 쓰인다. */
+
+/* 별표 2 — 기본 전용사용료(평일 주간 기준, 1회) */
+const BYULPYO2 = {
+  "충무체육관":  { sports:  90000, other: 200000, article: "별표 2 · 한밭종합운동장 충무체육관" },
+  "한밭체육관":  { sports:  90000, other: 200000, article: "별표 2 · 한밭종합운동장 한밭체육관" },
+  "한밭야구장":  { sports:  30000, other: 100000, article: "별표 2 · 한밭종합운동장 한밭야구장" }
+};
+
+/* 예전 자료의 시설명을 별표 1 의 이름으로 맞춘다 */
+const FAC_ALIAS = { "야구장": "한밭야구장" };
+
+/* 제13조 — 사용료의 감면 */
+const DISCOUNTS_13 = [
+  { id: "d0",  name: "해당 없음",                                   rate:   0, article: "" },
+  { id: "d1",  name: "국가 또는 시가 주최·주관하는 행사",              rate: 100, article: "제13조제1호" },
+  { id: "d2",  name: "시체육회·시장애인체육회 등록 전문체육 선수 훈련", rate: 100, article: "제13조제1호의2" },
+  { id: "d3",  name: "시 산하기관·자치구 직장운동경기부 선수 훈련",     rate: 100, article: "제13조제1호의3" },
+  { id: "d4",  name: "대한체육회·대한장애인체육회 계열 단체 주관 행사", rate:  80, article: "제13조제2호" },
+  { id: "d5",  name: "국가유공자·그 유족 또는 가족을 위한 행사",       rate:  80, article: "제13조제3호" },
+  { id: "d6",  name: "65세 이상·장애인·기초생활수급자를 위한 행사",     rate:  80, article: "제13조제4호" },
+  { id: "d7",  name: "학교의 정규 수업 또는 방과 후 활동",            rate:  80, article: "제13조제5호" },
+  { id: "d8",  name: "학교 밖 청소년지원센터 자립지원 활동",           rate:  80, article: "제13조제6호" },
+  { id: "d9",  name: "시가 유치한 전지훈련팀",                       rate:  80, article: "제13조제7호" },
+  { id: "d10", name: "스포츠클럽에서 실시하는 행사",                  rate:  50, article: "제13조제8호" },
+  { id: "d11", name: "시정조정위원회 심의·의결로 시장이 인정한 행사",   rate:  50, article: "제13조제9호" }
+];
+
+function facSeed(id, name, color, prepAllowed) {
+  const b = BYULPYO2[name] || { sports: 0, other: 0, article: "" };
+  return {
+    id: id, name: name, color: color,
+    feeSports: b.sports,      // 체육경기 기본 전용사용료 (1회)
+    feeOther: b.other,        // 체육경기 외 기본 전용사용료 (1회)
+    sessionHours: 0,          // 1회 기준 시간. 0이면 시간 제한이 정해져 있지 않다는 뜻
+    capacity: 0, article: b.article,
+    prep: { allowed: prepAllowed, mode: "percent", fee: 0, percent: 50, article: "" }
+  };
+}
+
 const DEFAULT_STATE = {
-  version: 1,
+  version: 2,
   settings: {
-    minHours: 1,
     rounding: 10,
-    nightStart: "18:00",
-    nightRate: 30,
-    weekendRate: 0,
-    holidayRate: 0,
-    surchargeArticle: "",
+
+    /* 별표 1의2 — 체육시설의 일일 사용시간 (제10조제1항) */
+    hours: {
+      summerFrom: 4, summerTo: 9,
+      summer: { early: "05:00", day: "08:00", night: "19:00", close: "23:00" },
+      winter: { early: "06:00", day: "09:00", night: "18:00", close: "23:00" }
+    },
+
+    /* 별표 2 비고 — 기본 전용사용료에 대한 가산·감산 (모두 기본액 기준) */
+    weekendRate: 50,       // 토요일·공휴일(주간) 가산
+    nightRate: 50,         // 야간사용 가산
+    earlyRate: 30,         // 조기사용 감산
+    overRate: 20,          // 허가시간 초과 1시간당 가산 (제11조제3항)
+    sundayAsHoliday: true, // 일요일을 공휴일로 본다 (관공서의 공휴일에 관한 규정 제2조제1호)
+
+    /* 제12조 — 관람료 수입에 따른 사용료 */
+    admSportsRate: 10,     // 체육경기
+    admOtherRate: 12.5,    // 프로경기 및 일반행사
+    admSchoolCut: 20,      // 고등학교 이하의 경기 할인
+
     holidays: [],
-    prepSurcharge: false,
+    prepSurcharge: false,  // 준비시간에도 가산·감산을 적용할지
+    articles: {
+      base:    "별표 2 (제11조제1항 관련)",
+      weekend: "별표 2 비고 · 토요일ㆍ공휴일(주간)",
+      night:   "별표 2 비고 · 야간사용",
+      early:   "별표 2 비고 · 조기사용",
+      over:    "제11조제3항 · 별표 2 비고",
+      hours:   "별표 1의2 (제10조제1항 관련)",
+      adm:     "제12조제2항",
+      admCut:  "제12조제3항",
+      discount:"제13조"
+    },
     orgNote: ""
   },
   facilities: [
-    { id: "f1", name: "충무체육관", unit: "hour", baseFee: 0, unitFee: 0, capacity: 0, article: "", color: "orange",
-      prep: { allowed: true, mode: "fee", fee: 0, percent: 50, article: "" } },
-    { id: "f2", name: "한밭체육관", unit: "hour", baseFee: 0, unitFee: 0, capacity: 0, article: "", color: "blue",
-      prep: { allowed: true, mode: "fee", fee: 0, percent: 50, article: "" } },
-    { id: "f3", name: "야구장", unit: "hour", baseFee: 0, unitFee: 0, capacity: 0, article: "", color: "green",
-      prep: { allowed: false, mode: "fee", fee: 0, percent: 50, article: "" } }
+    facSeed("f1", "충무체육관", "orange", true),
+    facSeed("f2", "한밭체육관", "blue",  true),
+    facSeed("f3", "한밭야구장", "green", false)
   ],
-  discounts: [
-    { id: "d0", name: "해당 없음", rate: 0, article: "" },
-    { id: "d1", name: "공공기관", rate: 0, article: "" },
-    { id: "d2", name: "지역 비영리단체", rate: 0, article: "" }
-  ],
+  discounts: structuredClone(DISCOUNTS_13),
   reservations: []
 };
 
@@ -809,25 +981,52 @@ const PENDING_KEY = "rsv.pending.v1";
 
 function migrate(d) {
   const base = structuredClone(DEFAULT_STATE);
+  const old = Number(d.version) || 1;
+
   const facs = (Array.isArray(d.facilities) && d.facilities.length ? d.facilities : base.facilities)
-    .map((f, i) => Object.assign({ unit: "hour", baseFee: 0, unitFee: 0, capacity: 0, article: "" }, f, {
-      // 색이 없던 예전 자료에는 시설 순서대로 기본색을 넣어준다
-      color: FAC_COLOR_IDS.includes(f.color) ? f.color : FAC_COLOR_IDS[i % 3],
-      prep: Object.assign({ allowed: false, mode: "fee", fee: 0, percent: 50, article: "" }, f.prep || {})
-    }));
+    .map((f, i) => {
+      // 예전 자료는 "기본료 + 시간당 단가" 구조였다. 조례는 1회 기본액 구조이므로
+      // 시설명이 별표 2 에 있으면 그 값으로 채워주고, 없으면 0으로 둔다(설정 화면에서 넣는다)
+      const nm = (old < 2 && FAC_ALIAS[f.name]) || f.name;
+      const seed = BYULPYO2[nm] || { sports: 0, other: 0, article: "" };
+      const x = Object.assign({ capacity: 0, article: "", sessionHours: 0 }, f, {
+        name: nm,
+        color: FAC_COLOR_IDS.includes(f.color) ? f.color : FAC_COLOR_IDS[i % 3],
+        feeSports: Number(f.feeSports) || (old < 2 ? seed.sports : 0),
+        feeOther:  Number(f.feeOther)  || (old < 2 ? seed.other  : 0),
+        prep: Object.assign({ allowed: false, mode: "percent", fee: 0, percent: 50, article: "" }, f.prep || {})
+      });
+      if (!x.article && old < 2) x.article = seed.article;
+      delete x.unit; delete x.baseFee; delete x.unitFee;   // 폐지된 항목
+      return x;
+    });
+
   const res = (Array.isArray(d.reservations) ? d.reservations : [])
     .map(r => {
-      const x = Object.assign({ kind: "행사", linkId: null }, r);
+      const x = Object.assign({ kind: "행사", linkId: null, useType: "체육경기", admission: null, schoolGame: false }, r);
       delete x.contact;          // 연락처 항목 폐지 — 예전 자료에 남아 있으면 함께 지운다
       return x;
     });
-  return {
-    version: 1,
-    settings: Object.assign(base.settings, d.settings || {}),
-    facilities: facs,
-    discounts: Array.isArray(d.discounts) && d.discounts.length ? d.discounts : base.discounts,
-    reservations: res
-  };
+
+  // 감면 유형은 조례 제13조가 정한다. 예전 자료(제13조 이전 임의 목록)는 갈아끼운다
+  const dcs = (old < 2 || !Array.isArray(d.discounts) || !d.discounts.length)
+    ? structuredClone(DISCOUNTS_13)
+    : d.discounts;
+
+  const st = Object.assign({}, base.settings, d.settings || {});
+  st.hours    = Object.assign({}, base.settings.hours, (d.settings || {}).hours || {});
+  st.hours.summer = Object.assign({}, base.settings.hours.summer, st.hours.summer || {});
+  st.hours.winter = Object.assign({}, base.settings.hours.winter, st.hours.winter || {});
+  st.articles = Object.assign({}, base.settings.articles, (d.settings || {}).articles || {});
+  if (old < 2) {   // 예전 할증 설정은 조례 값과 뜻이 달라 그대로 쓸 수 없다
+    st.weekendRate = base.settings.weekendRate;
+    st.nightRate   = base.settings.nightRate;
+    st.earlyRate   = base.settings.earlyRate;
+    st.overRate    = base.settings.overRate;
+  }
+  delete st.minHours; delete st.nightStart; delete st.holidayRate; delete st.surchargeArticle;
+
+  return { version: 2, settings: st, facilities: facs, discounts: dcs, reservations: res };
 }
 
 function readLocal() {
@@ -1151,6 +1350,7 @@ const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 function ymd(y, m, d) { return y + "-" + pad(m) + "-" + pad(d); }
 function parseYmd(s) { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); }
 function toMin(t) { if (!t) return 0; const [h, m] = t.split(":").map(Number); return h * 60 + m; }
+function fmtMin(n) { return pad(Math.floor(n / 60)) + ":" + pad(n % 60); }
 function isWeekend(dateStr) { const w = parseYmd(dateStr).getDay(); return w === 0 || w === 6; }
 function isHoliday(dateStr) { return (state.settings.holidays || []).includes(dateStr); }
 function facilityOf(id) { return state.facilities.find(f => f.id === id) || null; }
@@ -1167,111 +1367,203 @@ function toast(msg) {
 /* =========================================================
    3. 이용료 계산 — 조례를 이 함수에 담는다
    ========================================================= */
+/* 별표 1의2 — 그 날짜에 적용되는 조기·주간·야간 경계 */
+function dayBands(dateStr) {
+  const h = state.settings.hours || {};
+  const m = parseYmd(dateStr).getMonth() + 1;
+  const a = Number(h.summerFrom) || 4, b = Number(h.summerTo) || 9;
+  const summer = a <= b ? (m >= a && m <= b) : (m >= a || m <= b);
+  const t = (summer ? h.summer : h.winter) || {};
+  return {
+    season: summer ? "하계" : "동계",
+    early: toMin(t.early || "05:00"),
+    day:   toMin(t.day   || "08:00"),
+    night: toMin(t.night || "19:00"),
+    close: toMin(t.close || "23:00")
+  };
+}
+
+/* 사용 시각이 조기·주간·야간 중 어디에 걸치는지 */
+function bandsOf(r) {
+  const b = dayBands(r.date);
+  const s = toMin(r.start), e = Math.max(toMin(r.end), toMin(r.start));
+  const hit = (from, to) => Math.min(e, to) > Math.max(s, from);
+  return {
+    band: b,
+    early: hit(b.early, b.day),
+    day:   hit(b.day, b.night),
+    night: hit(b.night, 24 * 60)      // 마감시각을 넘겨 적더라도 야간으로 본다
+  };
+}
+
+/* 토요일·공휴일(주간) 가산 대상인지.
+   일요일은 「관공서의 공휴일에 관한 규정」 제2조제1호의 공휴일이므로 기본으로 포함한다 */
+function isSurchargeDay(dateStr) {
+  const w = parseYmd(dateStr).getDay();
+  if (isHoliday(dateStr)) return { yes: true, why: "공휴일로 등록된 날", tag: "공휴일" };
+  if (w === 6) return { yes: true, why: "", tag: "토요일" };
+  if (w === 0 && state.settings.sundayAsHoliday !== false)
+    return { yes: true, why: "관공서의 공휴일에 관한 규정 제2조제1호", tag: "일요일" };
+  return { yes: false, why: "", tag: "" };
+}
+
+/* ─────────────────────────────────────────────────────────
+   전용사용료 계산 (별표 2 + 비고, 별표 1의2, 제11조·제12조·제13조)
+
+     ① 기본 전용사용료   별표 2 의 1회 금액. 체육경기 / 체육경기 외로 갈린다
+     ② 토·공휴일 가산    기본액 × 50%           (주간 기준 금액을 만든다)
+     ③ 야간 가산         기본액 × 50%           ②까지의 금액에 더한다
+        조기 감산         기본액 × 30%           ②까지의 금액에서 뺀다
+     ④ 초과사용료        기본액 × 20% × 초과시간 (1시간 미만은 1시간)
+     ⑤ 관람료 수입 사용료 관람료 수입 × 10% 또는 12.5%, 고교 이하 경기는 20% 할인
+     ⑥ 감면              (①~⑤ 합계) × 감면율
+     합계 = (①~⑤ − ⑥) 을 절사 단위로 내림
+   ───────────────────────────────────────────────────────── */
 function calcFee(r) {
   const s = state.settings;
   const fac = facilityOf(r.facilityId);
-  const out = { total: 0, lines: [], hours: 0 };
-  if (!fac) { out.lines.push({ label: "시설 정보 없음", amount: 0 }); return out; }
+  const out = { total: 0, lines: [], hours: 0, pending: false };
+  if (!fac) { out.lines.push({ label: "시설 정보 없음", why: "시설을 먼저 고르세요", amount: 0 }); return out; }
 
-  const startM = toMin(r.start), endM = toMin(r.end);
-  const rawMin = Math.max(0, endM - startM);
-  out.hours = rawMin / 60;
+  const sM = toMin(r.start), eM = toMin(r.end);
+  const useMin = Math.max(0, eM - sM);
+  out.hours = useMin / 60;
 
   const isPrep = r.kind === "준비";
-  const prep = fac.prep || { allowed: false, mode: "fee", fee: 0, percent: 50, article: "" };
+  const sport = (r.useType || "체육경기") !== "체육경기 외";
+  const bd = bandsOf(r);
+  out.bands = bd;
 
-  let qty, qtyLabel, unitWord;
-  if (fac.unit === "day" && !isPrep) {
-    qty = rawMin > 0 ? 1 : 0; unitWord = "일"; qtyLabel = qty + "일";
-  } else {
-    // 준비시간은 최소 이용시간을 적용하지 않고 실제 사용한 만큼만 센다
-    qty = isPrep ? rawMin / 60 : Math.max(Number(s.minHours) || 0, rawMin / 60);
-    unitWord = "시간";
-    qtyLabel = (Math.round(qty * 10) / 10) + "시간";
-    if (!isPrep && qty > rawMin / 60) qtyLabel += " (최소 이용시간 적용)";
-  }
+  const A = s.articles || {};
+  const hourTxt = (Math.round(out.hours * 10) / 10) + "시간";
+  const bandTxt = [bd.early && "조기", bd.day && "주간", bd.night && "야간"].filter(Boolean).join("·") || "-";
 
-  // ② 기본 사용료 (행사) 또는 준비시간 사용료
+  // ① 기본 전용사용료
   let base = 0;
+  const prep = fac.prep || { allowed: false, mode: "percent", fee: 0, percent: 50, article: "" };
+  const facBase = Number(sport ? fac.feeSports : fac.feeOther) || 0;
+
   if (isPrep) {
     if (!prep.allowed) {
       out.lines.push({ label: fac.name + " · 준비시간 미적용 시설", why: "이 시설은 준비시간을 따로 받지 않는 것으로 설정돼 있습니다", amount: 0 });
     } else if (prep.mode === "free") {
-      out.lines.push({ label: "준비시간 " + qtyLabel, why: "무료" + (prep.article ? " · " + prep.article : ""), amount: 0 });
+      out.lines.push({ label: "준비시간 " + hourTxt, why: "무료" + (prep.article ? " · " + prep.article : " · 조례에 별도 규정 없음 (기관 내부 기준)"), amount: 0 });
     } else if (prep.mode === "percent") {
-      base = (Number(fac.unitFee) || 0) * qty * (Number(prep.percent) || 0) / 100;
+      base = facBase * (Number(prep.percent) || 0) / 100;
       out.lines.push({
-        label: "준비시간 · " + fac.name + " " + qtyLabel,
-        why: "시간당 " + won(fac.unitFee) + "원의 " + (Number(prep.percent) || 0) + "%" + (prep.article ? " · " + prep.article : ""),
+        label: "준비시간 · " + fac.name + " " + hourTxt,
+        why: "기본 전용사용료 " + won(facBase) + "원의 " + (Number(prep.percent) || 0) + "%" +
+             (prep.article ? " · " + prep.article : " · 조례에 별도 규정 없음 (기관 내부 기준)"),
         amount: base
       });
+      if (!facBase) out.pending = true;
     } else {
-      base = (Number(prep.fee) || 0) * qty;
+      base = (Number(prep.fee) || 0) * out.hours;
       out.lines.push({
-        label: "준비시간 · " + fac.name + " " + qtyLabel,
-        why: won(prep.fee) + "원 × " + (Math.round(qty * 10) / 10) + "시간" + (prep.article ? " · " + prep.article : ""),
+        label: "준비시간 · " + fac.name + " " + hourTxt,
+        why: "시간당 " + won(prep.fee) + "원 × " + hourTxt +
+             (prep.article ? " · " + prep.article : " · 조례에 별도 규정 없음 (기관 내부 기준)"),
         amount: base
       });
+      if (!Number(prep.fee)) out.pending = true;
     }
-    if (prep.allowed && prep.mode !== "free" && !Number(prep.fee) && !(prep.mode === "percent" && Number(prep.percent)))
-      out.pending = true;
   } else {
-    base = (Number(fac.baseFee) || 0) + (Number(fac.unitFee) || 0) * qty;
+    base = facBase;
     out.lines.push({
-      label: "기본 사용료 · " + fac.name + " " + qtyLabel,
-      why: (fac.baseFee ? "기본료 " + won(fac.baseFee) + "원 + " : "") +
-           won(fac.unitFee) + "원 × " + (Math.round(qty * 10) / 10) + unitWord +
-           (fac.article ? " · " + fac.article : ""),
+      label: "① 기본 전용사용료 · " + fac.name + " (" + (sport ? "체육경기" : "체육경기 외") + ") 1회",
+      why: "평일 주간 기준 " + won(base) + "원 · " + (fac.article || A.base),
       amount: base
     });
-    if (!Number(fac.unitFee) && !Number(fac.baseFee)) out.pending = true;
+    if (!base) out.pending = true;
   }
 
-  // ③④ 할증 — 준비시간은 설정에 따라 제외할 수 있다
-  let night = 0, extra = 0;
-  const surchargeApplies = !isPrep || s.prepSurcharge;
+  let sum = base;
 
-  if (surchargeApplies && fac.unit === "hour" && Number(s.nightRate) > 0 && base > 0) {
-    const nStart = toMin(s.nightStart);
-    const nightMin = Math.max(0, Math.min(endM, 24 * 60) - Math.max(startM, nStart));
-    if (nightMin > 0) {
-      const hourlyBase = isPrep ? base / Math.max(qty, 0.0001) : (Number(fac.unitFee) || 0);
-      night = hourlyBase * (nightMin / 60) * (Number(s.nightRate) / 100);
+  // ②③ 가산·감산은 모두 "기본액"을 기준으로 한다. 준비시간은 설정에 따라 건너뛴다
+  const applySur = (!isPrep || s.prepSurcharge) && base > 0;
+  const sur = isSurchargeDay(r.date);
+
+  if (applySur && sur.yes && Number(s.weekendRate) > 0) {
+    const amt = base * Number(s.weekendRate) / 100;
+    out.lines.push({
+      label: "② 토요일·공휴일(주간) 가산 " + s.weekendRate + "%",
+      why: r.date + " " + DOW[parseYmd(r.date).getDay()] + "요일" + (sur.why ? " · " + sur.why : "") + " · " + A.weekend,
+      amount: amt
+    });
+    sum += amt;
+  }
+
+  if (applySur && bd.night && Number(s.nightRate) > 0) {
+    const amt = base * Number(s.nightRate) / 100;
+    out.lines.push({
+      label: "③ 야간사용 가산 " + s.nightRate + "%",
+      why: bd.band.season + " 야간 " + fmtMin(bd.band.night) + " 이후에 걸침 · 당일 주간 사용료에 기본액의 " +
+           s.nightRate + "% 가산 · " + A.night,
+      amount: amt
+    });
+    sum += amt;
+  } else if (applySur && bd.early && !bd.day && Number(s.earlyRate) > 0) {
+    const amt = -base * Number(s.earlyRate) / 100;
+    out.lines.push({
+      label: "③ 조기사용 감산 " + s.earlyRate + "%",
+      why: bd.band.season + " 조기 " + fmtMin(bd.band.early) + "–" + fmtMin(bd.band.day) + " 안에서만 사용 · " + A.early,
+      amount: amt
+    });
+    sum += amt;
+  }
+
+  // ④ 초과사용료 — 1회 기준 시간이 정해진 시설에만 붙는다
+  const sh = Number(fac.sessionHours) || 0;
+  if (!isPrep && sh > 0 && out.hours > sh && base > 0 && Number(s.overRate) > 0) {
+    const over = Math.max(1, Math.ceil(out.hours - sh - 1e-9));   // 1시간 미만은 1시간으로 본다
+    const amt = base * Number(s.overRate) / 100 * over;
+    out.lines.push({
+      label: "④ 초과사용료 " + over + "시간",
+      why: "허가 기준 " + sh + "시간을 " + (Math.round((out.hours - sh) * 10) / 10) + "시간 초과 · 초과 1시간당 기본액의 " +
+           s.overRate + "% · " + A.over,
+      amount: amt
+    });
+    sum += amt;
+  }
+
+  // ⑤ 관람료 수입에 따른 사용료
+  const adm = Number(r.admission) || 0;
+  if (!isPrep && adm > 0) {
+    const rate = Number(sport ? s.admSportsRate : s.admOtherRate) || 0;
+    const amt = adm * rate / 100;
+    out.lines.push({
+      label: "⑤ 관람료 수입에 따른 사용료 " + rate + "%",
+      why: "관람료 수입 " + won(adm) + "원의 " + rate + "% · " +
+           (sport ? "체육경기" : "프로경기 및 일반행사") + " · " + A.adm,
+      amount: amt
+    });
+    sum += amt;
+    if (r.schoolGame && Number(s.admSchoolCut) > 0) {
+      const cut = -amt * Number(s.admSchoolCut) / 100;
       out.lines.push({
-        label: "야간 할증 " + s.nightRate + "%",
-        why: s.nightStart + " 이후 " + (Math.round(nightMin / 6) / 10) + "시간" + (s.surchargeArticle ? " · " + s.surchargeArticle : ""),
-        amount: night
+        label: "　고등학교 이하의 경기 " + s.admSchoolCut + "% 할인",
+        why: A.admCut,
+        amount: cut
       });
+      sum += cut;
     }
   }
 
-  const holiday = isHoliday(r.date), weekend = isWeekend(r.date);
-  const dayRate = holiday ? Number(s.holidayRate) || 0 : (weekend ? Number(s.weekendRate) || 0 : 0);
-  if (surchargeApplies && dayRate > 0 && base > 0) {
-    extra = base * (dayRate / 100);
-    out.lines.push({
-      label: (holiday ? "공휴일" : "주말") + " 할증 " + dayRate + "%",
-      why: r.date + " " + DOW[parseYmd(r.date).getDay()] + "요일" + (s.surchargeArticle ? " · " + s.surchargeArticle : ""),
-      amount: extra
-    });
-  }
-
-  const subtotal = base + night + extra;
-
-  // ⑤ 감면
+  // ⑥ 감면
   const dc = discountOf(r.discountId);
   let cut = 0;
   if (Number(dc.rate) > 0) {
-    cut = subtotal * (Number(dc.rate) / 100);
+    cut = sum * Number(dc.rate) / 100;
     out.lines.push({
-      label: "감면 · " + dc.name + " " + dc.rate + "%",
-      why: dc.article || "근거 조문 미입력",
+      label: "⑥ 감면 · " + dc.name + " " + dc.rate + "%",
+      why: (dc.article || A.discount) + (Number(dc.rate) === 100 ? " · 전부 면제" : " · 사용료의 " + dc.rate + "% 감경"),
       amount: -cut
     });
   }
 
+  out.note = bd.band.season + " · " + bandTxt + (sur.yes && applySur ? " · " + sur.tag : "");
   const unit = Math.max(1, Number(s.rounding) || 1);
-  out.total = Math.max(0, Math.floor((subtotal - cut) / unit) * unit);
+  out.total = Math.max(0, Math.floor((sum - cut) / unit) * unit);
   return out;
 }
 function feeOf(r) {
@@ -1431,6 +1723,7 @@ function renderRail() {
     const f = facilityOf(r.facilityId);
     const dc = discountOf(r.discountId);
     const cf = conflicts.has(r.id);
+    const fc = calcFee(r);
     return '<div class="item' + (cf ? " is-conflict" : "") + (r.kind === "준비" ? " is-prep" : "") +
       '" data-fc="' + colorOf(f) + '">' +
       '<div class="item-top">' +
@@ -1444,9 +1737,16 @@ function renderRail() {
         (r.headcount ? "<span>" + r.headcount + "명</span>" : "") +
         (Number(dc.rate) > 0 ? "<span>감면 " + esc(dc.name) + " " + dc.rate + "%</span>" : "") +
       "</div>" +
-      '<div class="item-fee">' + won(feeOf(r)) + "원" + (r.feeOverride !== "" && r.feeOverride != null ? " (직접 입력)" : "") + "</div>" +
+      '<div class="item-fee">' + won(feeOf(r)) + "원" + (r.feeOverride !== "" && r.feeOverride != null ? " (직접 입력)" : "") +
+        (fc.note ? ' <span class="item-fac">' + esc(fc.note) + "</span>" : "") + "</div>" +
       (cf ? '<div class="warn">⚠ 같은 시설에 시간이 겹치는 예약이 있습니다</div>' : "") +
+      '<div class="fee-box fee-detail" data-fee="' + r.id + '" hidden>' + feeLinesHtml(fc) +
+        (r.feeOverride !== "" && r.feeOverride != null
+          ? '<div class="fee-line"><span>직접 입력한 금액<span class="why">위 산정액 대신 이 금액을 씁니다</span></span><span>' + won(r.feeOverride) + "원</span></div>"
+          : "") +
+      "</div>" +
       '<div class="item-actions">' +
+        '<button type="button" class="btn btn-sm" data-detail="' + r.id + '">산정 상세</button>' +
         '<button type="button" class="btn btn-sm" data-edit="' + r.id + '">수정</button>' +
         '<button type="button" class="btn btn-sm" data-copy="' + r.id + '">복제</button>' +
       "</div></div>";
@@ -1514,37 +1814,45 @@ function renderServerCard() {
 function renderSettings() {
   renderServerCard();
   const s = state.settings;
-  $("#setMinHours").value = s.minHours;
+  const H = s.hours || {};
   $("#setRounding").value = s.rounding;
-  $("#setNightStart").value = s.nightStart;
-  $("#setNightRate").value = s.nightRate;
   $("#setWeekendRate").value = s.weekendRate;
-  $("#setHolidayRate").value = s.holidayRate;
-  $("#setSurchargeArticle").value = s.surchargeArticle || "";
+  $("#setNightRate").value = s.nightRate;
+  $("#setEarlyRate").value = s.earlyRate;
+  $("#setOverRate").value = s.overRate;
+  $("#setSundayHoliday").checked = s.sundayAsHoliday !== false;
   $("#setPrepSurcharge").checked = !!s.prepSurcharge;
+  $("#setSumEarly").value = (H.summer || {}).early || "";
+  $("#setSumDay").value   = (H.summer || {}).day   || "";
+  $("#setSumNight").value = (H.summer || {}).night || "";
+  $("#setWinEarly").value = (H.winter || {}).early || "";
+  $("#setWinDay").value   = (H.winter || {}).day   || "";
+  $("#setWinNight").value = (H.winter || {}).night || "";
+  $("#setSummerFrom").value = H.summerFrom;
+  $("#setSummerTo").value = H.summerTo;
+  $("#setAdmSports").value = s.admSportsRate;
+  $("#setAdmOther").value = s.admOtherRate;
+  $("#setAdmSchool").value = s.admSchoolCut;
   $("#setHolidays").value = (s.holidays || []).join("\n");
   $("#setOrgNote").value = s.orgNote || "";
 
   $("#facilityList").innerHTML = state.facilities.map(f => {
     const pr = f.prep || { allowed: false, mode: "fee", fee: 0, percent: 50, article: "" };
-    const noFee = !Number(f.unitFee) && !Number(f.baseFee);
+    const noFee = !Number(f.feeSports) && !Number(f.feeOther);
     return '<div class="item" data-fid="' + f.id + '">' +
+      '<div class="field"><label>시설명 ' + (noFee ? '<span class="needs-fee">기본액 미입력</span>' : "") + '</label><input data-k="name" value="' + esc(f.name) + '"></div>' +
       '<div class="row2">' +
-        '<div class="field"><label>시설명 ' + (noFee ? '<span class="needs-fee">단가 미입력</span>' : "") + '</label><input data-k="name" value="' + esc(f.name) + '"></div>' +
-        '<div class="field"><label>과금 단위</label><select data-k="unit">' +
-          '<option value="hour"' + (f.unit === "hour" ? " selected" : "") + ">시간</option>" +
-          '<option value="day"' + (f.unit === "day" ? " selected" : "") + ">일</option>" +
+        '<div class="field"><label>체육경기 기본액(원/1회)</label><input type="number" class="mono" data-k="feeSports" value="' + (f.feeSports || 0) + '"></div>' +
+        '<div class="field"><label>체육경기 외 기본액(원/1회)</label><input type="number" class="mono" data-k="feeOther" value="' + (f.feeOther || 0) + '"></div>' +
+      "</div>" +
+      '<div class="row3">' +
+        '<div class="field"><label>1회 기준 시간</label><input type="number" class="mono" data-k="sessionHours" min="0" step="0.5" value="' + (f.sessionHours || 0) + '"><span class="hint">0이면 제한 없음</span></div>' +
+        '<div class="field"><label>정원(명)</label><input type="number" class="mono" data-k="capacity" value="' + (f.capacity || 0) + '"></div>' +
+        '<div class="field"><label>달력 구분색</label><select data-k="color">' +
+          FAC_COLORS.map(c => '<option value="' + c.id + '"' + (colorOf(f) === c.id ? " selected" : "") + ">" + c.name + "</option>").join("") +
         "</select></div>" +
       "</div>" +
-      '<div class="field"><label>달력 구분색</label><select data-k="color">' +
-        FAC_COLORS.map(c => '<option value="' + c.id + '"' + (colorOf(f) === c.id ? " selected" : "") + ">" + c.name + "</option>").join("") +
-      "</select><span class=\"hint\">달력과 우측 상세에서 이 시설을 구분하는 색입니다.</span></div>" +
-      '<div class="row3">' +
-        '<div class="field"><label>기본료(원)</label><input type="number" class="mono" data-k="baseFee" value="' + (f.baseFee || 0) + '"></div>' +
-        '<div class="field"><label>' + (f.unit === "day" ? "일당" : "시간당") + ' 단가(원)</label><input type="number" class="mono" data-k="unitFee" value="' + (f.unitFee || 0) + '"></div>' +
-        '<div class="field"><label>정원(명)</label><input type="number" class="mono" data-k="capacity" value="' + (f.capacity || 0) + '"></div>' +
-      "</div>" +
-      '<div class="field"><label>근거 조문</label><input data-k="article" value="' + esc(f.article || "") + '" placeholder="예: 조례 별표1 제1호"></div>' +
+      '<div class="field"><label>근거 조문</label><input data-k="article" value="' + esc(f.article || "") + '" placeholder="예: 별표 2 · 한밭종합운동장 충무체육관"></div>' +
 
       '<div class="prepbox">' +
         '<label class="prep-toggle"><input type="checkbox" data-k="prep.allowed"' + (pr.allowed ? " checked" : "") + '><span>준비시간을 따로 받는 시설</span></label>' +
@@ -1552,11 +1860,11 @@ function renderSettings() {
           '<div class="row2">' +
             '<div class="field"><label>산정 방식</label><select data-k="prep.mode">' +
               '<option value="fee"' + (pr.mode === "fee" ? " selected" : "") + ">별도 단가</option>" +
-              '<option value="percent"' + (pr.mode === "percent" ? " selected" : "") + ">본단가의 %</option>" +
+              '<option value="percent"' + (pr.mode === "percent" ? " selected" : "") + ">기본액의 %</option>" +
               '<option value="free"' + (pr.mode === "free" ? " selected" : "") + ">무료</option>" +
             "</select></div>" +
             (pr.mode === "percent"
-              ? '<div class="field"><label>본단가 대비(%)</label><input type="number" class="mono" min="0" max="100" data-k="prep.percent" value="' + (pr.percent || 0) + '"></div>'
+              ? '<div class="field"><label>기본액 대비(%)</label><input type="number" class="mono" min="0" max="100" data-k="prep.percent" value="' + (pr.percent || 0) + '"></div>'
               : pr.mode === "fee"
               ? '<div class="field"><label>준비시간 단가(원/시간)</label><input type="number" class="mono" data-k="prep.fee" value="' + (pr.fee || 0) + '"></div>'
               : '<div class="field"><label></label><div class="hint">요금을 받지 않습니다</div></div>') +
@@ -1611,6 +1919,12 @@ function openModal(id, presetDate) {
   $("#fMemo").value = r ? (r.memo || "") : "";
   $("#fOverride").value = r && r.feeOverride != null ? r.feeOverride : "";
   $("#fKind").value = r ? (r.kind || "행사") : "행사";
+  $("#fUseType").value = r ? (r.useType || "체육경기") : "체육경기";
+  $("#fAdmission").value = r && r.admission ? r.admission : "";
+  $("#fSchoolGame").checked = !!(r && r.schoolGame);
+  $("#feeBreakdown").hidden = true;
+  $("#feeToggle").textContent = "상세보기";
+  $("#feeToggle").setAttribute("aria-expanded", "false");
 
   // 이미 등록된 준비시간 읽어오기
   const kids = r ? state.reservations.filter(x => x.linkId === r.id && x.kind === "준비") : [];
@@ -1643,6 +1957,9 @@ function formToRes() {
     applicant: $("#fApplicant").value.trim(),
     headcount: $("#fHead").value ? Number($("#fHead").value) : null,
     purpose: $("#fPurpose").value.trim(),
+    useType: $("#fUseType").value,
+    admission: $("#fAdmission").value === "" ? null : Number($("#fAdmission").value),
+    schoolGame: $("#fSchoolGame").checked,
     discountId: $("#fDiscount").value,
     memo: $("#fMemo").value.trim(),
     feeOverride: $("#fOverride").value === "" ? null : Number($("#fOverride").value)
@@ -1660,6 +1977,10 @@ function updateKindUI() {
 
   const isEvent = kindSel.value === "행사";
   $("#prepBox").hidden = !(allowed && isEvent);
+  $("#admBox").hidden = !isEvent;
+  $("#useTypeHint").textContent = $("#fUseType").value === "체육경기"
+    ? "국가·지방자치단체 및 대한체육회·장애인체육회 산하단체가 주관하는 경기"
+    : "직장단체·동호인 등 다수인이 참여하는 경기 및 행사 (콘서트·공연·전람·전시 포함)";
   $("#prepFields").hidden = !$("#fPrepOn").checked;
 
   const b = Number($("#fPrepBefore").value) || 0, a = Number($("#fPrepAfter").value) || 0;
@@ -1723,19 +2044,31 @@ function rebuildPrepRows(parent) {
   return n;
 }
 
-function updateFeePreview() {
-  const r = formToRes();
-  const box = $("#feeBreakdown");
-  if (!r.date || !r.start || !r.end || toMin(r.end) <= toMin(r.start)) {
-    box.innerHTML = '<div class="fee-line"><span>종료 시각이 시작 시각보다 늦어야 합니다</span><span>—</span></div>';
-  } else {
-    const f = calcFee(r);
-    box.innerHTML = (f.pending ? '<div class="fee-line"><span class="needs-fee">단가 미입력</span><span></span></div>' : "") +
+/* 산정 내역 표. 등록창과 우측 상세가 같은 함수를 쓴다 —
+   "왜 이 금액인지" 를 두 곳에서 똑같이 보여주기 위해서다 */
+function feeLinesHtml(f, opts) {
+  const o = opts || {};
+  return (f.pending ? '<div class="fee-line"><span class="needs-fee">기본액 미입력</span><span></span></div>' : "") +
     f.lines.map(l =>
       '<div class="fee-line"><span>' + esc(l.label) + (l.why ? '<span class="why">' + esc(l.why) + "</span>" : "") + "</span>" +
       "<span>" + (l.amount < 0 ? "−" : "") + won(Math.abs(l.amount)) + "</span></div>"
     ).join("") +
-    '<div class="fee-line total"><span>산정 이용료</span><span>' + won(f.total) + "원</span></div>" + prepPreview(r, f.total);
+    '<div class="fee-line total"><span>산정 이용료</span><span>' + won(f.total) + "원</span></div>" +
+    (o.tail || "");
+}
+
+function updateFeePreview() {
+  const r = formToRes();
+  const box = $("#feeBreakdown"), tot = $("#feeTotal"), note = $("#feeNote");
+  if (!r.date || !r.start || !r.end || toMin(r.end) <= toMin(r.start)) {
+    tot.textContent = "—";
+    note.textContent = "종료 시각이 시작 시각보다 늦어야 합니다";
+    box.innerHTML = "";
+  } else {
+    const f = calcFee(r);
+    tot.textContent = won(f.total) + "원";
+    note.textContent = (f.pending ? "기본액 미입력 · " : "") + (f.note || "");
+    box.innerHTML = feeLinesHtml(f, { tail: prepPreview(r, f.total) });
   }
   // 중복 안내
   const others = state.reservations.filter(x => x.id !== r.id && x.status !== "취소" &&
@@ -1869,6 +2202,12 @@ function init() {
 
   // 상세 / 목록 클릭
   document.addEventListener("click", e => {
+    const dt = e.target.closest("[data-detail]");
+    if (dt) {
+      const box = document.querySelector('[data-fee="' + dt.dataset.detail + '"]');
+      if (box) { box.hidden = !box.hidden; dt.textContent = box.hidden ? "산정 상세" : "접기"; }
+      return;
+    }
     const ed = e.target.closest("#railBody [data-edit], #listBody [data-edit]");
     if (ed) { openModal(ed.dataset.edit); return; }
     const cp = e.target.closest("[data-copy]");
@@ -1897,8 +2236,17 @@ function init() {
       if (e.key === "ArrowRight") shiftMonth(1);
     }
   });
-  ["#fDate", "#fStart", "#fEnd", "#fFac", "#fDiscount", "#fStatusSel", "#fOverride", "#fKind"].forEach(sel =>
+  ["#fDate", "#fStart", "#fEnd", "#fFac", "#fDiscount", "#fStatusSel", "#fOverride", "#fKind",
+   "#fUseType", "#fAdmission", "#fSchoolGame"].forEach(sel =>
     $(sel).addEventListener("input", () => { updateKindUI(); updateFeePreview(); }));
+
+  // 산정 이용료 상세보기 — 어떻게 나온 금액인지 접었다 폈다 한다
+  $("#feeToggle").addEventListener("click", () => {
+    const box = $("#feeBreakdown"), btn = $("#feeToggle");
+    box.hidden = !box.hidden;
+    btn.textContent = box.hidden ? "상세보기" : "접기";
+    btn.setAttribute("aria-expanded", String(!box.hidden));
+  });
   ["#fPrepOn", "#fPrepBefore", "#fPrepAfter"].forEach(sel =>
     $(sel).addEventListener("input", () => { updateKindUI(); updateFeePreview(); }));
 
@@ -1938,8 +2286,8 @@ function init() {
         f.prep[sub] = t.type === "checkbox" ? t.checked : (["fee", "percent"].includes(sub) ? Number(t.value) : t.value);
         save(); fillSelects(); renderSettings(); renderAll(); return;
       }
-      f[k] = ["baseFee", "unitFee", "capacity"].includes(k) ? Number(t.value) : t.value;
-      const reRender = k === "unit";
+      f[k] = ["feeSports", "feeOther", "sessionHours", "capacity"].includes(k) ? Number(t.value) : t.value;
+      const reRender = false;
       save(); fillSelects(); renderAll();
       if (reRender) renderSettings();
       return;
@@ -1950,14 +2298,29 @@ function init() {
       save(); fillSelects(); renderAll(); return;
     }
     const map = {
-      setMinHours: "minHours", setRounding: "rounding", setNightStart: "nightStart",
-      setNightRate: "nightRate", setWeekendRate: "weekendRate", setHolidayRate: "holidayRate",
-      setSurchargeArticle: "surchargeArticle", setOrgNote: "orgNote"
+      setRounding: "rounding", setWeekendRate: "weekendRate", setNightRate: "nightRate",
+      setEarlyRate: "earlyRate", setOverRate: "overRate",
+      setAdmSports: "admSportsRate", setAdmOther: "admOtherRate", setAdmSchool: "admSchoolCut",
+      setOrgNote: "orgNote"
+    };
+    // 별표 1의2 의 시간대
+    const hmap = {
+      setSumEarly: ["summer", "early"], setSumDay: ["summer", "day"], setSumNight: ["summer", "night"],
+      setWinEarly: ["winter", "early"], setWinDay: ["winter", "day"], setWinNight: ["winter", "night"]
     };
     if (t.id === "setPrepSurcharge") { state.settings.prepSurcharge = t.checked; save(); renderAll(); return; }
+    if (t.id === "setSundayHoliday") { state.settings.sundayAsHoliday = t.checked; save(); renderAll(); return; }
+    if (hmap[t.id]) {
+      const [season, key] = hmap[t.id];
+      state.settings.hours[season][key] = t.value;
+      save(); renderAll(); return;
+    }
+    if (t.id === "setSummerFrom" || t.id === "setSummerTo") {
+      state.settings.hours[t.id === "setSummerFrom" ? "summerFrom" : "summerTo"] = Number(t.value) || 1;
+      save(); renderAll(); return;
+    }
     if (map[t.id]) {
-      const num = ["minHours", "rounding", "nightRate", "weekendRate", "holidayRate"].includes(map[t.id]);
-      state.settings[map[t.id]] = num ? Number(t.value) : t.value;
+      state.settings[map[t.id]] = map[t.id] === "orgNote" ? t.value : Number(t.value);
       save(); renderAll(); return;
     }
     if (t.id === "setHolidays") {
@@ -1966,8 +2329,9 @@ function init() {
     }
   });
   $("#addFacility").addEventListener("click", () => {
-    state.facilities.push({ id: uid(), name: "새 시설", unit: "hour", baseFee: 0, unitFee: 0, capacity: 0, article: "",
-      prep: { allowed: false, mode: "fee", fee: 0, percent: 50, article: "" } });
+    state.facilities.push({ id: uid(), name: "새 시설", color: "none",
+      feeSports: 0, feeOther: 0, sessionHours: 0, capacity: 0, article: "",
+      prep: { allowed: false, mode: "percent", fee: 0, percent: 50, article: "" } });
     save(); fillSelects(); renderSettings(); renderAll();
   });
   $("#addDiscount").addEventListener("click", () => {
