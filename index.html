@@ -14,6 +14,13 @@
   --line:#E1E5E8; --line-strong:#C9D0D6;
   --accent:#2C5D7C; --accent-soft:#E7EEF3; --accent-ink:#1E4459;
   --alert:#A8574C; --alert-soft:#F6EBE9;
+
+  /* 시설별 구분색. 시설 카드에서 고른다 (facility.color)
+     밝게/어둡게 양쪽에서 모두 읽혀야 하므로 세 테마 블록에 모두 정의한다 */
+  --fc-none-soft:#F1F3F4; --fc-none-line:#C9D0D6; --fc-none-ink:#3E464D;
+  --fc-orange-soft:#FAEDDF; --fc-orange-line:#DFBE99; --fc-orange-ink:#7A4A16;
+  --fc-blue-soft:#E5EDF6;   --fc-blue-line:#AFC7DE;   --fc-blue-ink:#1F4A73;
+  --fc-green-soft:#E4F0E5;  --fc-green-line:#ADCBB3;  --fc-green-ink:#285631;
   --shadow:0 1px 2px rgba(20,23,26,.05),0 8px 24px -12px rgba(20,23,26,.18);
   --r:6px;
 }
@@ -24,6 +31,10 @@
     --line:#262D32; --line-strong:#39424A;
     --accent:#8BB8D6; --accent-soft:#1B2A34; --accent-ink:#B9D5E8;
     --alert:#D08A80; --alert-soft:#2C201E;
+    --fc-none-soft:#1B2024; --fc-none-line:#39424A; --fc-none-ink:#BFC7CD;
+    --fc-orange-soft:#2C2318; --fc-orange-line:#5A422A; --fc-orange-ink:#DFB78A;
+    --fc-blue-soft:#1A2733;   --fc-blue-line:#2E4557;   --fc-blue-ink:#9DC3E3;
+    --fc-green-soft:#1A2A1E;  --fc-green-line:#2D4935;  --fc-green-ink:#9BC8A5;
     --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px -14px rgba(0,0,0,.7);
   }
 }
@@ -33,6 +44,10 @@
   --line:#262D32; --line-strong:#39424A;
   --accent:#8BB8D6; --accent-soft:#1B2A34; --accent-ink:#B9D5E8;
   --alert:#D08A80; --alert-soft:#2C201E;
+  --fc-none-soft:#1B2024; --fc-none-line:#39424A; --fc-none-ink:#BFC7CD;
+  --fc-orange-soft:#2C2318; --fc-orange-line:#5A422A; --fc-orange-ink:#DFB78A;
+  --fc-blue-soft:#1A2733;   --fc-blue-line:#2E4557;   --fc-blue-ink:#9DC3E3;
+  --fc-green-soft:#1A2A1E;  --fc-green-line:#2D4935;  --fc-green-ink:#9BC8A5;
   --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px -14px rgba(0,0,0,.7);
 }
 *{box-sizing:border-box}
@@ -120,6 +135,8 @@ main{max-width:1440px;margin:0 auto;padding:18px 20px 60px}
 .cal-title small{font-size:12px;font-weight:400;color:var(--muted);margin-left:8px;letter-spacing:0}
 .legend{display:flex;gap:14px;font-size:11px;color:var(--muted);flex-wrap:wrap}
 .legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.legend .fac i{background:var(--fc-soft);border:1px solid var(--fc-line)}
+.legend-sep{width:1px;align-self:stretch;background:var(--line)}
 .lg-approved{background:var(--accent)}
 .lg-pending{background:transparent;border:1px solid var(--accent)}
 .lg-prep{background:var(--accent-soft);box-shadow:inset 2px 0 0 var(--accent)}
@@ -142,21 +159,29 @@ main{max-width:1440px;margin:0 auto;padding:18px 20px 60px}
 .cell-date b{font-weight:500;font-size:14px}
 .cell.today .cell-date b{background:var(--accent);color:var(--surface);border-radius:4px;padding:0 5px}
 .holiday-tag{font-size:10px;color:var(--alert);letter-spacing:-.01em}
-.cell-count{margin-left:auto;font-size:11px;color:var(--faint)}
+.cell-count{margin-left:auto;font-size:10px;color:var(--muted);display:flex;gap:5px;align-items:center;white-space:nowrap}
+.cell-count b{font-weight:600;color:var(--ink-2)}
+.cell-count .pc{color:var(--faint)}
+/* 색은 시설을 뜻하고, 상태는 형태로 나타낸다 (승인=채움, 신청=파선, 취소=취소선) */
 .chip{
-  display:block;width:100%;text-align:left;border:1px solid var(--accent);
-  background:var(--accent);color:var(--surface);
+  display:block;width:100%;text-align:left;
+  border:1px solid var(--fc-line);background:var(--fc-soft);color:var(--fc-ink);
   border-radius:3px;padding:3px 6px;font-size:12px;line-height:1.35;
+  box-shadow:inset 3px 0 0 var(--fc-line);
   overflow:hidden;
 }
 .chip>span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.chip .n{font-size:11px;opacity:.9}
-.chip .t{font-family:"IBM Plex Mono",monospace;opacity:.85;margin-right:5px;font-size:11px;display:inline!important}
-.chip.pending{background:transparent;color:var(--accent-ink);border-style:dashed}
-.chip.prep{background:var(--accent-soft);color:var(--accent-ink);border-color:var(--accent-soft);box-shadow:inset 2px 0 0 var(--accent)}
-.chip.prep.pending{border:1px dashed var(--accent)}
-.chip.cancelled{background:transparent;border-color:var(--line-strong);color:var(--faint);text-decoration:line-through}
-.chip.conflict{border-color:var(--alert);box-shadow:inset 2px 0 0 var(--alert)}
+.chip .n{font-size:11px;opacity:.85}
+.chip .t{font-family:"IBM Plex Mono",monospace;opacity:.8;margin-right:5px;font-size:11px;display:inline!important}
+.chip.pending{background:transparent;border-style:dashed;box-shadow:none}
+.chip.cancelled{background:transparent;border-color:var(--line-strong);color:var(--faint);text-decoration:line-through;box-shadow:none}
+.chip.conflict{border-color:var(--alert);box-shadow:inset 3px 0 0 var(--alert)}
+
+/* 시설 색 — data-fc 로 고른다 */
+[data-fc]{--fc-soft:var(--fc-none-soft);--fc-line:var(--fc-none-line);--fc-ink:var(--fc-none-ink)}
+[data-fc="orange"]{--fc-soft:var(--fc-orange-soft);--fc-line:var(--fc-orange-line);--fc-ink:var(--fc-orange-ink)}
+[data-fc="blue"]{--fc-soft:var(--fc-blue-soft);--fc-line:var(--fc-blue-line);--fc-ink:var(--fc-blue-ink)}
+[data-fc="green"]{--fc-soft:var(--fc-green-soft);--fc-line:var(--fc-green-line);--fc-ink:var(--fc-green-ink)}
 .chip-more{font-size:11px;color:var(--muted);background:none;border:0;padding:2px 4px;text-align:left}
 
 /* ---------- side rail ---------- */
@@ -166,8 +191,11 @@ main{max-width:1440px;margin:0 auto;padding:18px 20px 60px}
 .rail-head .sub{font-size:11px;color:var(--muted)}
 .rail-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px;max-height:calc(100vh - 260px);overflow:auto}
 .empty{padding:22px 14px;text-align:center;color:var(--faint);font-size:12px}
-.item{border:1px solid var(--line);border-radius:var(--r);padding:9px 10px;display:flex;flex-direction:column;gap:5px;background:var(--surface)}
-.item.is-conflict{border-color:var(--alert);background:var(--alert-soft)}
+.item{border:1px solid var(--line);border-radius:var(--r);padding:9px 10px 9px 12px;display:flex;flex-direction:column;gap:5px;background:var(--surface);box-shadow:inset 4px 0 0 var(--fc-line)}
+.item.is-conflict{border-color:var(--alert);background:var(--alert-soft);box-shadow:inset 4px 0 0 var(--alert)}
+/* 준비 건은 예전처럼 연한 바탕으로 구분한다 */
+.item.is-prep{background:var(--fc-soft)}
+.item-top .item-fac{color:var(--fc-ink);font-weight:500}
 .item-top{display:flex;align-items:baseline;gap:8px}
 .item-time{font-family:"IBM Plex Mono",monospace;font-size:12px;font-variant-numeric:tabular-nums}
 .item-fac{font-size:12px;color:var(--muted);margin-left:auto}
@@ -176,7 +204,8 @@ main{max-width:1440px;margin:0 auto;padding:18px 20px 60px}
 .item-fee{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-2)}
 .item-actions{display:flex;gap:4px;margin-top:2px}
 .status{font-size:10px;letter-spacing:.04em;padding:1px 6px;border-radius:999px;border:1px solid var(--line-strong);color:var(--muted)}
-.kindtag{font-size:10px;letter-spacing:.04em;padding:1px 6px;border-radius:3px;background:var(--accent-soft);color:var(--accent-ink)}
+.kindtag{font-size:10px;letter-spacing:.04em;padding:1px 6px;border-radius:3px;background:var(--fc-soft,var(--accent-soft));color:var(--fc-ink,var(--accent-ink));border:1px solid var(--fc-line,transparent)}
+.item.is-prep .kindtag{background:var(--surface)}
 .prepbox{border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:flex;flex-direction:column;gap:9px;background:var(--surface-2)}
 .prepbox[hidden]{display:none}
 .prep-toggle{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer}
@@ -324,7 +353,9 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
             <span class="cal-title" id="calTitle">—</span>
             <small id="calSubtitle"></small>
           </div>
-          <div class="legend">
+          <div class="legend" id="calLegend">
+            <span id="facLegend"></span>
+            <span class="legend-sep"></span>
             <span><i class="lg-approved"></i>승인</span>
             <span><i class="lg-pending"></i>신청</span>
             <span><i class="lg-cancel"></i>취소</span>
@@ -710,6 +741,20 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
    ========================================================= */
 const STORAGE_KEY = "rsv.mgmt.v1";
 
+/* 시설 구분색. CSS 의 --fc-<이름>-soft/line/ink 와 짝이 맞아야 한다 */
+const FAC_COLORS = [
+  { id: "orange", name: "주황" }, { id: "blue", name: "파랑" },
+  { id: "green", name: "초록" }, { id: "none", name: "색 없음" }
+];
+const FAC_COLOR_IDS = FAC_COLORS.map(c => c.id);
+/* 색이 없거나 모르는 값이면 시설 순서대로 기본색을 준다 */
+function colorOf(f) {
+  if (!f) return "none";
+  if (FAC_COLOR_IDS.includes(f.color)) return f.color;
+  const i = state.facilities.indexOf(f);
+  return i >= 0 ? FAC_COLOR_IDS[i % 3] : "none";
+}
+
 const DEFAULT_STATE = {
   version: 1,
   settings: {
@@ -725,11 +770,11 @@ const DEFAULT_STATE = {
     orgNote: ""
   },
   facilities: [
-    { id: "f1", name: "충무체육관", unit: "hour", baseFee: 0, unitFee: 0, capacity: 0, article: "",
+    { id: "f1", name: "충무체육관", unit: "hour", baseFee: 0, unitFee: 0, capacity: 0, article: "", color: "orange",
       prep: { allowed: true, mode: "fee", fee: 0, percent: 50, article: "" } },
-    { id: "f2", name: "한밭체육관", unit: "hour", baseFee: 0, unitFee: 0, capacity: 0, article: "",
+    { id: "f2", name: "한밭체육관", unit: "hour", baseFee: 0, unitFee: 0, capacity: 0, article: "", color: "blue",
       prep: { allowed: true, mode: "fee", fee: 0, percent: 50, article: "" } },
-    { id: "f3", name: "야구장", unit: "hour", baseFee: 0, unitFee: 0, capacity: 0, article: "",
+    { id: "f3", name: "야구장", unit: "hour", baseFee: 0, unitFee: 0, capacity: 0, article: "", color: "green",
       prep: { allowed: false, mode: "fee", fee: 0, percent: 50, article: "" } }
   ],
   discounts: [
@@ -765,7 +810,9 @@ const PENDING_KEY = "rsv.pending.v1";
 function migrate(d) {
   const base = structuredClone(DEFAULT_STATE);
   const facs = (Array.isArray(d.facilities) && d.facilities.length ? d.facilities : base.facilities)
-    .map(f => Object.assign({ unit: "hour", baseFee: 0, unitFee: 0, capacity: 0, article: "" }, f, {
+    .map((f, i) => Object.assign({ unit: "hour", baseFee: 0, unitFee: 0, capacity: 0, article: "" }, f, {
+      // 색이 없던 예전 자료에는 시설 순서대로 기본색을 넣어준다
+      color: FAC_COLOR_IDS.includes(f.color) ? f.color : FAC_COLOR_IDS[i % 3],
       prep: Object.assign({ allowed: false, mode: "fee", fee: 0, percent: 50, article: "" }, f.prep || {})
     }));
   const res = (Array.isArray(d.reservations) ? d.reservations : [])
@@ -1298,12 +1345,13 @@ function renderCalendar() {
     // 달력에는 행사만 띄운다. 준비시간은 날짜를 누르면 우측에서 함께 보인다
     const dayAll = byDate[date] || (out ? state.reservations.filter(r => r.date === date) : []);
     const items = dayAll.filter(r => (r.kind || "행사") !== "준비");
+    const prepCount = dayAll.length - items.length;
     const shown = items.slice(0, CAL_CHIPS);
     const chips = shown.map(r => {
       const f = facilityOf(r.facilityId);
       const cls = r.status === "승인" ? "" : (r.status === "취소" ? " cancelled" : " pending");
       const cf = conflicts.has(r.id) ? " conflict" : "";
-      return '<button type="button" class="chip' + cls + cf + '" data-edit="' + r.id + '" title="' +
+      return '<button type="button" class="chip' + cls + cf + '" data-fc="' + colorOf(f) + '" data-edit="' + r.id + '" title="' +
         esc(r.start + "–" + r.end + " " + (f ? f.name : "") + " / " + r.applicant) + '">' +
         '<span><span class="t">' + esc(r.start) + "</span>" + esc(f ? f.name : "?") + "</span>" +
         '<span class="n">' + esc(r.applicant) + "</span></button>";
@@ -1318,12 +1366,20 @@ function renderCalendar() {
       '" data-day="' + date + '" role="button" tabindex="0">' +
         '<div class="cell-date"><b>' + label + "</b>" +
           (isHoliday(date) ? '<span class="holiday-tag">공휴일</span>' : "") +
-          (items.length ? '<span class="cell-count">' + items.length + "</span>" : "") +
+          ((items.length || prepCount)
+            ? '<span class="cell-count">' +
+                (items.length ? "행사 <b>" + items.length + "</b>" : "") +
+                (prepCount ? '<span class="pc">준비 ' + prepCount + "</span>" : "") +
+              "</span>"
+            : "") +
         "</div>" + chips + more +
       "</div>"
     );
   }
   $("#calGrid").innerHTML = cells.join("");
+  $("#facLegend").innerHTML = state.facilities
+    .map(f => '<span class="fac" data-fc="' + colorOf(f) + '"><i></i>' + esc(f.name) + "</span>")
+    .join(" ");
   renderSummary();
 }
 
@@ -1375,7 +1431,8 @@ function renderRail() {
     const f = facilityOf(r.facilityId);
     const dc = discountOf(r.discountId);
     const cf = conflicts.has(r.id);
-    return '<div class="item' + (cf ? " is-conflict" : "") + '">' +
+    return '<div class="item' + (cf ? " is-conflict" : "") + (r.kind === "준비" ? " is-prep" : "") +
+      '" data-fc="' + colorOf(f) + '">' +
       '<div class="item-top">' +
         '<span class="item-time">' + esc(r.start) + "–" + esc(r.end) + "</span>" +
         (r.kind === "준비" ? '<span class="kindtag">준비</span>' : "") +
@@ -1479,6 +1536,9 @@ function renderSettings() {
           '<option value="day"' + (f.unit === "day" ? " selected" : "") + ">일</option>" +
         "</select></div>" +
       "</div>" +
+      '<div class="field"><label>달력 구분색</label><select data-k="color">' +
+        FAC_COLORS.map(c => '<option value="' + c.id + '"' + (colorOf(f) === c.id ? " selected" : "") + ">" + c.name + "</option>").join("") +
+      "</select><span class=\"hint\">달력과 우측 상세에서 이 시설을 구분하는 색입니다.</span></div>" +
       '<div class="row3">' +
         '<div class="field"><label>기본료(원)</label><input type="number" class="mono" data-k="baseFee" value="' + (f.baseFee || 0) + '"></div>' +
         '<div class="field"><label>' + (f.unit === "day" ? "일당" : "시간당") + ' 단가(원)</label><input type="number" class="mono" data-k="unitFee" value="' + (f.unitFee || 0) + '"></div>' +
