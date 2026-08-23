@@ -609,14 +609,15 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
             <input type="checkbox" id="setDiscountAnnex">
             <span>부속시설·전기·수도에도 감면 적용</span>
           </label>
-          <div class="hint">제11조제1항은 부속시설 사용료도 “사용료”에 넣고 있어 제13조 감면 대상으로 볼 여지가 있습니다.
-            다만 전기·수도는 실비라서 기본은 꺼둡니다. 시 해석에 따라 켜세요.</div>
+          <div class="hint">제11조제1항이 부속시설 사용료도 “사용료”에 넣고 있어 제13조 감면 대상입니다.
+            기본으로 켜져 있습니다. 전기·수도 실비까지는 깎지 않는 것으로 정하면 여기서 끄세요.</div>
 
           <div class="hr"></div>
 
           <div class="field">
             <label>감면 유형 <span class="hint" style="display:inline">제13조</span></label>
-            <div class="hint">감면율은 ①~⑤를 모두 합한 금액에 적용됩니다. 등록창에서 해당 유형을 고르면 자동으로 빠집니다.</div>
+            <div class="hint">조례가 정한 비율은 <b>전부 면제 · 80% 감경 · 50% 감경</b> 세 가지입니다.
+              어느 호에 해당하는지는 근거 조문에 적어두었고, 산정 내역에 그대로 나옵니다.</div>
           </div>
           <div id="discountList" style="display:flex;flex-direction:column;gap:9px"></div>
           <button type="button" class="btn btn-sm" id="addDiscount" style="align-self:flex-start">+ 감면 유형 추가</button>
@@ -974,20 +975,15 @@ const BYULPYO6 = [
 /* 예전 자료의 시설명을 별표 1 의 이름으로 맞춘다 */
 const FAC_ALIAS = { "야구장": "한밭야구장" };
 
-/* 제13조 — 사용료의 감면 */
+/* 제13조 — 사용료의 감면.
+   조례가 정한 비율은 전부 면제 / 80% 감경 / 50% 감경 세 가지뿐이다.
+   호별로 목록을 늘리지 않고 비율로만 고르게 한다 — 어느 호에 해당하는지는
+   근거 조문에 적어두었고, 산정 내역에 그대로 나온다. */
 const DISCOUNTS_13 = [
-  { id: "d0",  name: "해당 없음",                                   rate:   0, article: "" },
-  { id: "d1",  name: "국가 또는 시가 주최·주관하는 행사",              rate: 100, article: "제13조제1호" },
-  { id: "d2",  name: "시체육회·시장애인체육회 등록 전문체육 선수 훈련", rate: 100, article: "제13조제1호의2" },
-  { id: "d3",  name: "시 산하기관·자치구 직장운동경기부 선수 훈련",     rate: 100, article: "제13조제1호의3" },
-  { id: "d4",  name: "대한체육회·대한장애인체육회 계열 단체 주관 행사", rate:  80, article: "제13조제2호" },
-  { id: "d5",  name: "국가유공자·그 유족 또는 가족을 위한 행사",       rate:  80, article: "제13조제3호" },
-  { id: "d6",  name: "65세 이상·장애인·기초생활수급자를 위한 행사",     rate:  80, article: "제13조제4호" },
-  { id: "d7",  name: "학교의 정규 수업 또는 방과 후 활동",            rate:  80, article: "제13조제5호" },
-  { id: "d8",  name: "학교 밖 청소년지원센터 자립지원 활동",           rate:  80, article: "제13조제6호" },
-  { id: "d9",  name: "시가 유치한 전지훈련팀",                       rate:  80, article: "제13조제7호" },
-  { id: "d10", name: "스포츠클럽에서 실시하는 행사",                  rate:  50, article: "제13조제8호" },
-  { id: "d11", name: "시정조정위원회 심의·의결로 시장이 인정한 행사",   rate:  50, article: "제13조제9호" }
+  { id: "d0", name: "해당 없음",   rate:   0, article: "" },
+  { id: "d1", name: "전부 면제",   rate: 100, article: "제13조제1호~제1호의3 (국가·시 주최/주관, 전문체육 선수 훈련, 직장운동경기부 훈련)" },
+  { id: "d2", name: "80% 감경",    rate:  80, article: "제13조제2호~제7호 (대한체육회 계열, 국가유공자, 65세 이상·장애인·수급자, 학교 수업, 학교 밖 청소년, 전지훈련팀)" },
+  { id: "d3", name: "50% 감경",    rate:  50, article: "제13조제8호·제9호 (스포츠클럽, 시정조정위원회 인정)" }
 ];
 
 function facSeed(id, name, color, prepAllowed) {
@@ -1003,7 +999,7 @@ function facSeed(id, name, color, prepAllowed) {
 }
 
 const DEFAULT_STATE = {
-  version: 2,
+  version: 3,
   settings: {
     rounding: 10,
 
@@ -1032,7 +1028,7 @@ const DEFAULT_STATE = {
 
     /* 별표 6 — 부속시설 사용료 */
     annexItems: structuredClone(BYULPYO6),
-    discountAnnex: false,  // 부속시설·전기·수도에도 감면을 적용할지 (아래 주석 참고)
+    discountAnnex: true,   // 부속시설·전기·수도에도 감면을 적용할지 (아래 주석 참고)
 
     holidays: [],
     prepSurcharge: false,  // 준비시간에도 가산·감산을 적용할지
@@ -1115,16 +1111,22 @@ function migrate(d) {
       return x;
     });
 
-  // 감면 유형은 조례 제13조가 정한다. 예전 자료(제13조 이전 임의 목록)는 갈아끼운다
-  const replaceDcs = old < 2 || !Array.isArray(d.discounts) || !d.discounts.length;
-  const dcs = replaceDcs ? structuredClone(DISCOUNTS_13) : d.discounts;
+  // 감면 유형은 조례 제13조가 정한다. 예전 목록은 갈아끼운다
+  const oldDcs = Array.isArray(d.discounts) ? d.discounts : [];
+  const replaceDcs = old < 3 || !oldDcs.length;
+  const dcs = replaceDcs ? structuredClone(DISCOUNTS_13) : oldDcs;
   if (replaceDcs) {
-    // 예전 목록의 d1·d2 는 조례 목록의 d1·d2 와 뜻이 다르다.
-    // id 를 그대로 두면 감면율 0% 이던 예약에 100% 면제가 붙어버린다.
-    // 담당자가 조례 목록에서 다시 고르도록 "해당 없음"으로 되돌린다 —
-    // 예전 목록은 감면율이 모두 0 이었으므로 금액은 달라지지 않는다.
-    const ok = new Set(dcs.map(x => x.id));
-    res.forEach(r => { if (!ok.has(r.discountId) || old < 2) r.discountId = dcs[0].id; });
+    // 같은 id 라도 목록이 바뀌면 뜻이 달라진다. id 를 그대로 두면
+    // 감면이 없던 예약에 100% 면제가 붙는 식으로 금액이 틀어진다.
+    // **감면율을 기준으로 옮겨서** 실제 감면은 그대로 유지한다
+    const byRate = {};
+    dcs.forEach(x => { if (byRate[x.rate] == null) byRate[x.rate] = x.id; });
+    const rateOf = {};
+    oldDcs.forEach(x => { rateOf[x.id] = Number(x.rate) || 0; });
+    res.forEach(r => {
+      const rate = rateOf[r.discountId];
+      r.discountId = (rate != null && byRate[rate] != null) ? byRate[rate] : dcs[0].id;
+    });
   }
 
   const st = Object.assign({}, base.settings, d.settings || {});
@@ -1133,6 +1135,9 @@ function migrate(d) {
   st.hours.winter = Object.assign({}, base.settings.hours.winter, st.hours.winter || {});
   st.articles = Object.assign({}, base.settings.articles, (d.settings || {}).articles || {});
   if (!Array.isArray(st.annexItems) || !st.annexItems.length) st.annexItems = structuredClone(BYULPYO6);
+  // 제11조제1항이 부속시설 사용료도 "사용료"에 넣고 있어 제13조 감면 대상이다.
+  // 처음에는 실비 성격을 걱정해 꺼두었으나, 담당자 확인으로 켜는 것으로 정했다
+  if (old < 3) st.discountAnnex = true;
   if (old < 2) {   // 예전 할증 설정은 조례 값과 뜻이 달라 그대로 쓸 수 없다
     st.weekendRate = base.settings.weekendRate;
     st.nightRate   = base.settings.nightRate;
@@ -1141,7 +1146,7 @@ function migrate(d) {
   }
   delete st.minHours; delete st.nightStart; delete st.holidayRate; delete st.surchargeArticle;
 
-  return { version: 2, settings: st, facilities: facs, discounts: dcs, reservations: res };
+  return { version: 3, settings: st, facilities: facs, discounts: dcs, reservations: res };
 }
 
 function readLocal() {
@@ -1788,7 +1793,7 @@ function calcFee(r) {
     const dcBase = sum + (dcAnnex ? annexSum : 0);
     cut = dcBase * Number(dc.rate) / 100;
     out.lines.push({
-      label: "⑨ 감면 · " + dc.name + " " + dc.rate + "%",
+      label: "⑨ 감면 · " + dc.name + (String(dc.name).includes(dc.rate + "%") ? "" : " " + dc.rate + "%"),
       why: (dc.article || A.discount) + (Number(dc.rate) === 100 ? " · 전부 면제" : " · 사용료의 " + dc.rate + "% 감경") +
            (annexSum > 0 ? (dcAnnex ? " · 부속시설·전기·수도 포함" : " · 부속시설·전기·수도(실비)는 제외") : ""),
       amount: -cut
@@ -2152,7 +2157,8 @@ function fillSelects() {
   $("#fFac").innerHTML = opts;
   $("#fFacility").innerHTML = '<option value="">전체 시설</option>' + opts;
   $("#fDiscount").innerHTML = state.discounts.map(d =>
-    '<option value="' + d.id + '">' + esc(d.name) + (d.rate ? " (" + d.rate + "%)" : "") + "</option>").join("");
+    '<option value="' + d.id + '">' + esc(d.name) +
+    (d.rate && !String(d.name).includes(d.rate + "%") ? " (" + d.rate + "%)" : "") + "</option>").join("");
 }
 function openModal(id, presetDate) {
   view.editingId = id || null;
@@ -2360,6 +2366,20 @@ function feeLinesHtml(f, opts) {
     (o.tail || "");
 }
 
+/* 산정 내역은 부속시설·전기·수도 입력칸보다 위에 있다.
+   줄이 하나 늘 때마다 아래가 밀려서, 수량을 넣는 칸이 손가락 밑에서 도망간다.
+   다시 그리기 전후로 포커스된 칸의 화면 위치를 재서 스크롤로 상쇄한다.
+   **이 보정을 빼지 않는다** — 빼면 수량을 넣을 때마다 화면이 밀린다 */
+function keepFocusInPlace(redraw) {
+  const box = $("#modal"), el = document.activeElement;
+  const hold = el && box.contains(el) ? el.getBoundingClientRect().top : null;
+  redraw();
+  if (hold != null) {
+    const moved = el.getBoundingClientRect().top - hold;
+    if (moved) box.scrollTop += moved;
+  }
+}
+
 function updateFeePreview() {
   const r = formToRes();
   const box = $("#feeBreakdown"), tot = $("#feeTotal"), note = $("#feeNote");
@@ -2372,7 +2392,7 @@ function updateFeePreview() {
     tot.textContent = won(f.total) + "원";
     note.textContent = (f.pending ? "기본액 미입력 · " : "") + (f.note || "");
     $("#annexTotal").textContent = won(f.annex || 0) + "원";
-    box.innerHTML = feeLinesHtml(f, { tail: prepPreview(r, f.total) });
+    keepFocusInPlace(() => { box.innerHTML = feeLinesHtml(f, { tail: prepPreview(r, f.total) }); });
   }
   // 중복 안내
   const others = state.reservations.filter(x => x.id !== r.id && x.status !== "취소" &&
