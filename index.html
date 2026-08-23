@@ -1931,12 +1931,12 @@ function renderSummary() {
   const hrs = a => Math.round(a.reduce((n, r) => n + Math.max(0, (toMin(r.end) - toMin(r.start)) / 60), 0) * 10) / 10;
   const fee = a => a.reduce((n, r) => n + feeOf(r), 0);
   $("#summary").innerHTML =
-    stat("행사", ev.length + '<small>건 · ' + hrs(ev) + "시간</small>") +
-    stat("준비시간", pr.length + '<small>건 · ' + hrs(pr) + "시간</small>") +
+    stat("행사", ev.length + '<small>건 · ') +
+    stat("준비시간", pr.length + '<small>건 · ') +
     stat("행사 이용료", won(fee(ev)) + '<small>원</small>') +
     stat("준비시간 이용료", won(fee(pr)) + '<small>원</small>') +
-    stat("합계", won(fee(live)) + '<small>원</small>') +
-    stat("승인 대기", mr.filter(r => r.status === "신청").length + '<small>건</small>');
+    stat("승인 대기", mr.filter(r => r.status === "신청").length + '<small>건</small>') +
+    stat("합계", won(fee(live)) + '<small>원</small>');
 }
 function stat(k, v) { return '<div class="stat"><dt>' + k + "</dt><dd>" + v + "</dd></div>"; }
 
