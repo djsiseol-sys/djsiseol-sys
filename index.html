@@ -162,6 +162,8 @@ main{max-width:1440px;margin:0 auto;padding:18px 20px 60px}
 .cell{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px;display:flex;flex-direction:column;gap:5px;background:var(--surface);text-align:left;font:inherit;color:inherit;border-top:0;border-left:0;position:relative}
 .cell:nth-child(7n){border-right:0}
 .cell.out{background:var(--sunk)}
+/* 인쇄판의 앞뒤 달 칸 — 자리만 남기고 비운다 */
+.cell.blank{background:var(--sunk)}
 .cell:hover{box-shadow:inset 0 0 0 1px var(--line-strong)}
 .cell.selected{box-shadow:inset 0 0 0 2px var(--accent)}
 .cell-date{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2)}
@@ -359,7 +361,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 .print-only{display:none}
 #printArea{display:none}
 .pc-page{margin:0 0 6px}
-.pc-page .dow{border:1px solid #888;border-bottom:0}
+.pc-page .dow{border:1px solid #888}
 .pc-legend{display:flex;gap:12px;font-size:10px;color:#333;margin-left:auto;align-items:center;flex-wrap:wrap}
 .pc-legend>span{white-space:nowrap}
 .pc-legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px;
@@ -560,6 +562,10 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
         <div class="seg" id="listModeSeg" role="group" aria-label="목록 종류">
           <button type="button" data-lm="view" aria-pressed="true">조회용</button>
           <button type="button" data-lm="income" aria-pressed="false">수익집계용</button>
+        </div>
+        <div class="seg" id="utilSeg" role="group" aria-label="공과금 보기" hidden>
+          <button type="button" data-us="sum" aria-pressed="true">공과금 합계</button>
+          <button type="button" data-us="split" aria-pressed="false">전기·수도 따로</button>
         </div>
         <input type="search" id="q" placeholder="단체명 · 목적 · 메모 검색">
         <select id="fFacility"><option value="">전체 시설</option></select>
@@ -1082,7 +1088,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 화면에 띄우는 판 번호. **내용을 고치면 여기를 올린다.**
    "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을 열고 있는 것인데,
    이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-08-23.4";
+const APP_VERSION = "2026-08-23.5";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -1275,7 +1281,8 @@ const DEFAULT_STATE = {
 
 let state = structuredClone(DEFAULT_STATE);
 let view = { year: new Date().getFullYear(), month: new Date().getMonth() + 1, selected: null, pane: "calendar", editingId: null,
-             listMode: "view" };   // 목록 종류: view 조회용 / income 수익집계용
+             listMode: "view",     // 목록 종류: view 조회용 / income 수익집계용
+             utilSplit: false };   // 공과금을 전기료·수도료로 나눠 볼지
 
 /* 저장 위치
    shared  = 이 페이지(공유 링크)에 함께 저장 — 링크를 가진 담당자 모두가 같은 자료를 봅니다
@@ -2020,7 +2027,7 @@ function calcFee(r) {
 
   // ⑥⑦⑧ 부속시설 사용료 (별표 6) — 행사 종료 후 7일 이내에 징수한다 (제11조제2항)
   // 목록(수익집계용)에서 부속시설과 공과금(전기+수도)을 따로 떼어 보여주려고 나눠 센다
-  let annexSum = 0, annexOnly = 0, utilSum = 0;
+  let annexSum = 0, annexOnly = 0, utilSum = 0, powerSum = 0, waterSum = 0;
   const qty = (r.annex && typeof r.annex === "object") ? r.annex : {};
   if (!isPrep) {
     (s.annexItems || []).forEach(it => {
@@ -2041,7 +2048,7 @@ function calcFee(r) {
         why: "실제 사용량을 확인해 직접 입력한 실비 · " + A.annex,
         amount: pw
       });
-      annexSum += pw; utilSum += pw;
+      annexSum += pw; utilSum += pw; powerSum = pw;
     }
     const wt = Number(r.water) || 0;
     if (wt > 0) {
@@ -2050,7 +2057,7 @@ function calcFee(r) {
         why: "실제 사용량을 확인해 직접 입력한 실비 · " + A.annex + " · 1일 1회 수도사용 (전용사용 시)",
         amount: wt
       });
-      annexSum += wt; utilSum += wt;
+      annexSum += wt; utilSum += wt; waterSum = wt;
     }
   }
   out.annex = annexSum;
@@ -2082,7 +2089,13 @@ function calcFee(r) {
   const dcOn = (Number(dc.rate) > 0 && dcAnnex) ? (1 - Number(dc.rate) / 100) : 1;
   const partAnnex = floorUnit(annexOnly * dcOn);
   const partUtil  = floorUnit(utilSum  * dcOn);
-  out.parts = { annex: partAnnex, util: partUtil, use: Math.max(0, out.total - partAnnex - partUtil) };
+  // 공과금을 전기·수도로 나눠 볼 수 있게 따로도 담는다.
+  // 수도료는 나머지로 두어 전기+수도가 언제나 공과금과 같아지게 한다
+  const partPower = Math.min(partUtil, floorUnit(powerSum * dcOn));
+  out.parts = {
+    annex: partAnnex, util: partUtil, power: partPower, water: partUtil - partPower,
+    use: Math.max(0, out.total - partAnnex - partUtil)
+  };
   return out;
 }
 /* 이용료를 전용사용료 · 부속시설 · 공과금(전기+수도) 으로 나눠 돌려준다.
@@ -2093,7 +2106,10 @@ function feeParts(r) {
   const total = ov == null ? f.total : ov;
   const annex = Math.min(f.parts.annex, total);
   const util  = Math.min(f.parts.util, total - annex);
-  return { total: total, annex: annex, util: util, use: Math.max(0, total - annex - util), calc: f };
+  const power = Math.min(f.parts.power, util);
+  return { total: total, annex: annex, util: util,
+           power: power, water: util - power,          // 전기 + 수도 = 공과금
+           use: Math.max(0, total - annex - util), calc: f };
 }
 function feeOf(r) {
   if (r.feeOverride !== "" && r.feeOverride != null && !isNaN(r.feeOverride)) return Number(r.feeOverride);
@@ -2170,6 +2186,8 @@ function calCellsHtml(o) {
     else { date = ymd(y, m, dnum); label = dnum; }
 
     const dow = (i % 7);
+    // 인쇄판은 이번 달만 찍는다. 앞뒤 달 칸은 자리만 남기고 비운다
+    if (out && !live) { cells.push('<div class="cell out blank"></div>'); continue; }
     const dayAll = byDate[date] || (out ? state.reservations.filter(r => r.date === date) : []);
     const items = dayAll.filter(r => kinds.includes(r.kind || "행사"));
     const evCount = dayAll.filter(r => (r.kind || "행사") !== "준비").length;
@@ -2344,6 +2362,14 @@ const LIST_MODES = {
   view:   { name: "조회용",    cols: ["done", "date", "dow", "time", "fac", "kind", "applicant", "purpose", "head", "memo"] },
   income: { name: "수익집계용", cols: ["done", "date", "dow", "time", "fac", "kind", "applicant", "head", "discount", "use", "annex", "util", "total"] }
 };
+/* 실제로 쓸 열. 수익집계용에서 공과금을 한 칸으로 볼지(util)
+   전기료·수도료로 나눠 볼지(power·water) 고를 수 있다 (`view.utilSplit`).
+   화면·인쇄·엑셀·CSV 가 모두 이 함수를 쓴다 — 본 것과 뽑은 것이 달라지지 않게 */
+function colsOf(mode) {
+  const cols = LIST_MODES[mode].cols;
+  if (mode !== "income" || !view.utilSplit) return cols;
+  return cols.flatMap(k => k === "util" ? ["power", "water"] : k);
+}
 /* 날짜 하나에 딸린 값이라 여러 줄을 하나로 합쳐서 보여주는 열 (엑셀 병합·CSV 빈칸) */
 const MERGE_COLS = ["done", "date", "dow"];
 const LIST_COLS = {
@@ -2361,6 +2387,8 @@ const LIST_COLS = {
   use:       { label: "이용료", cls: "num", sum: true },
   annex:     { label: "부속시설", cls: "num", sum: true, blankZero: true },
   util:      { label: "공과금", cls: "num", sum: true, blankZero: true },
+  power:     { label: "전기료", cls: "num", sum: true, blankZero: true },
+  water:     { label: "수도료", cls: "num", sum: true, blankZero: true },
   total:     { label: "합계",   cls: "num", sum: true }
 };
 
@@ -2381,7 +2409,9 @@ function listRow(r) {
     head: r.headcount || "",
     memo: (r.memo || ""),
     discount: Number(dc.rate) > 0 ? dc.name + (String(dc.name).includes(dc.rate + "%") ? "" : " " + dc.rate + "%") : "",
-    use: fp.use, annex: fp.annex, util: fp.util, total: fp.total
+    use: fp.use, annex: fp.annex, util: fp.util,
+    power: fp.power, water: fp.water,
+    total: fp.total
   };
 }
 function listCellText(row, key) {
@@ -2411,11 +2441,15 @@ function listRows() {
 
 function renderList() {
   const mode = LIST_MODES[view.listMode] ? view.listMode : "view";
-  const cols = LIST_MODES[mode].cols;
+  const cols = colsOf(mode);
   const src = listRows();
   const rows = src.map(listRow);
 
   $$("#listModeSeg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lm === mode)));
+  // 공과금 전환은 금액을 보는 화면에서만 뜻이 있다
+  $("#utilSeg").hidden = mode !== "income";
+  $$("#utilSeg button").forEach(b =>
+    b.setAttribute("aria-pressed", String((b.dataset.us === "split") === !!view.utilSplit)));
 
   $("#listHead").innerHTML = "<tr>" + cols.map(k =>
     "<th" + (LIST_COLS[k].cls === "num" ? ' style="text-align:right"' : "") + ">" + LIST_COLS[k].label + "</th>"
@@ -2461,9 +2495,14 @@ function renderList() {
     const useSum = rows.reduce((a, x) => a + x.use, 0);
     const anSum  = rows.reduce((a, x) => a + x.annex, 0);
     const utSum  = rows.reduce((a, x) => a + x.util, 0);
+    const pwSum = rows.reduce((a, x) => a + x.power, 0);
+    const wtSum = rows.reduce((a, x) => a + x.water, 0);
+    const utTxt = !utSum ? ""
+      : view.utilSplit
+        ? (pwSum ? " · 전기료 " + won(pwSum) + "원" : "") + (wtSum ? " · 수도료 " + won(wtSum) + "원" : "")
+        : " · 공과금 " + won(utSum) + "원";
     $("#listCount").textContent = rows.length + "건 · 이용료 " + won(useSum) + "원" +
-      (anSum ? " · 부속시설 " + won(anSum) + "원" : "") +
-      (utSum ? " · 공과금 " + won(utSum) + "원" : "") +
+      (anSum ? " · 부속시설 " + won(anSum) + "원" : "") + utTxt +
       " · 합계 " + won(useSum + anSum + utSum) + "원" + hidden;
   } else {
     $("#listCount").textContent = rows.length + "건 · 행사 " + nEv +
@@ -2872,7 +2911,7 @@ function buildPrintCalendar(kindList) {
 
 /* 날짜별 상세 인쇄판을 만든다 */
 function buildPrintDetail(dates) {
-  const cols = LIST_MODES[view.listMode === "income" ? "income" : "view"].cols
+  const cols = colsOf(view.listMode === "income" ? "income" : "view")
     .filter(k => k !== "date" && k !== "dow" && k !== "memo");
   // 날마다 표가 따로라 그냥 두면 열 폭이 제각각이 된다. 폭을 정해 한 장처럼 맞춘다
   const wOf = k => k === "time" ? 12 : k === "fac" ? 12 : k === "kind" ? 6 : k === "head" ? 6 :
@@ -2968,7 +3007,7 @@ function xesc(v) {
 
 function exportTable(fmt, rows, mode, periodLabel) {
   const m = LIST_MODES[mode] ? mode : "view";
-  const cols = LIST_MODES[m].cols;
+  const cols = colsOf(m);
   const data = rows.map(listRow);
   const head = cols.map(k => LIST_COLS[k].label);
   const name = "예약내역_" + (periodLabel || "").replace(/[^0-9가-힣]/g, "") + "_" + LIST_MODES[m].name;
@@ -3223,6 +3262,13 @@ function init() {
     const b = e.target.closest("[data-lm]");
     if (!b) return;
     view.listMode = b.dataset.lm;
+    renderList();
+  });
+  // 공과금을 한 칸으로 볼지, 전기료·수도료로 나눠 볼지
+  $("#utilSeg").addEventListener("click", e => {
+    const b = e.target.closest("[data-us]");
+    if (!b) return;
+    view.utilSplit = b.dataset.us === "split";
     renderList();
   });
   $("#listPrint").addEventListener("click", () => doPrint("list"));
