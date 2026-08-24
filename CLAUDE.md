@@ -70,6 +70,7 @@ index.html            # 전부. HTML + CSS + JS 단일 파일, 빌드 없음
                       #   GitHub Pages 가 그대로 서빙한다
                       #   SUPABASE_URL / SUPABASE_ANON_KEY 를 섹션 1-B 위에 박아 넣었다
 배포안내.md           # GitHub Pages 로 올리고 주소를 켜는 절차
+요금담당계정안내.md   # 요금 담당 전용 계정을 만들고 관리하는 절차
 README.md             # 저장소 첫 화면 설명
 .nojekyll             # Pages 의 Jekyll 처리를 끈다 (지우지 않는다)
 서버설치안내.md       # Supabase 설정 절차와 SQL  ※ 아직 저장소에 없음
@@ -172,7 +173,10 @@ README.md             # 저장소 첫 화면 설명
 | `viewer` | 로그인 안 함 | 조회만 |
 
 - `settings.feeManagers` 는 이메일 목록이고, **담당자가 설정 화면에서 넣는다.**
-  계정 자체는 Supabase 대시보드에서 따로 만든다 (Authentication → Users → Add user)
+  계정 자체는 Supabase 대시보드에서 따로 만든다 (Authentication → Users → Add user).
+  만들고 관리하는 절차는 `요금담당계정안내.md` 에 적어 두었다
+- **목록에 없는 로그인 계정은 담당자로 본다.** 계정을 만들고 목록에 넣는 것을
+  빠뜨리면 그 계정이 전권을 갖는다 — 안내서에도 경고로 적어 두었다
 - `applyRole()` 이 `body.fee-only` 를 붙여 예약·설정을 고치는 UI 를 감춘다.
   **서버 연결 카드는 잠그지 않는다** — 잠그면 로그인·로그아웃을 할 수 없다
 
