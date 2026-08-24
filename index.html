@@ -349,6 +349,24 @@ body.ro #deleteRes,body.ro #saveRes{display:none!important}
 body.ro #pane-settings input,body.ro #pane-settings select,body.ro #pane-settings textarea,
 body.ro #resForm input,body.ro #resForm select,body.ro #resForm textarea{pointer-events:none;opacity:.72}
 body.ro #copyText{pointer-events:auto;opacity:1}
+/* 요금 담당 계정 — 요금 관리만 한다. 예약·설정을 고치는 것은 감춘다 */
+body.fee-only #newBtn,body.fee-only #railDone,body.fee-only #railHoliday,body.fee-only .item-actions [data-edit],
+body.fee-only .item-actions [data-copy],body.fee-only #listBody [data-edit],body.fee-only #resetAll,
+body.fee-only #clearRes,body.fee-only #importJson,body.fee-only #importPaste,body.fee-only #addFacility,
+body.fee-only #addDiscount,body.fee-only #addAnnex,body.fee-only [data-delfac],body.fee-only [data-deldc],
+body.fee-only [data-delannex]{display:none!important}
+body.fee-only #pane-settings input,body.fee-only #pane-settings select,body.fee-only #pane-settings textarea{
+  pointer-events:none;opacity:.72;
+}
+body.fee-only #serverCard input,body.fee-only #serverCard select,body.fee-only #serverCard textarea{
+  pointer-events:auto;opacity:1;
+}
+.paidbox{width:16px;height:16px;accent-color:var(--accent);margin:0;cursor:pointer}
+tr.is-paid td{background:var(--accent-soft)}
+tr.is-paid:hover td{background:var(--accent-soft)}
+td.paid,th.paid{width:44px;text-align:center;padding-left:6px;padding-right:6px}
+.fee-why{font-size:11px}
+.fee-why .fee-line{padding:1px 0}
 /* 조회 전용에서도 서버 연결·로그인 입력란은 살려둔다.
    잠그면 로그인을 할 수 없어 조회 전용에서 영영 빠져나오지 못한다 */
 body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textarea{pointer-events:auto;opacity:1}
@@ -426,18 +444,32 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
   .pc-page .chip .n{font-size:12.5px;font-weight:600}
 
   /* ② 목록으로 인쇄 */
-  body.print-list .rail,body.print-list #pane-calendar,body.print-list #pane-settings,body.print-list .filters{display:none!important}
+  body.print-list .rail,body.print-list #pane-calendar,body.print-list #pane-settings,body.print-list #pane-fees,
+  body.print-list .filters{display:none!important}
   body.print-list #pane-list{display:block!important}
-  body.print-list .table-wrap{overflow:visible}
-  body.print-list th{position:static;background:#f4f4f4;color:#000;border-bottom:1px solid #888}
-  body.print-list table{font-size:11px}
-  body.print-list td,body.print-list th{padding:3px 6px;border-bottom:1px solid #ccc}
-  body.print-list thead{display:table-header-group}
-  body.print-list tr{break-inside:avoid;page-break-inside:avoid}
-  /* 수정 단추가 있던 열은 종이에서 뺀다 */
+  body.print-fees .rail,body.print-fees #pane-calendar,body.print-fees #pane-settings,body.print-fees #pane-list,
+  body.print-fees .filters,body.print-fees #feeNote{display:none!important}
+  body.print-fees #pane-fees{display:block!important}
+  body.print-list .table-wrap,body.print-fees .table-wrap{overflow:visible}
+  body.print-list th,body.print-fees th{position:static;background:#f4f4f4;color:#000;border-bottom:1px solid #888}
+  body.print-list table,body.print-fees table{font-size:11px}
+  body.print-list td,body.print-list th,
+  body.print-fees td,body.print-fees th{padding:3px 6px;border-bottom:1px solid #ccc}
+  body.print-list thead,body.print-fees thead{display:table-header-group}
+  body.print-list tr,body.print-fees tr{break-inside:avoid;page-break-inside:avoid}
+  /* 단추가 있던 열과 접어 둔 산정 내역은 종이에서 뺀다 */
   body.print-list #listHead th:last-child,
   body.print-list #listBody td:last-child,
-  body.print-list #listFoot td:last-child{display:none}
+  body.print-list #listFoot td:last-child,
+  body.print-fees #feeHead th:last-child,
+  body.print-fees #feeBody td:last-child,
+  body.print-fees #feeFoot td:last-child{display:none}
+  body.print-fees #feeBody tr[data-feerow]{display:none!important}
+  /* 체크칸은 종이에 ✓ 글자로 찍는다 */
+  body.print-fees .paidbox{display:none}
+  body.print-fees td.paid::after{content:"";font-weight:700;color:#000}
+  body.print-fees tr.is-paid td.paid::after{content:"✓"}
+  body.print-fees tr.is-paid td{background:transparent}
 
   /* ③ 날짜별 상세로 인쇄 */
   body.print-detail main{display:none!important}
@@ -471,11 +503,13 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
     <nav class="tabs" role="tablist">
       <button type="button" role="tab" data-pane="calendar" aria-selected="true">달력</button>
       <button type="button" role="tab" data-pane="list" aria-selected="false">목록</button>
+      <button type="button" role="tab" data-pane="fees" aria-selected="false">요금 관리</button>
       <button type="button" role="tab" data-pane="settings" aria-selected="false">시설 · 요금 기준</button>
     </nav>
 
     <div class="topbar-tools">
       <span class="rob" id="roBadge" hidden>조회 전용</span>
+      <span class="rob" id="roleBadge" hidden>요금 담당</span>
       <span class="savestate" id="saveState">—</span>
       <button type="button" class="btn btn-sm savenow" id="saveNow" title="지금 저장 (Ctrl+S) · 예약은 등록·수정 즉시 저장됩니다">저장</button>
       <button type="button" class="btn btn-sm" id="themeBtn" title="화면 모드 전환">◐</button>
@@ -590,6 +624,40 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
           <tfoot id="listFoot"></tfoot>
         </table>
       </div>
+    </div>
+  </section>
+
+  <!-- ================= 요금 관리 ================= -->
+  <!-- 돈만 보는 화면. 공과금을 전기료·수도료로 나눠 보여주고,
+       건마다 입금을 확인해 표시한다. 산정 근거도 줄마다 펼쳐 볼 수 있다 -->
+  <section class="pane" id="pane-fees">
+    <div class="print-only print-head" id="printHeadFee"></div>
+    <div class="card">
+      <div class="filters">
+        <input type="search" id="feeQ" placeholder="단체명 · 목적 검색">
+        <select id="feeFacility"><option value="">전체 시설</option></select>
+        <select id="feePaid">
+          <option value="">입금 전체</option>
+          <option value="no">미입금만</option>
+          <option value="yes">입금 완료만</option>
+        </select>
+        <select id="feeRange">
+          <option value="month">선택한 달</option>
+          <option value="all">전체 기간</option>
+        </select>
+        <button type="button" class="btn btn-sm" id="feePrint">인쇄</button>
+        <button type="button" class="btn btn-sm" id="feeXls">엑셀</button>
+        <button type="button" class="btn btn-sm" id="feeCsv">CSV</button>
+        <span class="savestate" id="feeCount" style="margin-left:auto"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead id="feeHead"></thead>
+          <tbody id="feeBody"></tbody>
+          <tfoot id="feeFoot"></tfoot>
+        </table>
+      </div>
+      <p class="field hint" id="feeNote" style="margin:0;padding:10px 14px;border-top:1px solid var(--line)"></p>
     </div>
   </section>
 
@@ -818,12 +886,25 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 
           <div id="srvLoggedIn" hidden>
             <p class="field hint" style="margin:0 0 8px">
-              <span id="srvWho" class="mono"></span> 으로 로그인되어 있습니다. 등록·수정이 가능합니다.
+              <span id="srvWho" class="mono"></span> 으로 로그인되어 있습니다. <span id="srvRole"></span>
             </p>
             <button type="button" class="btn btn-sm" id="srvLogout">로그아웃</button>
           </div>
 
           <p class="field hint" id="srvMsg" style="margin:0"></p>
+
+          <div class="hr"></div>
+
+          <div class="field">
+            <label for="setFeeManagers">요금 담당 계정 (이메일, 한 줄에 하나)</label>
+            <textarea id="setFeeManagers" class="mono" placeholder="fee@djsiseol.or.kr"></textarea>
+            <span class="hint">여기 적은 계정으로 로그인하면 <b>요금 관리 탭의 입금 확인만</b> 할 수 있고,
+              예약 등록·수정과 설정은 잠깁니다. 계정 자체는 Supabase 대시보드에서
+              (Authentication → Users → Add user) 따로 만들어야 합니다.</span>
+            <span class="hint" style="color:var(--alert)">주의 — 이 구분은 <b>화면에서 가르는 것</b>이지 서버가 막아 주는 것이 아닙니다.
+              대장 전체가 한 행에 담겨 있어 서버는 누가 어느 항목을 고쳤는지 가려낼 수 없습니다.
+              믿을 수 있는 직원에게만 계정을 주세요.</span>
+          </div>
         </div>
       </div>
 
@@ -1088,7 +1169,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 화면에 띄우는 판 번호. **내용을 고치면 여기를 올린다.**
    "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을 열고 있는 것인데,
    이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-08-23.5";
+const APP_VERSION = "2026-08-23.6";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -1255,6 +1336,10 @@ const DEFAULT_STATE = {
     holidays: [],          // 손으로 넣은 공휴일 (대체공휴일·임시공휴일)
     holidayOff: [],        // 자동 공휴일 중 손으로 뺀 날
     doneDates: [],         // 그 날 할 일을 다 마쳤다고 표시한 날짜 ("확인")
+    /* 요금 관리 전용 계정의 이메일. 여기 적힌 계정으로 로그인하면
+       예약은 못 고치고 요금 관리(입금 확인)만 할 수 있다.
+       비어 있으면 로그인한 사람은 모두 담당자로 본다 */
+    feeManagers: [],
     prepSurcharge: true,   // 준비시간에도 가산·감산을 적용할지
     articles: {
       base:    "별표 2 (제11조제1항 관련)",
@@ -1331,7 +1416,8 @@ function migrate(d) {
   const res = (Array.isArray(d.reservations) ? d.reservations : [])
     .map(r => {
       const x = Object.assign({ kind: "행사", linkId: null, useType: "체육경기", admission: null, schoolGame: false,
-                               annex: null, power: null, water: null }, r);
+                               annex: null, power: null, water: null, paid: false }, r);
+      x.paid = !!x.paid;         // 입금 확인 (요금 관리 화면에서 켠다)
       if (x.annex && typeof x.annex !== "object") x.annex = null;
       delete x.contact;          // 연락처 항목 폐지 — 예전 자료에 남아 있으면 함께 지운다
       return x;
@@ -1365,6 +1451,8 @@ function migrate(d) {
   if (!Array.isArray(st.holidayOff)) st.holidayOff = [];
   st.doneDates = (Array.isArray(st.doneDates) ? st.doneDates : [])
     .filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x)).sort();
+  st.feeManagers = (Array.isArray(st.feeManagers) ? st.feeManagers : [])
+    .map(x => String(x).trim().toLowerCase()).filter(Boolean);
   // 공휴일은 2040년까지 자동으로 잡히므로, 예전에 손으로 적어둔 것 중
   // 자동과 겹치는 날은 지운다. 대체공휴일처럼 자동에 없는 날만 남긴다
   st.holidays = st.holidays.filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x) && !autoHolidayName(x));
@@ -1763,6 +1851,23 @@ function isHoliday(dateStr) { return !!holidayName(dateStr); }
    달력 칸 우측 아래와 목록 맨 왼쪽에 체크(✓)로 나온다.
    예약 하나하나가 아니라 **날짜 단위**다 — 그 날 처리가 끝났는지를 보는 것이라서 그렇다 */
 function isDone(dateStr) { return (state.settings.doneDates || []).includes(dateStr); }
+
+/* ── 역할 ──────────────────────────────────────────────────
+   manager 담당자 — 예약 등록·수정과 설정까지 전부
+   fee     요금 담당 — 예약은 못 고치고 요금 관리(입금 확인)만
+   viewer  로그인하지 않은 사람 — 조회만
+
+   요금 담당은 `settings.feeManagers` 에 적힌 이메일로 로그인한 계정이다.
+   **이 구분은 화면에서 가르는 것이지 서버가 막아 주는 것이 아니다.**
+   대장 전체가 한 행에 통째로 들어 있어서, 서버는 "이 사람이 입금 표시만
+   고쳤는지" 를 가려낼 수 없다. 실무상 역할을 나누고 실수를 줄이는 장치로 본다 */
+function currentRole() {
+  if (!SERVER.token || !RUNTIME.writable) return "viewer";
+  const list = state.settings.feeManagers || [];
+  return list.includes(String(SERVER.email || "").trim().toLowerCase()) ? "fee" : "manager";
+}
+function canEditRes()  { return currentRole() === "manager"; }   // 예약·설정
+function canMarkPaid() { return currentRole() !== "viewer"; }    // 입금 확인
 function toggleDone(dateStr) {
   const s = state.settings;
   s.doneDates = s.doneDates || [];
@@ -2360,7 +2465,9 @@ function renderRail() {
    화면에서 본 것과 뽑은 종이가 달라지지 않게 하려는 것이다 */
 const LIST_MODES = {
   view:   { name: "조회용",    cols: ["done", "date", "dow", "time", "fac", "kind", "applicant", "purpose", "head", "memo"] },
-  income: { name: "수익집계용", cols: ["done", "date", "dow", "time", "fac", "kind", "applicant", "head", "discount", "use", "annex", "util", "total"] }
+  income: { name: "수익집계용", cols: ["done", "date", "dow", "time", "fac", "kind", "applicant", "head", "discount", "use", "annex", "util", "total"] },
+  // 요금 관리 화면 — 공과금을 전기료·수도료로 나눠 놓고 입금 확인 칸을 맨 앞에 둔다
+  fee:    { name: "요금관리",   cols: ["paid", "date", "dow", "time", "fac", "kind", "applicant", "discount", "use", "annex", "power", "water", "total"] }
 };
 /* 실제로 쓸 열. 수익집계용에서 공과금을 한 칸으로 볼지(util)
    전기료·수도료로 나눠 볼지(power·water) 고를 수 있다 (`view.utilSplit`).
@@ -2374,6 +2481,7 @@ function colsOf(mode) {
 const MERGE_COLS = ["done", "date", "dow"];
 const LIST_COLS = {
   done:      { label: "완료",   cls: "done" },
+  paid:      { label: "입금",   cls: "paid" },
   date:      { label: "날짜",   cls: "t" },
   dow:       { label: "요일",   cls: "" },
   time:      { label: "시간",   cls: "t" },
@@ -2399,6 +2507,7 @@ function listRow(r) {
   return {
     r: r,
     done: isDone(r.date) ? "✓" : "",
+    paid: r.paid ? "✓" : "",
     date: r.date,
     dow: DOW[parseYmd(r.date).getDay()],
     time: r.start + "–" + r.end,
@@ -2513,6 +2622,96 @@ function renderList() {
     "<span>" + esc($("#listCount").textContent) + "</span>" +
     '<span style="margin-left:auto">' + esc(state.settings.orgNote || "") + "</span>";
 }
+/* =========================================================
+   7-B. 요금 관리
+   =========================================================
+   돈만 보는 화면. 목록(수익집계용)과 같은 열 정의를 쓰되
+     · 공과금을 전기료·수도료로 나눠 늘 따로 보여주고
+     · 건마다 입금을 확인해 표시하고
+     · 줄마다 산정 근거(근거 조문 포함)를 펼쳐 볼 수 있다
+   입금 표시는 요금 담당 계정이나 담당자만 켤 수 있다 (currentRole 참고) */
+function feeRows() {
+  const q = $("#feeQ").value.trim().toLowerCase();
+  const fFac = $("#feeFacility").value, paid = $("#feePaid").value, rng = $("#feeRange").value;
+  let rows = state.reservations.filter(r => r.status !== "취소");
+  if (rng === "month") rows = rows.filter(r => r.date.startsWith(view.year + "-" + pad(view.month)));
+  if (fFac) rows = rows.filter(r => r.facilityId === fFac);
+  if (paid === "yes") rows = rows.filter(r => !!r.paid);
+  else if (paid === "no") rows = rows.filter(r => !r.paid);
+  if (q) rows = rows.filter(r => [r.applicant, r.purpose].join(" ").toLowerCase().includes(q));
+  return rows.sort(byDateTime);
+}
+function feePeriodLabel() {
+  return $("#feeRange").value === "month" ? view.year + "년 " + view.month + "월" : "전체 기간";
+}
+
+function renderFees() {
+  const cols = colsOf("fee");
+  const src = feeRows();
+  const rows = src.map(listRow);
+  const mayMark = canMarkPaid();
+
+  $("#feeHead").innerHTML = "<tr>" + cols.map(k =>
+    "<th" + (LIST_COLS[k].cls === "num" ? ' style="text-align:right"' : "") +
+    (LIST_COLS[k].cls === "paid" ? ' class="paid"' : "") + ">" + LIST_COLS[k].label + "</th>"
+  ).join("") + "<th></th></tr>";
+
+  $("#feeBody").innerHTML = rows.length ? rows.map(row => {
+    const r = row.r;
+    const cells = cols.map(k => {
+      const c = LIST_COLS[k];
+      if (k === "paid") {
+        // 화면에서는 체크칸, 인쇄·엑셀에서는 ✓ 글자로 나간다
+        return '<td class="paid"><input type="checkbox" class="paidbox" data-paid="' + r.id + '"' +
+          (r.paid ? " checked" : "") + (mayMark ? "" : " disabled") +
+          ' aria-label="입금 확인"></td>';
+      }
+      return '<td class="' + c.cls + '">' + esc(listCellText(row, k)) + "</td>";
+    }).join("");
+    return "<tr" + (r.paid ? ' class="is-paid"' : "") + ">" + cells +
+        '<td><button type="button" class="btn btn-sm" data-feedetail="' + r.id + '">산정 상세</button></td></tr>' +
+      // 왜 이 금액인지 — 근거 조문까지 그대로 편다
+      '<tr hidden data-feerow="' + r.id + '"><td colspan="' + (cols.length + 1) + '">' +
+        '<div class="fee-box fee-why">' + feeLinesHtml(feeParts(r).calc) +
+        (r.feeOverride !== "" && r.feeOverride != null
+          ? '<div class="fee-line"><span>직접 입력한 금액<span class="why">위 산정액 대신 이 금액을 씁니다</span></span><span>' +
+            won(r.feeOverride) + "원</span></div>"
+          : "") +
+      "</div></td></tr>";
+  }).join("") : '<tr><td colspan="' + (cols.length + 1) + '" class="empty">조건에 맞는 예약이 없습니다</td></tr>';
+
+  const firstSum = cols.findIndex(k => LIST_COLS[k].sum);
+  $("#feeFoot").innerHTML = rows.length
+    ? "<tr>" + '<td class="foot-label" colspan="' + firstSum + '">' + rows.length + "건 합계</td>" +
+      cols.slice(firstSum).map(k => {
+        const c = LIST_COLS[k];
+        if (!c.sum) return "<td></td>";
+        const v = rows.reduce((a, x) => a + Number(x[k] || 0), 0);
+        return '<td class="num">' + ((c.blankZero && !v) ? "" : won(v)) + "</td>";
+      }).join("") + "<td></td></tr>"
+    : "";
+
+  const paidRows = rows.filter(x => x.r.paid);
+  const paidSum = paidRows.reduce((a, x) => a + x.total, 0);
+  const allSum  = rows.reduce((a, x) => a + x.total, 0);
+  $("#feeCount").textContent = rows.length + "건 · 합계 " + won(allSum) + "원 · 입금 " +
+    paidRows.length + "건 " + won(paidSum) + "원 · 미입금 " + (rows.length - paidRows.length) + "건 " +
+    won(allSum - paidSum) + "원";
+
+  // 날짜 단위로 다 받았는지도 알려 준다 — "그 날 것은 다 들어왔나" 를 보기 위해서다
+  const byDate = {};
+  rows.forEach(x => { (byDate[x.date] = byDate[x.date] || []).push(x); });
+  const dates = Object.keys(byDate);
+  const doneDates = dates.filter(d => byDate[d].every(x => x.r.paid));
+  $("#feeNote").textContent = mayMark
+    ? "입금을 받은 건에 체크하세요. 날짜 " + dates.length + "일 중 " + doneDates.length + "일은 그 날 것이 모두 입금되었습니다."
+    : "입금 표시는 담당자나 요금 담당 계정으로 로그인해야 켤 수 있습니다. (설정 탭에서 로그인)";
+
+  $("#printHeadFee").innerHTML = "<h1>" + esc(feePeriodLabel()) + " 시설 사용료 관리대장</h1>" +
+    "<span>" + esc($("#feeCount").textContent) + "</span>" +
+    '<span style="margin-left:auto">' + esc(state.settings.orgNote || "") + "</span>";
+}
+
 function listPeriodLabel() {
   return $("#fRange").value === "month" ? view.year + "년 " + view.month + "월" : "전체 기간";
 }
@@ -2533,6 +2732,10 @@ function renderServerCard() {
   $("#srvLoggedIn").hidden = !SERVER.token;
   $("#srvLoggedOut").hidden = !!SERVER.token;
   if (SERVER.token) $("#srvWho").textContent = SERVER.email || "담당자";
+  const roleEl = $("#srvRole");
+  if (roleEl) roleEl.textContent = currentRole() === "fee"
+    ? "요금 담당 계정입니다 — 요금 관리(입금 확인)만 할 수 있습니다."
+    : "등록·수정이 가능합니다.";
 }
 
 function renderSettings() {
@@ -2558,6 +2761,7 @@ function renderSettings() {
   $("#setAdmSports").value = s.admSportsRate;
   $("#setAdmOther").value = s.admOtherRate;
   $("#setAdmSchool").value = s.admSchoolCut;
+  $("#setFeeManagers").value = (s.feeManagers || []).join("\n");
   $("#setHolidays").value = (s.holidays || []).join("\n");
   $("#setHolidayOff").value = (s.holidayOff || []).join("\n");
   $("#holidayOffBox").hidden = !(s.holidayOff || []).length;
@@ -2653,6 +2857,7 @@ function fillSelects() {
   const opts = state.facilities.map(f => '<option value="' + f.id + '">' + esc(f.name) + "</option>").join("");
   $("#fFac").innerHTML = opts;
   $("#fFacility").innerHTML = '<option value="">전체 시설</option>' + opts;
+  $("#feeFacility").innerHTML = '<option value="">전체 시설</option>' + opts;
   $("#fDiscount").innerHTML = state.discounts.map(d =>
     '<option value="' + d.id + '">' + esc(d.name) +
     (d.rate && !String(d.name).includes(d.rate + "%") ? " (" + d.rate + "%)" : "") + "</option>").join("");
@@ -2705,6 +2910,7 @@ function formToRes() {
     end: timeVal("fEnd"),
     facilityId: $("#fFac").value,
     status: prev ? prev.status : "승인",   // 취소를 쓰지 않는다. 예전 자료의 상태는 그대로 둔다
+    paid: prev ? !!prev.paid : false,      // 입금 표시는 요금 관리 화면에서만 켠다
     applicant: $("#fApplicant").value.trim(),
     headcount: $("#fHead").value ? Number($("#fHead").value) : null,
     purpose: $("#fPurpose").value.trim(),
@@ -2968,6 +3174,11 @@ function doPrint(kind) {
     renderList();
     $("#printPage").textContent = "@page{size:A4 landscape;margin:8mm}";
     document.body.classList.add("print-list");
+  } else if (kind === "fees") {
+    if (view.pane !== "fees") setPane("fees");
+    renderFees();
+    $("#printPage").textContent = "@page{size:A4 landscape;margin:8mm}";
+    document.body.classList.add("print-fees");
   } else {
     // 행사 달력과 준비 달력을 따로 찍는다. 인쇄판에서는 "+N건 더" 없이 그 날 것을 다 편다
     const pick = $("#printCalKind").value;
@@ -2977,7 +3188,7 @@ function doPrint(kind) {
     document.body.classList.add("print-cal");
   }
   const done = () => {
-    document.body.classList.remove("print-cal", "print-list", "print-detail");
+    document.body.classList.remove("print-cal", "print-list", "print-detail", "print-fees");
     $("#printPage").textContent = "";
     $("#printArea").innerHTML = "";
     window.removeEventListener("afterprint", done);
@@ -3010,7 +3221,8 @@ function exportTable(fmt, rows, mode, periodLabel) {
   const cols = colsOf(m);
   const data = rows.map(listRow);
   const head = cols.map(k => LIST_COLS[k].label);
-  const name = "예약내역_" + (periodLabel || "").replace(/[^0-9가-힣]/g, "") + "_" + LIST_MODES[m].name;
+  const name = (m === "fee" ? "사용료관리_" : "예약내역_") +
+    (periodLabel || "").replace(/[^0-9가-힣]/g, "") + (m === "fee" ? "" : "_" + LIST_MODES[m].name);
 
   if (!data.length) { toast("내보낼 예약이 없습니다"); return; }
 
@@ -3084,10 +3296,13 @@ function exportTable(fmt, rows, mode, periodLabel) {
     const v = data.reduce((a, x) => a + Number(x[k] || 0), 0);
     return (c.blankZero && !v) ? "" : v;
   });
-  const foot = sums.some(v => v != null)
-    ? '<tr><td style="border:.5pt solid #999999;background:#EEEEEE;font-weight:bold">' + data.length + "건 합계</td>" +
-      cols.slice(1).map((k, i) => '<td style="border:.5pt solid #999999;background:#EEEEEE;font-weight:bold;text-align:right">' +
-        (sums[i + 1] ? won(sums[i + 1]) : "") + "</td>").join("") + "</tr>"
+  // 합계 줄. 화면과 같이 금액이 시작되기 전 칸을 합쳐서 "N건 합계" 를 한 줄로 눕힌다
+  const firstSum = cols.findIndex(k => LIST_COLS[k].sum);
+  const footCell = "border:.5pt solid #999999;background:#EEEEEE;font-weight:bold;";
+  const foot = firstSum >= 0
+    ? '<tr><td colspan="' + firstSum + '" style="' + footCell + '">' + data.length + "건 합계</td>" +
+      cols.slice(firstSum).map((k, i) => '<td style="' + footCell + 'text-align:right">' +
+        (sums[firstSum + i] ? won(sums[firstSum + i]) : "") + "</td>").join("") + "</tr>"
     : "";
 
   const html =
@@ -3096,7 +3311,8 @@ function exportTable(fmt, rows, mode, periodLabel) {
     "<table border=1>" +
     "<colgroup>" + widths.map(w => '<col width="' + w + '">').join("") + "</colgroup>" +
     '<tr><td colspan="' + cols.length + '" style="font-size:13pt;font-weight:bold;border:none">' +
-      xesc((periodLabel || "") + " 시설 예약 " + LIST_MODES[m].name + " 목록") + "</td></tr>" +
+      xesc((periodLabel || "") + (m === "fee" ? " 시설 사용료 관리대장"
+                                               : " 시설 예약 " + LIST_MODES[m].name + " 목록")) + "</td></tr>" +
     "<tr>" + cols.map(k => '<th style="background:#DDDDDD;border:.5pt solid #999999;font-weight:bold">' +
       xesc(LIST_COLS[k].label) + "</th>").join("") + "</tr>" +
     body + foot +
@@ -3111,9 +3327,22 @@ function renderAll() {
   conflicts = conflictIds(state.reservations);
   $("#yearInput").value = view.year;
   $("#monthInput").value = view.month;
+  applyRole();
   renderCalendar();
   renderRail();
   renderList();
+  renderFees();
+}
+
+/* 로그인한 계정의 역할을 화면에 반영한다 */
+function applyRole() {
+  const role = currentRole();
+  document.body.classList.toggle("fee-only", role === "fee");
+  const badge = $("#roleBadge");
+  if (badge) {
+    badge.hidden = role !== "fee";
+    badge.textContent = "요금 담당";
+  }
 }
 
 /* =========================================================
@@ -3125,6 +3354,7 @@ function setPane(p) {
   $$(".pane").forEach(s => s.classList.toggle("active", s.id === "pane-" + p));
   if (p === "settings") renderSettings();
   if (p === "list") renderList();
+  if (p === "fees") renderFees();
 }
 function shiftMonth(d) {
   let m = view.month + d, y = view.year;
@@ -3271,6 +3501,29 @@ function init() {
     view.utilSplit = b.dataset.us === "split";
     renderList();
   });
+  // ── 요금 관리
+  ["#feeQ", "#feeFacility", "#feePaid", "#feeRange"].forEach(sel =>
+    $(sel).addEventListener("input", renderFees));
+  $("#feePrint").addEventListener("click", () => doPrint("fees"));
+  $("#feeXls").addEventListener("click", () => exportTable("xls", feeRows(), "fee", feePeriodLabel()));
+  $("#feeCsv").addEventListener("click", () => exportTable("csv", feeRows(), "fee", feePeriodLabel()));
+  $("#feeBody").addEventListener("change", e => {
+    const box = e.target.closest("[data-paid]");
+    if (!box) return;
+    if (!canMarkPaid()) { box.checked = !box.checked; toast("입금 표시는 로그인해야 켤 수 있습니다"); return; }
+    const r = state.reservations.find(x => x.id === box.dataset.paid);
+    if (!r) return;
+    r.paid = box.checked;
+    save(); saveNow(true);        // 돈에 관한 표시라 기다리지 않고 바로 올린다
+    renderFees();
+  });
+  $("#feeBody").addEventListener("click", e => {
+    const btn = e.target.closest("[data-feedetail]");
+    if (!btn) return;
+    const row = document.querySelector('[data-feerow="' + btn.dataset.feedetail + '"]');
+    if (row) { row.hidden = !row.hidden; btn.textContent = row.hidden ? "산정 상세" : "접기"; }
+  });
+
   $("#listPrint").addEventListener("click", () => doPrint("list"));
   $("#listXls").addEventListener("click", () => exportTable("xls", listRows(), view.listMode, listPeriodLabel()));
   $("#listCsv").addEventListener("click", () => exportTable("csv", listRows(), view.listMode, listPeriodLabel()));
@@ -3394,6 +3647,11 @@ function init() {
     if (map[t.id]) {
       state.settings[map[t.id]] = map[t.id] === "orgNote" ? t.value : Number(t.value);
       save(); renderAll(); return;
+    }
+    if (t.id === "setFeeManagers") {
+      state.settings.feeManagers = t.value.split("\n")
+        .map(x => x.trim().toLowerCase()).filter(x => x.includes("@"));
+      save(); applyRole(); renderAll(); return;
     }
     if (t.id === "setHolidays" || t.id === "setHolidayOff") {
       const key = t.id === "setHolidays" ? "holidays" : "holidayOff";
