@@ -1228,7 +1228,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 화면에 띄우는 판 번호. **내용을 고치면 여기를 올린다.**
    "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을 열고 있는 것인데,
    이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-08-23.8";
+const APP_VERSION = "2026-08-23.9";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -2559,7 +2559,8 @@ const LIST_MODES = {
   view:   { name: "조회용",    cols: ["done", "date", "dow", "time", "fac", "kind", "applicant", "purpose", "head", "memo"] },
   income: { name: "수익집계용", cols: ["done", "date", "dow", "time", "fac", "kind", "applicant", "head", "discount", "use", "annex", "util", "total"] },
   // 요금 관리 화면 — 공과금을 전기료·수도료로 나눠 놓고 입금 확인 칸을 맨 앞에 둔다
-  fee:    { name: "요금관리",   cols: ["paid", "date", "dow", "time", "fac", "kind", "applicant", "discount", "use", "annex", "power", "water", "total"] }
+  // 요금 관리는 돈을 보는 화면이라 요일·시간을 빼고 그 자리에 이용 목적을 둔다
+  fee:    { name: "요금관리",   cols: ["paid", "date", "purpose", "fac", "kind", "applicant", "discount", "use", "annex", "power", "water", "total"] }
 };
 /* 실제로 쓸 열. 수익집계용에서 공과금을 한 칸으로 볼지(util)
    전기료·수도료로 나눠 볼지(power·water) 고를 수 있다 (`view.utilSplit`).
