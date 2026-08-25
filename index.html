@@ -1231,7 +1231,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 화면에 띄우는 판 번호. **내용을 고치면 여기를 올린다.**
    "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을 열고 있는 것인데,
    이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-08-23.11";
+const APP_VERSION = "2026-08-23.12";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -2506,9 +2506,9 @@ function renderSummary() {
   const util = live.reduce((n, r) => n + feeParts(r).util, 0);
   $("#summary").innerHTML =
     stat("행사", ev.length + '<small>건</small>') +
-    stat("준비시간", pr.length + '<small>건</small>') +
+    stat("준비", pr.length + '<small>건</small>') +
     stat("행사 이용료", won(fee(ev)) + '<small>원</small>') +
-    stat("준비시간 이용료", won(fee(pr)) + '<small>원</small>') +
+    stat("준비 이용료", won(fee(pr)) + '<small>원</small>') +
     stat("공과금 (전기+수도)", won(util) + '<small>원</small>') +
     stat("합계", won(fee(live)) + '<small>원</small>');
 }
@@ -3266,10 +3266,9 @@ function buildPrintCalendar(kindList) {
 
   $("#printArea").innerHTML = kindList.map(kind => {
     const n = mr.filter(r => (r.kind || "행사") === kind).length;
-    const fee = mr.filter(r => (r.kind || "행사") === kind).reduce((a, r) => a + feeOf(r), 0);
     return '<section class="pc-page"><div class="pc-fit">' +
       '<div class="pd-head"><h1>' + y + "년 " + m + "월 " + kind + " 일정표</h1>" +
-        "<span>" + kind + " " + n + "건 · 이용료 " + won(fee) + "원</span>" +
+        "<span>" + kind + " " + n + "건</span>" +
         (org ? "<span>" + esc(org) + "</span>" : "") + legend + "</div>" +
       '<div class="dow"><div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div></div>' +
       '<div class="grid">' + calCellsHtml({ year: y, month: m, kinds: [kind], cap: 0, live: false }) + "</div>" +
