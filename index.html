@@ -404,8 +404,26 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
    무엇을 인쇄할지는 인쇄 창(#printBox)에서 고른다 */
 .print-only{display:none}
 #printArea{display:none}
+/* ── 인쇄 달력 ──────────────────────────────────────────────
+   #printArea 는 화면에서 감춰져 있어서 여기 규칙은 인쇄에만 보인다.
+   @media print 밖에 두는 것은 **화면에서도 같은 크기로 재기 위해서다** —
+   그래야 한 장에 맞출 배율(fitPrintPages)을 미리 구할 수 있다 */
 .pc-page{margin:0 0 6px}
+.pc-fit{display:flex;flex-direction:column;transform-origin:top left}
 .pc-page .dow{border:1px solid #888}
+.pc-page .dow div{padding:3px 4px;font-size:11px}
+.pc-page .grid{grid-auto-rows:minmax(22mm,auto);border:1px solid #888;border-top:0;flex:1 0 auto;align-content:stretch}
+.pc-page .cell{padding:3px 4px;gap:2px;border-color:#aaa}
+.pc-page .cell.out{background:#f2f2f2}
+.pc-page .cell-date{font-size:11px}
+.pc-page .cell-date > b{font-size:13px;font-weight:700}
+.pc-page .cell.today .cell-date > b{background:none;color:#000;border:1px solid #000;padding:0 3px}
+.pc-page .cell-count{font-size:9px}
+.pc-page .cell-done{font-size:14px}
+.pc-page .chip{font-size:12px;padding:2px 4px;line-height:1.32;box-shadow:inset 3px 0 0 var(--fc-line)}
+.pc-page .chip>span:first-child{font-size:10.5px;opacity:1}
+.pc-page .chip .t{font-size:10.5px}
+.pc-page .chip .n{font-size:12.5px;font-weight:600}
 .pc-legend{display:flex;gap:12px;font-size:10px;color:#333;margin-left:auto;align-items:center;flex-wrap:wrap}
 .pc-legend>span{white-space:nowrap}
 .pc-legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px;
@@ -451,23 +469,8 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
   /* 한 장에 한 달. A4 가로에서 쓸 수 있는 높이는 210 − 위아래 7mm = 196mm 다.
      머리글·요일줄을 빼고 여섯 줄이 들어가도록 칸 최소 높이를 잡았다.
      한 날에 일정이 아주 많으면 그 줄만 늘어나고 다음 장으로 넘어간다 */
-  .pc-page{break-after:page;page-break-after:always;min-height:193mm;display:flex;flex-direction:column}
+  .pc-page{break-after:page;page-break-after:always}
   .pc-page:last-child{break-after:auto;page-break-after:auto}
-  .pc-page .grid{flex:1 0 auto;align-content:stretch}
-  .pc-page .dow div{padding:3px 4px;font-size:11px}
-  /* 여섯 줄 × 25mm 면 A4 가로 한 장에 들어간다. 바쁜 날은 칸이 알아서 늘어난다 */
-  .pc-page .grid{grid-auto-rows:minmax(22mm,auto);border:1px solid #888;border-top:0}
-  .pc-page .cell{padding:3px 4px;gap:2px;border-color:#aaa}
-  .pc-page .cell.out{background:#f2f2f2}
-  .pc-page .cell-date{font-size:11px}
-  .pc-page .cell-date > b{font-size:13px;font-weight:700}
-  .pc-page .cell.today .cell-date > b{background:none;color:#000;border:1px solid #000;padding:0 3px}
-  .pc-page .cell-count{font-size:9px}
-  .pc-page .cell-done{font-size:14px}
-  .pc-page .chip{font-size:12px;padding:2px 4px;line-height:1.32;box-shadow:inset 3px 0 0 var(--fc-line)}
-  .pc-page .chip>span:first-child{font-size:10.5px;opacity:1}
-  .pc-page .chip .t{font-size:10.5px}
-  .pc-page .chip .n{font-size:12.5px;font-weight:600}
 
   /* ② 목록으로 인쇄 */
   body.print-list .rail,body.print-list #pane-calendar,body.print-list #pane-settings,body.print-list #pane-fees,
@@ -1228,7 +1231,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 화면에 띄우는 판 번호. **내용을 고치면 여기를 올린다.**
    "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을 열고 있는 것인데,
    이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-08-23.10";
+const APP_VERSION = "2026-08-23.11";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -3264,14 +3267,60 @@ function buildPrintCalendar(kindList) {
   $("#printArea").innerHTML = kindList.map(kind => {
     const n = mr.filter(r => (r.kind || "행사") === kind).length;
     const fee = mr.filter(r => (r.kind || "행사") === kind).reduce((a, r) => a + feeOf(r), 0);
-    return '<section class="pc-page">' +
+    return '<section class="pc-page"><div class="pc-fit">' +
       '<div class="pd-head"><h1>' + y + "년 " + m + "월 " + kind + " 일정표</h1>" +
         "<span>" + kind + " " + n + "건 · 이용료 " + won(fee) + "원</span>" +
         (org ? "<span>" + esc(org) + "</span>" : "") + legend + "</div>" +
       '<div class="dow"><div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div></div>' +
       '<div class="grid">' + calCellsHtml({ year: y, month: m, kinds: [kind], cap: 0, live: false }) + "</div>" +
-      "</section>";
+      "</div></section>";
   }).join("");
+  fitPrintPages();
+}
+
+/* ── 한 장에 맞추기 ────────────────────────────────────────
+   행사가 많은 달은 칸이 늘어나 다음 장으로 넘어간다.
+   내용을 줄이거나 감추지 않고 **글씨째로 조금 축소해서 한 장에 담는다.**
+   재는 것은 화면에서 하되, 인쇄될 종이와 같은 폭(283mm)으로 펼쳐 놓고 잰다 */
+const PX_PER_MM = 96 / 25.4;
+const PAGE_W_MM = 283;   // A4 가로 297 − 좌우 여백 7mm
+const PAGE_H_MM = 193;   // A4 가로 210 − 위아래 여백 7mm (반올림 여유를 조금 뒀다)
+const FIT_MIN = 0.55;    // 이보다 더 줄이면 글씨를 못 읽는다. 그때는 두 장으로 넘긴다
+
+function fitPrintPages() {
+  const area = $("#printArea");
+  const keep = area.getAttribute("style");
+  // 종이와 같은 폭으로 잠깐 눈에 안 띄는 곳에 펼쳐 놓고 잰다
+  area.style.cssText = "display:block;position:fixed;left:-30000px;top:0;width:" + PAGE_W_MM + "mm;";
+  const avail = PAGE_H_MM * PX_PER_MM;
+  $$("#printArea .pc-fit").forEach(fit => {
+    const page = fit.parentElement;
+    fit.style.transform = ""; fit.style.width = ""; fit.style.minHeight = "";
+    page.style.height = ""; page.style.overflow = "";
+    let k = 1;
+    // 폭을 넓히면 글이 덜 접혀 높이가 줄어든다. 그래서 재고 줄이기를 되풀이한다
+    for (let i = 0; i < 10; i++) {
+      const h = fit.scrollHeight * k;
+      if (h <= avail) break;
+      k = Math.max(FIT_MIN, k * (avail / h) * 0.995);
+      fit.style.width = (100 / k) + "%";
+      fit.style.transform = "scale(" + k + ")";
+      if (k <= FIT_MIN) break;
+    }
+    if (fit.scrollHeight * k <= avail + 1) {
+      // 들어간다 — 줄어든 만큼 늘려서 종이를 꽉 채우고, 장 높이를 못박는다.
+      // **overflow:hidden 이 꼭 필요하다** — transform 은 그려지는 크기만 줄이고
+      // 자리(레이아웃 높이)는 그대로라서, 잘라내지 않으면 브라우저가
+      // 줄어들기 전 높이를 기준으로 장을 넘겨 버린다
+      fit.style.minHeight = (PAGE_H_MM / k) + "mm";
+      page.style.height = PAGE_H_MM + "mm";
+      page.style.overflow = "hidden";
+    } else {
+      page.style.overflow = "";      // 못 맞췄으면 자르지 않고 다음 장으로 넘긴다
+    }
+    page.dataset.fit = k.toFixed(3);
+  });
+  if (keep === null) area.removeAttribute("style"); else area.setAttribute("style", keep);
 }
 
 /* 날짜별 상세 인쇄판을 만든다 */
