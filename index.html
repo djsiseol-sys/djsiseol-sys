@@ -1228,7 +1228,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 화면에 띄우는 판 번호. **내용을 고치면 여기를 올린다.**
    "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을 열고 있는 것인데,
    이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-08-23.9";
+const APP_VERSION = "2026-08-23.10";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -1836,7 +1836,50 @@ async function serverLoad() {
   return migrate(rows[0].data || {});
 }
 
+/* ── 입금 표시를 남의 것과 합치기 ──────────────────────────
+   대장 전체가 `ledger` 한 행에 통째로 들어 있어서, 화면에 있는 자료를 그냥 올리면
+   그 사이 **다른 사람이 켠 입금 체크가 통째로 지워진다.**
+   요금 담당과 담당자가 동시에 쓰는 화면이라 실제로 일어나는 일이다.
+
+   그래서 올리기 직전에, 남이 먼저 저장했으면 그 자료의 입금 표시를 가져와 덮는다.
+   **내가 이번에 직접 켜고 끈 것(`PAY_EDITS`)만 내 값을 지키고, 나머지는 서버를 따른다.**
+   `updated_at` 이 그대로면(남이 저장한 적이 없으면) 아무것도 받아오지 않는다 —
+   전송량을 아끼기 위해서다 */
+const PAY_FIELDS = ["paid", "paidPower", "paidWater"];
+const PAY_EDITS = new Map();
+function notePayEdit(id, field) {
+  const m = PAY_EDITS.get(id) || {};
+  m[field] = true;
+  PAY_EDITS.set(id, m);
+}
+async function mergeRemotePayments() {
+  try {
+    const head = await sbGet("/rest/v1/ledger?id=eq." + ROW_ID + "&select=updated_at");
+    if (!head.ok) return;
+    const rows = await head.json();
+    if (!rows.length || rows[0].updated_at === SERVER.seen) return;   // 남이 저장한 적 없다
+    const res = await sbGet("/rest/v1/ledger?id=eq." + ROW_ID + "&select=data");
+    if (!res.ok) return;
+    const d = await res.json();
+    const remote = ((d[0] || {}).data || {}).reservations || [];
+    const byId = {};
+    remote.forEach(r => { byId[r.id] = r; });
+    let changed = false;
+    state.reservations.forEach(r => {
+      const o = byId[r.id];
+      if (!o) return;
+      const mine = PAY_EDITS.get(r.id) || {};
+      PAY_FIELDS.forEach(k => {
+        if (mine[k]) return;                 // 내가 방금 바꾼 것은 내 값을 지킨다
+        if (!!r[k] !== !!o[k]) { r[k] = !!o[k]; changed = true; }
+      });
+    });
+    if (changed) renderFees();
+  } catch (e) { /* 합치지 못해도 저장은 계속한다 */ }
+}
+
 async function serverSave() {
+  await mergeRemotePayments();
   const now = new Date().toISOString();
   const body = [{ id: ROW_ID, data: state, updated_at: now, updated_by: SERVER.email || "" }];
   let res = await sbFetch("/rest/v1/ledger", {
@@ -1855,6 +1898,7 @@ async function serverSave() {
   if (!res.ok) { const e = new Error("저장 실패 (" + res.status + ")"); e.code = "upstream_error"; throw e; }
   const rows = await res.json().catch(() => []);
   if (rows.length) SERVER.seen = rows[0].updated_at;
+  PAY_EDITS.clear();      // 올렸으니 내 것으로 지킬 이유가 없어졌다
   return true;
 }
 
@@ -3678,9 +3722,10 @@ function init() {
     const id = box.dataset.paid || box.dataset.id;
     const r = state.reservations.find(x => x.id === id);
     if (!r) return;
-    if (box.dataset.paidpart === "power") r.paidPower = box.checked;
-    else if (box.dataset.paidpart === "water") r.paidWater = box.checked;
-    else r.paid = box.checked;
+    const field = box.dataset.paidpart === "power" ? "paidPower"
+                : box.dataset.paidpart === "water" ? "paidWater" : "paid";
+    r[field] = box.checked;
+    notePayEdit(r.id, field);   // 올릴 때 남의 것과 합치면서 이것만은 내 값을 지킨다
     save(); saveNow(true);        // 돈에 관한 표시라 기다리지 않고 바로 올린다
     renderFees();
   });
