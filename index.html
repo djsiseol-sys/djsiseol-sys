@@ -193,8 +193,13 @@ main{max-width:1440px;margin:0 auto;padding:18px 20px 60px}
   box-shadow:inset 3px 0 0 var(--fc-line);
   overflow:hidden;
 }
+/* 윗줄(시각·시설)은 길이가 정해져 있어 한 줄로 자른다 */
 .chip>span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chip>span:first-child{font-size:11px;opacity:.85}
+/* 아랫줄(이용 목적)은 **자르지 않고 줄을 바꾼다.**
+   목적은 단체명보다 길 때가 많아 한 줄로 자르면 무슨 행사인지 알 수 없다.
+   한글은 낱말 단위로 끊고, 띄어쓰기 없이 긴 글자는 어디서든 끊는다 */
+.chip>span.n{white-space:normal;word-break:keep-all;overflow-wrap:anywhere;text-overflow:clip}
 .chip .n{font-size:12px;font-weight:500;opacity:1}
 .chip .t{font-family:"IBM Plex Mono",monospace;margin-right:3px;font-size:10px;letter-spacing:-.04em;display:inline!important}
 /* 상태는 화면에서 쓰지 않기로 해서 테두리는 전부 실선이다 (예전 '신청' 파선 없음) */
@@ -277,6 +282,11 @@ tfoot td.foot-label{white-space:nowrap;color:var(--ink-2)}
 td.memo{white-space:pre-wrap;word-break:break-word;min-width:180px}
 /* 목록 맨 왼쪽 — 그 날짜를 확인 완료로 표시했는지 */
 td.done,th.done{width:30px;text-align:center;padding-left:6px;padding-right:6px;color:var(--sun);font-weight:700}
+/* 요일 글씨 색 — 달력과 같다. 칸 전체가 아니라 글씨에만 쓴다 */
+td.dow-sat{color:var(--sat);font-weight:600}
+td.dow-sun{color:var(--sun);font-weight:600}
+.pd-day td.dow-sat{color:#20558C;font-weight:600}
+.pd-day td.dow-sun{color:#B03A3A;font-weight:600}
 
 /* ---------- settings ---------- */
 .settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;align-items:start}
@@ -373,7 +383,11 @@ body.no-admin #pane-settings input,body.no-admin #pane-settings select,body.no-a
 body.no-admin #pane-settings [data-delfac],body.no-admin #pane-settings [data-deldc],
 body.no-admin #pane-settings [data-delannex],body.no-admin #addFacility,
 body.no-admin #addDiscount,body.no-admin #addAnnex{display:none!important}
-.paidbox{width:16px;height:16px;accent-color:var(--accent);margin:0;cursor:pointer}
+.paidbox{width:16px;height:16px;accent-color:var(--accent);margin:0;cursor:pointer;flex:0 0 auto}
+/* 금액 칸 안의 입금 체크 — 숫자는 오른쪽 정렬을 지킨다 */
+.amtchk{display:flex;align-items:center;justify-content:flex-end;gap:7px;cursor:pointer}
+.amtchk>span{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+.amtchk:has(input:checked)>span{color:var(--accent-ink);font-weight:600}
 tr.is-paid td{background:var(--accent-soft)}
 tr.is-paid:hover td{background:var(--accent-soft)}
 td.paid,th.paid{width:44px;text-align:center;padding-left:6px;padding-right:6px}
@@ -1214,7 +1228,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 화면에 띄우는 판 번호. **내용을 고치면 여기를 올린다.**
    "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을 열고 있는 것인데,
    이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-08-23.7";
+const APP_VERSION = "2026-08-23.8";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -1461,8 +1475,11 @@ function migrate(d) {
   const res = (Array.isArray(d.reservations) ? d.reservations : [])
     .map(r => {
       const x = Object.assign({ kind: "행사", linkId: null, useType: "체육경기", admission: null, schoolGame: false,
-                               annex: null, power: null, water: null, paid: false }, r);
-      x.paid = !!x.paid;         // 입금 확인 (요금 관리 화면에서 켠다)
+                               annex: null, power: null, water: null,
+                               paid: false, paidPower: false, paidWater: false }, r);
+      // 입금 확인 (요금 관리 화면에서 켠다).
+      // 전기료·수도료는 행사가 끝난 뒤 실비로 따로 받으므로 따로 확인한다
+      x.paid = !!x.paid; x.paidPower = !!x.paidPower; x.paidWater = !!x.paidWater;
       if (x.annex && typeof x.annex !== "object") x.annex = null;
       delete x.contact;          // 연락처 항목 폐지 — 예전 자료에 남아 있으면 함께 지운다
       return x;
@@ -1896,6 +1913,21 @@ function isHoliday(dateStr) { return !!holidayName(dateStr); }
    달력 칸 우측 아래와 목록 맨 왼쪽에 체크(✓)로 나온다.
    예약 하나하나가 아니라 **날짜 단위**다 — 그 날 처리가 끝났는지를 보는 것이라서 그렇다 */
 function isDone(dateStr) { return (state.settings.doneDates || []).includes(dateStr); }
+
+/* 이 건에서 받아야 할 것을 다 받았는지.
+   이용료(전용사용료+부속시설)·전기료·수도료를 따로 받으므로 따로 확인한다.
+   금액이 0원인 항목은 받을 것이 없으니 확인 대상에서 뺀다 */
+function fullyPaid(r) {
+  const fp = feeParts(r);
+  return (!(fp.use + fp.annex) || r.paid)
+      && (!fp.power || r.paidPower)
+      && (!fp.water || r.paidWater);
+}
+/* 실제로 들어온 금액 */
+function paidAmount(r) {
+  const fp = feeParts(r);
+  return (r.paid ? fp.use + fp.annex : 0) + (r.paidPower ? fp.power : 0) + (r.paidWater ? fp.water : 0);
+}
 
 /* ── 역할 ──────────────────────────────────────────────────
    manager 담당자 — 예약 등록·수정과 설정까지 전부
@@ -2359,11 +2391,16 @@ function calCellsHtml(o) {
       const cls = r.status === "취소" ? " cancelled" : "";
       const cf = conflicts.has(r.id) ? " conflict" : "";
       const pk = (r.kind || "행사") === "준비" ? " is-prep" : "";
+      /* 아랫줄에는 **이용 목적**을 띄운다 (담당자 요청).
+         목적을 안 적은 건은 빈 줄이 되어버리므로 신청 단체로 대신한다.
+         두 값 모두 짚어 보게 마우스를 올리면 나오는 설명에는 함께 담는다 */
+      const label = (r.purpose || "").trim() || r.applicant;
       return "<" + (live ? "button type=\"button\"" : "span") + ' class="chip' + cls + cf + pk +
         '" data-fc="' + colorOf(f) + '"' + (live ? ' data-edit="' + r.id + '"' : "") + ' title="' +
-        esc(r.start + "–" + r.end + " " + (f ? f.name : "") + " / " + r.applicant) + '">' +
+        esc(r.start + "–" + r.end + " " + (f ? f.name : "") + "\n" + r.applicant +
+            (r.purpose ? " / " + r.purpose : "")) + '">' +
         '<span><span class="t">' + esc(r.start) + "–" + esc(r.end) + "</span>" + esc(f ? f.name : "?") + "</span>" +
-        '<span class="n">' + esc(r.applicant) + "</span></" + (live ? "button" : "span") + ">";
+        '<span class="n">' + esc(label) + "</span></" + (live ? "button" : "span") + ">";
     }).join("");
     const more = (live && items.length > n)
       ? '<button type="button" class="chip-more" data-day="' + date + '">+ ' + (items.length - n) + "건 더</button>"
@@ -2578,6 +2615,13 @@ function listRow(r) {
     total: fp.total
   };
 }
+/* 요일 칸에 입힐 색. 달력과 같은 규칙이다 — 토요일 파랑, 일요일·공휴일 빨강.
+   글씨에만 쓴다 (칸 전체를 물들이지 않는다) */
+function dowClassOf(dateStr) {
+  if (holidayName(dateStr)) return " dow-sun";
+  const w = parseYmd(dateStr).getDay();
+  return w === 6 ? " dow-sat" : (w === 0 ? " dow-sun" : "");
+}
 function listCellText(row, key) {
   const c = LIST_COLS[key], v = row[key];
   if (!c.sum) return String(v == null ? "" : v);
@@ -2627,7 +2671,8 @@ function renderList() {
         const c = LIST_COLS[k];
         if (k === "applicant" && r.status === "취소")
           return "<td><s>" + esc(row.applicant) + "</s></td>";
-        return '<td class="' + c.cls + '">' + esc(listCellText(row, k)) + "</td>";
+        const extra = k === "dow" ? dowClassOf(r.date) : "";
+        return '<td class="' + c.cls + extra + '">' + esc(listCellText(row, k)) + "</td>";
       }).join("") +
       '<td><button type="button" class="btn btn-sm" data-edit="' + r.id + '">수정</button></td>' +
     "</tr>";
@@ -2691,8 +2736,8 @@ function feeRows() {
   let rows = state.reservations.filter(r => r.status !== "취소");
   if (rng === "month") rows = rows.filter(r => r.date.startsWith(view.year + "-" + pad(view.month)));
   if (fFac) rows = rows.filter(r => r.facilityId === fFac);
-  if (paid === "yes") rows = rows.filter(r => !!r.paid);
-  else if (paid === "no") rows = rows.filter(r => !r.paid);
+  if (paid === "yes") rows = rows.filter(r => fullyPaid(r));
+  else if (paid === "no") rows = rows.filter(r => !fullyPaid(r));
   if (q) rows = rows.filter(r => [r.applicant, r.purpose].join(" ").toLowerCase().includes(q));
   return rows.sort(byDateTime);
 }
@@ -2721,9 +2766,19 @@ function renderFees() {
           (r.paid ? " checked" : "") + (mayMark ? "" : " disabled") +
           ' aria-label="입금 확인"></td>';
       }
-      return '<td class="' + c.cls + '">' + esc(listCellText(row, k)) + "</td>";
+      // 전기료·수도료는 행사 뒤에 실비로 따로 받으므로 칸마다 따로 확인한다.
+      // 받을 것이 없는(0원) 칸에는 체크를 두지 않는다
+      if ((k === "power" || k === "water") && Number(row[k])) {
+        const on = k === "power" ? r.paidPower : r.paidWater;
+        return '<td class="num"><label class="amtchk"><input type="checkbox" class="paidbox"' +
+          ' data-paidpart="' + k + '" data-id="' + r.id + '"' + (on ? " checked" : "") +
+          (mayMark ? "" : " disabled") + ' aria-label="' + LIST_COLS[k].label + ' 입금 확인">' +
+          "<span>" + esc(listCellText(row, k)) + "</span></label></td>";
+      }
+      const extra = k === "dow" ? dowClassOf(r.date) : "";
+      return '<td class="' + c.cls + extra + '">' + esc(listCellText(row, k)) + "</td>";
     }).join("");
-    return "<tr" + (r.paid ? ' class="is-paid"' : "") + ">" + cells +
+    return "<tr" + (fullyPaid(r) ? ' class="is-paid"' : "") + ">" + cells +
         '<td><button type="button" class="btn btn-sm" data-feedetail="' + r.id + '">산정 상세</button></td></tr>' +
       // 왜 이 금액인지 — 근거 조문까지 그대로 편다
       '<tr hidden data-feerow="' + r.id + '"><td colspan="' + (cols.length + 1) + '">' +
@@ -2746,20 +2801,22 @@ function renderFees() {
       }).join("") + "<td></td></tr>"
     : "";
 
-  const paidRows = rows.filter(x => x.r.paid);
-  const paidSum = paidRows.reduce((a, x) => a + x.total, 0);
+  // 이용료·전기료·수도료를 따로 받으므로, 들어온 금액도 항목별로 센다
+  const doneRows = rows.filter(x => fullyPaid(x.r));
+  const paidSum = rows.reduce((a, x) => a + paidAmount(x.r), 0);
   const allSum  = rows.reduce((a, x) => a + x.total, 0);
   $("#feeCount").textContent = rows.length + "건 · 합계 " + won(allSum) + "원 · 입금 " +
-    paidRows.length + "건 " + won(paidSum) + "원 · 미입금 " + (rows.length - paidRows.length) + "건 " +
+    doneRows.length + "건 " + won(paidSum) + "원 · 미입금 " + (rows.length - doneRows.length) + "건 " +
     won(allSum - paidSum) + "원";
 
   // 날짜 단위로 다 받았는지도 알려 준다 — "그 날 것은 다 들어왔나" 를 보기 위해서다
   const byDate = {};
   rows.forEach(x => { (byDate[x.date] = byDate[x.date] || []).push(x); });
   const dates = Object.keys(byDate);
-  const doneDates = dates.filter(d => byDate[d].every(x => x.r.paid));
+  const doneDates = dates.filter(d => byDate[d].every(x => fullyPaid(x.r)));
   $("#feeNote").textContent = mayMark
-    ? "입금을 받은 건에 체크하세요. 날짜 " + dates.length + "일 중 " + doneDates.length + "일은 그 날 것이 모두 입금되었습니다."
+    ? "입금을 받은 것에 체크하세요. 전기료·수도료는 행사가 끝난 뒤 실비로 따로 받으므로 그 칸에서 따로 확인합니다 (별표 6 · 제11조제2항). " +
+      "날짜 " + dates.length + "일 중 " + doneDates.length + "일은 그 날 것이 모두 입금되었습니다."
     : "입금 표시는 담당자나 요금 담당 계정으로 로그인해야 켤 수 있습니다. (⚙ 설정 에서 로그인)";
 
   $("#printHeadFee").innerHTML = "<h1>" + esc(feePeriodLabel()) + " 시설 사용료 관리대장</h1>" +
@@ -2964,7 +3021,10 @@ function formToRes() {
     end: timeVal("fEnd"),
     facilityId: $("#fFac").value,
     status: prev ? prev.status : "승인",   // 취소를 쓰지 않는다. 예전 자료의 상태는 그대로 둔다
-    paid: prev ? !!prev.paid : false,      // 입금 표시는 요금 관리 화면에서만 켠다
+    // 입금 표시는 요금 관리 화면에서만 켠다. 예약을 고쳐도 그대로 둔다
+    paid: prev ? !!prev.paid : false,
+    paidPower: prev ? !!prev.paidPower : false,
+    paidWater: prev ? !!prev.paidWater : false,
     applicant: $("#fApplicant").value.trim(),
     headcount: $("#fHead").value ? Number($("#fHead").value) : null,
     purpose: $("#fPurpose").value.trim(),
@@ -3192,7 +3252,8 @@ function buildPrintDetail(dates) {
       const r = row, x = listRow(r);
       const tds = cols.map(k => {
         const c = LIST_COLS[k];
-        return '<td class="' + c.cls + '">' + esc(k === "kind" ? x.kind : listCellText(x, k)) + "</td>";
+        const extra = k === "dow" ? dowClassOf(r.date) : "";
+        return '<td class="' + c.cls + extra + '">' + esc(k === "kind" ? x.kind : listCellText(x, k)) + "</td>";
       }).join("");
       const memo = r.memo
         ? '<tr class="' + ((r.kind || "행사") === "준비" ? "is-prep" : "") + '"><td class="memo" colspan="' + cols.length +
@@ -3351,7 +3412,10 @@ function exportTable(fmt, rows, mode, periodLabel) {
       const val = c.sum ? String(row[k] || 0) : listCellText(row, k);
       // 날짜·요일은 여러 줄을 합친 칸이라 준비 테두리 대신 보통 테두리를 쓴다
       const bd = (prep && !(merged && span[i] > 1)) ? prepBorder(k) : plain;
-      return "<td" + rs + fmtAttr + bd + "text-align:" + align + ";vertical-align:top;" +
+      // 요일은 화면과 같게 토=파랑, 일·공휴일=빨강
+      const dc = k === "dow" ? { " dow-sat": "color:#20558C;font-weight:bold;",
+                                 " dow-sun": "color:#B03A3A;font-weight:bold;" }[dowClassOf(row.date)] || "" : "";
+      return "<td" + rs + fmtAttr + bd + dc + "text-align:" + align + ";vertical-align:top;" +
         (c.cls === "memo" ? "mso-wrap-text:yes;" : "white-space:nowrap;") + '">' + xesc(val) + "</td>";
     }).join("") + "</tr>";
   }).join("");
@@ -3607,12 +3671,15 @@ function init() {
   $("#feeXls").addEventListener("click", () => exportTable("xls", feeRows(), "fee", feePeriodLabel()));
   $("#feeCsv").addEventListener("click", () => exportTable("csv", feeRows(), "fee", feePeriodLabel()));
   $("#feeBody").addEventListener("change", e => {
-    const box = e.target.closest("[data-paid]");
+    const box = e.target.closest("[data-paid], [data-paidpart]");
     if (!box) return;
     if (!canMarkPaid()) { box.checked = !box.checked; toast("입금 표시는 로그인해야 켤 수 있습니다"); return; }
-    const r = state.reservations.find(x => x.id === box.dataset.paid);
+    const id = box.dataset.paid || box.dataset.id;
+    const r = state.reservations.find(x => x.id === id);
     if (!r) return;
-    r.paid = box.checked;
+    if (box.dataset.paidpart === "power") r.paidPower = box.checked;
+    else if (box.dataset.paidpart === "water") r.paidWater = box.checked;
+    else r.paid = box.checked;
     save(); saveNow(true);        // 돈에 관한 표시라 기다리지 않고 바로 올린다
     renderFees();
   });
