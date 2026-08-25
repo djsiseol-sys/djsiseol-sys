@@ -85,8 +85,7 @@ button{cursor:pointer}
 /* 제목을 누르면 달력(첫 화면)으로 돌아간다 */
 .brand h1 button{background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;letter-spacing:inherit}
 .brand h1 button:hover{color:var(--accent-ink);text-decoration:underline;text-underline-offset:3px}
-.brand span{font-size:10px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase}
-.brand .ver{letter-spacing:0;text-transform:none;color:var(--faint)}
+
 .period{display:flex;align-items:center;gap:6px}
 .period input[type=number]{
   width:74px;padding:5px 8px;border:1px solid var(--line);border-radius:var(--r);
@@ -377,6 +376,8 @@ body.fee-only #serverCard input,body.fee-only #serverCard select,body.fee-only #
 /* 설정창 */
 .setsec{display:flex;flex-direction:column;gap:11px}
 .setsec h3{margin:0;font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;font-weight:600}
+kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;border:1px solid var(--line-strong);
+  border-bottom-width:2px;border-radius:3px;padding:0 4px;background:var(--surface-2);color:var(--ink-2)}
 .setsec+.setsec{margin-top:2px}
 /* 담당자가 아니면 시설·요금 기준 화면을 볼 수는 있어도 고칠 수는 없다.
    (요금 기준을 감추면 "왜 이 금액인지" 를 보여준다는 이 도구의 목적이 깨진다) */
@@ -515,11 +516,6 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
   <div class="topbar-inner">
     <div class="brand">
       <h1><button type="button" id="homeBtn" title="달력 화면으로 갑니다">시설 예약 관리대장</button></h1>
-      <span>internal</span>
-      <!-- 화면에 뜬 것이 최신 파일인지 한눈에 보려고 판 번호를 띄운다.
-           "고쳤다는데 안 바뀐다" 는 대개 옛 파일을 열고 있는 것이라서,
-           이 표시가 없으면 확인할 방법이 없다. 내용을 고치면 APP_VERSION 을 올린다 -->
-      <span class="ver mono" id="appVer" title="이 화면 파일의 판 번호"></span>
     </div>
 
     <div class="period">
@@ -1166,9 +1162,20 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
       </div>
 
       <div class="setsec" id="setAdminOnly" hidden></div>
-      <p class="field hint" id="setLockNote" hidden style="margin:0">
+      <p class="hint" id="setLockNote" hidden style="margin:0;font-size:11.5px;color:var(--muted);line-height:1.6">
         설정을 고치려면 <b>담당자 계정</b>으로 로그인해야 합니다.
         요금 담당 계정과 데이터 관리는 담당자만 볼 수 있습니다.
+      </p>
+
+      <!-- 판 번호. 화면에 뜬 것이 최신 파일인지 확인하는 데 쓴다.
+           "고쳤다는데 안 바뀐다" 는 대개 옛 파일을 열고 있는 것이라서,
+           이 표시가 없으면 확인할 방법이 없다. 내용을 고치면 APP_VERSION 을 올린다.
+           조회하는 사람도 확인할 수 있어야 하므로 관리자 전용 칸 바깥에 둔다 -->
+      <div class="hr"></div>
+      <p class="hint" style="margin:0;font-size:11.5px;color:var(--muted);line-height:1.6">
+        판 번호 <b class="mono" id="appVer"></b>
+        <br>안내받은 번호와 다르면 옛 화면을 보고 있는 것입니다.
+        <kbd>Ctrl</kbd>+<kbd>F5</kbd> 로 새로고침해 보세요.
       </p>
     </div>
   </div>
@@ -1231,10 +1238,10 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* =========================================================
    1. 데이터 구조
    ========================================================= */
-/* 화면에 띄우는 판 번호. **내용을 고치면 여기를 올린다.**
-   "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을 열고 있는 것인데,
-   이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-08-23.13";
+/* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
+   ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
+   열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
+const APP_VERSION = "2026-08-23.14";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
