@@ -298,10 +298,15 @@ td.dow-sun{color:var(--sun);font-weight:600}
 
 /* ---------- settings ---------- */
 .settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;align-items:start}
+/* 한 번에 한 묶음만 보이므로 카드 하나가 폭을 다 쓴다 */
+.settings{grid-template-columns:minmax(0,1fr)}
 .sec-head{padding:12px 14px;border-bottom:1px solid var(--line)}
 .sec-head h2{margin:0;font-size:14px;font-weight:600}
 .sec-head p{margin:3px 0 0;font-size:11.5px;color:var(--muted)}
 .sec-body{padding:12px 14px;display:flex;flex-direction:column;gap:11px}
+/* 시설·부속시설·감면 목록은 옆으로 늘어놓는다. 세로로만 쌓으면 화면이 한없이 길어진다.
+   .sec-body 뒤에 두어야 한다 — 앞에 두면 flex 로 되돌아간다 */
+.setgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;align-items:start}
 .field{display:flex;flex-direction:column;gap:4px}
 .field label{font-size:11px;color:var(--muted);letter-spacing:.02em}
 .prep-toggle input[type="checkbox"]{width:15px;height:15px;flex:0 0 auto}
@@ -704,20 +709,27 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
       조회 전용입니다. 요금 기준은 볼 수 있지만 고칠 수는 없습니다.
       고치려면 <b>⚙ 설정</b> 에서 담당자 계정으로 로그인하세요.
     </p>
+    <!-- 세 묶음이 한 화면에 다 펼쳐지면 스크롤이 너무 길어진다.
+         목록·공과금 전환과 같은 방식으로 한 번에 하나씩 본다 -->
+    <div class="seg" id="setSeg" role="group" aria-label="요금 기준 종류" style="margin:0 0 12px">
+      <button type="button" data-sp="fac" aria-pressed="true">시설 · 단가</button>
+      <button type="button" data-sp="rate" aria-pressed="false">가산 · 감산 · 감면</button>
+      <button type="button" data-sp="calc" aria-pressed="false">계산 방식</button>
+    </div>
     <div class="settings">
 
-      <div class="card">
+      <div class="card" data-sp="fac">
         <div class="sec-head">
           <h2>시설 · 단가</h2>
           <p>조례상 사용료 표를 그대로 옮겨 적는 곳입니다. 여기 값이 계산의 기준이 됩니다.</p>
         </div>
-        <div class="sec-body" id="facilityList"></div>
+        <div class="sec-body setgrid" id="facilityList"></div>
         <div class="sec-body" style="border-top:1px solid var(--line)">
           <button type="button" class="btn" id="addFacility">+ 시설 추가</button>
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" data-sp="rate">
         <div class="sec-head">
           <h2>가산 · 감산 · 감면 기준</h2>
           <p>대전광역시 체육시설 관리운영 조례 [시행 2024.12.27. 조례 제6358호] 기준으로 채워져 있습니다.
@@ -849,7 +861,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
               「주변압기 전력기본요금 × (행사용변압기 용량 ÷ 2차변전실 변압기 용량) ÷ 30 × 1.1
               + 전력사용량(㎾) × 전력요금 × 1.1」 이고, 수도료는 「1일 1회 수도사용 실비(전용사용 시)」 입니다.</div>
           </div>
-          <div id="annexItemList" style="display:flex;flex-direction:column;gap:9px"></div>
+          <div id="annexItemList" class="setgrid"></div>
           <button type="button" class="btn btn-sm" id="addAnnex" style="align-self:flex-start">+ 부속시설 항목 추가</button>
           <label class="prep-toggle" style="margin-top:4px">
             <input type="checkbox" id="setDiscountAnnex">
@@ -865,7 +877,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
             <div class="hint">조례가 정한 비율은 <b>전부 면제 · 80% 감경 · 50% 감경</b> 세 가지입니다.
               어느 호에 해당하는지는 근거 조문에 적어두었고, 산정 내역에 그대로 나옵니다.</div>
           </div>
-          <div id="discountList" style="display:flex;flex-direction:column;gap:9px"></div>
+          <div id="discountList" class="setgrid"></div>
           <button type="button" class="btn btn-sm" id="addDiscount" style="align-self:flex-start">+ 감면 유형 추가</button>
 
           <div class="hr"></div>
@@ -886,7 +898,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" data-sp="calc">
         <div class="sec-head">
           <h2>계산 방식</h2>
           <p>대전광역시 체육시설 관리운영 조례를 그대로 옮긴 산식입니다.
@@ -927,39 +939,6 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
             <label for="setOrgNote">부서 · 대장 메모</label>
             <textarea id="setOrgNote" placeholder="담당자, 조례 개정일, 인수인계 사항 등"></textarea>
           </div>
-        </div>
-      </div>
-
-      <!-- 행사 정산서에 찍히는 입금 계좌.
-           시설사용료와 공과금을 다른 계좌로 받으므로 두 벌을 따로 적는다 -->
-      <div class="card">
-        <div class="sec-head">
-          <h2>정산서 입금 계좌</h2>
-          <p>행사 정산서의 <b>시설사용료</b>·<b>공과금</b> 칸 옆에 <b>은행:계좌번호</b> 형식으로 찍힙니다.
-             비워 두면 그 칸이 빈칸으로 나와 손으로 적을 수 있습니다.</p>
-        </div>
-        <div class="sec-body">
-          <div class="row2">
-            <div class="field">
-              <label for="setBankUse">시설사용료 — 은행</label>
-              <input id="setBankUse" placeholder="예: 하나은행">
-            </div>
-            <div class="field">
-              <label for="setAcctUse">시설사용료 — 계좌번호</label>
-              <input id="setAcctUse" class="mono" placeholder="예: 123-456789-01234">
-            </div>
-          </div>
-          <div class="row2">
-            <div class="field">
-              <label for="setBankUtil">공과금 — 은행</label>
-              <input id="setBankUtil" placeholder="예: 농협">
-            </div>
-            <div class="field">
-              <label for="setAcctUtil">공과금 — 계좌번호</label>
-              <input id="setAcctUtil" class="mono" placeholder="예: 301-0000-1111-11">
-            </div>
-          </div>
-          <p class="field hint" id="setAcctPreview" style="margin:0"></p>
         </div>
       </div>
 
@@ -1120,6 +1099,32 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
      감추기만 하면 요금 담당 계정 이메일이 화면 소스에 남는다.
      로그인 칸만은 누구에게나 열어 둔다. 안 그러면 조회 전용에서 빠져나올 수 없다 -->
 <template id="adminTpl">
+        <div class="hr"></div>
+        <h3>정산서 입금 계좌</h3>
+        <p class="field hint" style="margin:0 0 8px">행사 정산서의 <b>시설사용료</b>·<b>공과금</b> 칸 옆에
+          <b>은행:계좌번호</b> 형식으로 찍힙니다. 비워 두면 그 칸이 빈칸으로 나와 손으로 적을 수 있습니다.</p>
+        <div class="row2">
+          <div class="field">
+            <label for="setBankUse">시설사용료 — 은행</label>
+            <input id="setBankUse" placeholder="예: 하나은행">
+          </div>
+          <div class="field">
+            <label for="setAcctUse">시설사용료 — 계좌번호</label>
+            <input id="setAcctUse" class="mono" placeholder="예: 123-456789-01234">
+          </div>
+        </div>
+        <div class="row2" style="margin-top:8px">
+          <div class="field">
+            <label for="setBankUtil">공과금 — 은행</label>
+            <input id="setBankUtil" placeholder="예: 농협">
+          </div>
+          <div class="field">
+            <label for="setAcctUtil">공과금 — 계좌번호</label>
+            <input id="setAcctUtil" class="mono" placeholder="예: 301-0000-1111-11">
+          </div>
+        </div>
+        <p class="field hint" id="setAcctPreview" style="margin:6px 0 0"></p>
+
         <div class="hr"></div>
         <h3>요금 담당 계정</h3>
           <div class="field">
@@ -1286,7 +1291,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-08-26.16";
+const APP_VERSION = "2026-08-26.17";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -1485,7 +1490,7 @@ const DEFAULT_STATE = {
 };
 
 let state = structuredClone(DEFAULT_STATE);
-let view = { year: new Date().getFullYear(), month: new Date().getMonth() + 1, selected: null, pane: "calendar", editingId: null,
+let view = { year: new Date().getFullYear(), month: new Date().getMonth() + 1, selected: null, pane: "calendar", setPane: "fac", editingId: null,
              listMode: "view",     // 목록 종류: view 조회용 / income 수익집계용
              utilSplit: false };   // 공과금을 전기료·수도료로 나눠 볼지
 
@@ -3005,18 +3010,6 @@ function renderSettings() {
     : view.year + "년은 자동 공휴일 표(2026~2040년) 밖입니다. 직접 적어 주세요.";
   $("#setOrgNote").value = s.orgNote || "";
 
-  // 정산서 입금 계좌 — 정산서에 찍히는 모양 그대로 미리 보여준다
-  const sl = s.settle || {};
-  $("#setBankUse").value  = sl.useBank  || "";
-  $("#setAcctUse").value  = sl.useAcct  || "";
-  $("#setBankUtil").value = sl.utilBank || "";
-  $("#setAcctUtil").value = sl.utilAcct || "";
-  const acctTxt = (b, n) => (String(b || "").trim() && String(n || "").trim())
-    ? String(b).trim() + ":" + String(n).trim() : "(빈칸 — 손으로 적습니다)";
-  $("#setAcctPreview").textContent =
-    "정산서에 찍히는 모양 — 시설사용료 " + acctTxt(sl.useBank, sl.useAcct) +
-    " · 공과금 " + acctTxt(sl.utilBank, sl.utilAcct);
-
   $("#facilityList").innerHTML = state.facilities.map(f => {
     const pr = f.prep || { allowed: false, mode: "fee", fee: 0, percent: 50, article: "" };
     const noFee = !Number(f.feeSports) && !Number(f.feeOther);
@@ -3776,6 +3769,8 @@ function xwXlsx(wb) {
     '<Relationship Id="rId1" Type="' + NSr + '/officeDocument" Target="xl/workbook.xml"/></Relationships>';
   const book = H + '<workbook xmlns="' + NSm + '" xmlns:r="' + NSr + '">' +
     '<sheets><sheet name="' + xq(wb.name) + '" sheetId="1" r:id="rId1"/></sheets>' +
+    (wb.printArea ? "<definedNames><definedName name=\"_xlnm.Print_Area\" localSheetId=\"0\">" +
+      xq(wb.name) + "!" + wb.printArea + "</definedName></definedNames>" : "") +
     // 수식만 담고 값은 담지 않으므로, 열 때 한 번 다시 계산하게 한다
     '<calcPr calcId="0" fullCalcOnLoad="1"/></workbook>';
   const brels = H + '<Relationships xmlns="' + NSp + '">' +
@@ -3848,7 +3843,9 @@ function xwXlsx(wb) {
   }
   const sheet = H + '<worksheet xmlns="' + NSm + '" xmlns:r="' + NSr + '">' +
     '<dimension ref="A1:' + cellRef(nRow - 1, nCol - 1) + '"/>' +
-    '<sheetViews><sheetView workbookViewId="0"/></sheetViews>' +
+    // 쪽 나눔 미리보기로 열면 인쇄 영역 바깥이 회색으로 눌려 서식만 또렷하게 보인다 (원본과 같다)
+    '<sheetViews><sheetView view="pageBreakPreview" zoomScaleNormal="100" ' +
+      'zoomScaleSheetLayoutView="100" workbookViewId="0"/></sheetViews>' +
     '<sheetFormatPr defaultRowHeight="13.5"/>' +
     "<cols>" + wb.cols.map((w, i) => w == null ? "" :
       '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>').join("") + "</cols>" +
@@ -3860,6 +3857,7 @@ function xwXlsx(wb) {
     '<pageMargins left="0.039370078740157" right="0.039370078740157" top="0.98425196850393" ' +
       'bottom="0.35433070866141" header="0.43307086614173" footer="0.27559055118110"/>' +
     '<pageSetup paperSize="9" scale="86" orientation="portrait"/>' +
+    (wb.header ? '<headerFooter alignWithMargins="0"><oddHeader>' + xq(wb.header) + "</oddHeader></headerFooter>" : "") +
     (wb.breaks && wb.breaks.length ? '<rowBreaks count="' + wb.breaks.length + '" manualBreakCount="' + wb.breaks.length + '">' +
       wb.breaks.map(b => '<brk id="' + b + '" max="' + (nCol - 1) + '" man="1"/>').join("") + "</rowBreaks>" : "") +
     "</worksheet>";
@@ -3882,7 +3880,7 @@ function xwXlsx(wb) {
      C 칸 — 줄마다 "서식번호[=글 | #숫자 | @수식]" 을 | 로 이어 붙였다 (열은 A~N 차례)
    원본에 들어 있던 예시 자료(행사명·금액·담당자 이름 등)는 뽑을 때 비웠다. 서식만 남는다.
    **통제 도장 자리(M36:N39)도 원본처럼 비워 둔다** — 한글로 만든 그림을 붙이는 칸이다 */
-const SETTLE_FORM = {"W":[6.21875,5.886719,4.777344,7.777344,3.777344,3.777344,5.21875,9.777344,4.441406,6.777344,7.332031,9.109375,12.777344,null],"H":[21.0,28.5,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,18.0,10.5,26.25,18.75,7.5,12.75,81.75,21.95,28.5,21.95,23.25,18.0,18.75,21.75,24.0,18.75,24.0,30.0,21.75,22.5,21.0,20.25,20.25,17.25,18.75,18.0,21.75,18.0,22.5,22.5,22.5,22.5,22.5,22.5,22.5,22.5,22.5,21.0,21.75,9.0,19.5,9.75,18.75,8.25,20.25,18.0,16.5,null,14.25],"M":[[0,0,1,2],[0,2,1,5],[0,8,1,6],[1,0,1,2],[1,2,1,9],[1,11,2,1],[1,12,1,2],[2,0,1,2],[2,2,1,9],[2,12,1,2],[3,0,2,2],[3,2,2,5],[3,7,1,3],[3,10,2,2],[3,12,1,2],[5,0,1,2],[5,2,1,5],[5,10,1,2],[6,0,1,2],[6,2,1,5],[6,10,1,2],[7,0,5,2],[7,2,1,10],[7,12,1,2],[8,2,3,5],[8,7,3,1],[8,8,3,2],[8,10,3,2],[11,2,1,5],[11,8,1,2],[11,10,1,2],[12,0,2,2],[12,2,1,5],[12,7,1,3],[12,10,1,2],[13,2,1,2],[13,5,1,2],[13,7,1,3],[13,10,1,2],[14,0,2,2],[14,2,1,6],[14,8,1,2],[14,10,1,2],[15,2,1,2],[15,5,1,3],[15,8,1,2],[15,10,1,2],[16,0,3,2],[16,2,2,5],[16,7,1,4],[16,11,2,1],[16,12,3,1],[17,7,1,4],[18,2,1,5],[18,9,1,2],[19,0,8,1],[19,1,1,2],[19,8,1,4],[19,12,2,1],[20,1,1,2],[20,8,1,2],[20,10,2,1],[21,1,1,2],[21,8,1,2],[21,12,2,1],[22,1,1,2],[22,8,1,2],[23,1,1,2],[23,8,1,2],[23,12,4,1],[24,1,1,2],[24,8,1,2],[24,10,2,1],[25,1,1,2],[25,8,1,2],[26,1,1,6],[26,8,1,3],[27,0,1,2],[27,2,1,5],[27,8,1,3],[27,11,1,3],[28,0,1,2],[28,2,1,5],[28,8,1,3],[28,11,1,3],[29,9,1,2],[29,12,1,2],[30,0,2,3],[30,3,2,4],[30,7,2,1],[30,9,1,2],[30,12,1,2],[31,9,1,2],[31,12,1,2],[32,0,4,3],[32,3,4,4],[32,7,4,1],[32,9,2,4],[34,8,1,4],[35,8,4,4],[39,0,1,2],[39,2,1,5],[39,8,1,6],[40,0,1,2],[40,2,1,9],[40,11,2,1],[40,12,2,2],[41,0,1,2],[41,2,1,9],[42,0,2,2],[42,2,2,5],[42,7,1,3],[42,10,2,2],[42,12,1,2],[44,0,1,2],[44,2,1,5],[44,10,1,2],[45,0,1,2],[45,2,1,5],[45,10,1,2],[46,0,5,2],[46,2,1,10],[46,12,1,2],[47,2,3,5],[47,7,3,1],[47,8,3,2],[47,10,3,2],[50,2,1,5],[50,8,1,2],[50,10,1,2],[51,0,2,2],[51,2,1,5],[51,7,1,3],[51,10,1,2],[52,2,1,2],[52,5,1,2],[52,7,1,3],[52,10,1,2],[53,0,3,2],[53,2,2,6],[53,8,2,2],[53,10,2,2],[55,2,1,2],[55,4,1,3],[55,8,1,2],[55,10,1,2],[55,12,3,1],[55,13,3,1],[56,0,3,2],[56,2,2,2],[56,7,1,4],[56,11,2,1],[57,7,1,4],[58,2,1,2],[58,4,1,3],[58,9,1,2],[58,12,2,1],[58,13,2,1],[59,0,8,1],[59,1,1,2],[59,8,1,4],[60,1,1,2],[60,8,1,2],[60,10,2,1],[60,12,2,1],[60,13,2,1],[61,1,1,2],[61,8,1,2],[62,1,1,2],[62,8,1,2],[62,12,5,1],[62,13,5,1],[63,1,1,2],[63,8,1,2],[64,1,1,2],[64,8,1,2],[64,10,2,1],[65,1,1,2],[65,8,1,2],[66,1,1,6],[66,8,1,3],[67,0,1,2],[67,2,1,5],[67,8,1,3],[67,11,1,3],[68,0,1,2],[68,2,1,2],[68,11,1,3],[70,0,3,8],[70,9,1,2],[70,12,1,2],[72,9,1,2],[72,12,1,2],[74,9,1,2],[74,12,1,2],[76,0,1,14],[78,0,2,14]],"NF":["_-* #,##0_-;\\-* #,##0_-;_-* \"-\"_-;_-@_-","@","#,##0\"원\"","#,##0\"원\"\\ \\ \\ \\ \"*\"","#,##0\"명\"","0%","General\"회\"","#,##0","#,##0\"원\"\\ \"*\"","\"*\"\\ General\"개\"","#,##0\"원\"\"*\"","\"*\"\\ General\"회\"","General\"개\"","yyyy\\.mm\\.dd","yyyy\"년\"\\ m\"월\"\\ d\"일\";@","mm-dd-yy","0_);[Red]\\(0\\)"],"BD":[{"t":"medium","b":"thin","l":"medium","r":"thin"},{"t":"medium","b":"thin","r":"thin"},{"t":"medium","b":"thin"},{"t":"medium","b":"thin","l":"thin","r":"thin"},{"t":"medium","b":"thin","l":"thin","r":"medium"},{"t":"medium","b":"thin","r":"medium"},{"b":"thin","l":"medium","r":"thin"},{"b":"thin","r":"thin"},{"b":"thin"},{"t":"thin","b":"medium","l":"thin"},{"t":"thin","l":"thin","r":"medium"},{"t":"thin","r":"medium"},{"t":"thin","b":"medium","l":"medium","r":"thin"},{"t":"thin","b":"medium","r":"thin"},{"t":"thin","b":"medium"},{"b":"medium","l":"thin"},{"b":"medium","l":"thin","r":"medium"},{"b":"medium","r":"medium"},{"r":"thin"},{"t":"medium"},{"t":"medium","r":"thin"},{"b":"thin","l":"thin","r":"thin"},{"b":"thin","l":"medium"},{"t":"thin","b":"thin","l":"thin","r":"thin"},{"b":"thin","l":"thin"},{"t":"thin","b":"thin","l":"thin","r":"medium"},{"t":"thin","b":"thin","l":"medium","r":"medium"},{"t":"thin","b":"thin","r":"medium"},{"t":"thin","b":"thin","l":"medium","r":"thin"},{"t":"thin","b":"thin"},{"t":"thin","b":"thin","r":"thin"},{"t":"thin","b":"medium","l":"medium","r":"medium"},{"t":"thin","b":"medium","r":"medium"},{"t":"thin","b":"medium","l":"thin","r":"thin"},{"t":"thin","b":"medium","l":"thin","r":"medium"},{"t":"medium","b":"medium","l":"medium","r":"medium"},{"t":"medium","r":"medium"},{"t":"medium","b":"medium"},{"t":"medium","b":"medium","r":"medium"},{"l":"medium"},{"r":"medium"},{"b":"thin","l":"thin","r":"medium"},{"l":"thin","r":"thin"},{"l":"thin"},{"b":"thin","r":"medium"},{"b":"medium","l":"medium"},{"t":"thin","l":"medium","r":"thin"},{"t":"thin","b":"medium","l":"medium"},{"t":"medium","l":"medium","r":"medium"},{"l":"medium","r":"thin"},{"l":"thin","r":"medium"},{"t":"medium","b":"medium","l":"medium"},{"t":"thin","b":"thin","l":"thin"},{"t":"medium","b":"medium","l":"thin","r":"medium"},{"t":"thin","r":"thin"},{"t":"thin"},{"t":"medium","b":"medium","l":"medium","r":"thin"},{"t":"medium","b":"medium","r":"thin"},{"b":"medium","l":"medium","r":"thin"},{"b":"medium"},{"b":"medium","r":"thin"},{"b":"medium","l":"medium","r":"medium"},{"t":"thin","l":"thin"},{"t":"medium","b":"thin","l":"thin"},{"t":"thin","l":"thin","r":"thin"},{"t":"medium","b":"medium","l":"thin","r":"thin"},{"b":"medium","l":"thin","r":"thin"},{"l":"medium","r":"medium"}],"FL":[{"p":"solid","fg":"FFFF00"},{"p":"solid","fg":"FFFFFF"},{"p":"gray0625","bg":"FFFFFF"},{"p":"solid","fg":"FFFFFF","bg":"FFFFFF"},{"p":"gray0625"},{"p":"solid","fg":"C1E5F5"}],"S":[{"b":1,"h":"center","v":"center","nf":0,"bd":0},{"bd":1},{"b":1,"h":"center","v":"center","bd":0,"fl":0},{"bd":2},{"b":1,"h":"center","v":"center","nf":0,"bd":3},{"b":1,"h":"left","v":"center","nf":0,"bd":4},{"bd":5},{"b":1,"h":"center","v":"center","nf":0,"bd":6},{"bd":7},{"b":1,"h":"left","v":"center","w":1,"s":1,"bd":7},{"bd":8},{"b":1,"h":"center","v":"center","nf":0,"bd":9},{"sz":12.0,"b":1,"h":"center","v":"center","s":1,"nf":1,"bd":10},{"bd":11},{"b":1,"h":"center","v":"center","nf":0,"bd":12},{"bd":13},{"b":1,"h":"left","v":"center","nf":0,"bd":12},{"bd":14},{"bd":15},{"sz":12.0,"b":1,"h":"center","v":"center","s":1,"nf":1,"bd":16},{"bd":17},{"b":1,"h":"center","v":"center","nf":0,"bd":6,"fl":1},{"bd":18},{"b":1,"h":"center","v":"center","nf":0,"bd":0,"fl":1},{"bd":19},{"bd":20},{"b":1,"h":"center","v":"center","nf":0,"bd":21,"fl":1},{"h":"center","nf":0,"bd":21,"fl":1},{"bd":22},{"b":1,"h":"center","v":"center","nf":0,"bd":23,"fl":1},{"bd":24},{"b":1,"h":"center","v":"center","nf":0,"bd":25,"fl":1},{"b":1,"h":"center","nf":0,"bd":26},{"bd":27},{"h":"center","nf":0,"bd":28},{"bd":29},{"bd":30},{"nf":0,"bd":23},{"h":"center","nf":0,"bd":23},{"nf":0,"bd":25},{"b":1,"h":"center","v":"center","nf":0,"bd":31},{"bd":32},{"h":"center","nf":0,"bd":12},{"nf":0,"bd":33},{"h":"center","nf":0,"bd":33},{"nf":0,"bd":34},{"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":35,"fl":2},{"bd":36},{"b":1,"h":"center","v":"center","nf":0,"bd":35,"fl":2},{"bd":37},{"bd":38},{"b":1,"h":"center","v":"center","nf":0,"bd":38,"fl":2},{"bd":39},{"bd":40},{"b":1,"h":"center","w":1,"nf":0,"bd":0},{"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":21},{"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":41},{"b":1,"h":"left","v":"center","bd":0},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":4},{},{"bd":42},{"bd":43},{"b":1,"h":"left","v":"center","bd":28},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":25},{"bd":21},{"bd":44},{"bd":45},{"h":"center","nf":0,"bd":34},{"b":1,"h":"left","v":"center","bd":46},{"sz":10.0,"b":1,"h":"center","v":"center","nf":0,"bd":0},{"sz":10.0,"b":1,"h":"center","v":"center","nf":0,"bd":3},{"b":1,"h":"center","v":"center","nf":0,"bd":4},{"b":1,"h":"left","v":"center","s":1,"bd":46},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":11},{"sz":10.0,"h":"center","v":"center","nf":3,"bd":47},{"sz":10.0,"h":"center","v":"center","nf":3,"bd":14},{"sz":10.0,"h":"center","v":"center","nf":4,"bd":13},{"sz":10.0,"h":"center","v":"center","nf":5,"bd":33},{"b":1,"v":"center","nf":2,"bd":34},{"b":1,"h":"center","v":"center","nf":0,"bd":28},{"h":"center","v":"center","nf":0,"bd":7},{"h":"center","v":"center","nf":0,"bd":21},{"b":1,"h":"center","v":"center","nf":0,"bd":41},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":27,"fl":3},{"sz":10.0,"h":"center","v":"center","nf":6,"bd":13},{"sz":10.0,"h":"center","v":"center","nf":0,"bd":14},{"h":"center","v":"center","s":1,"nf":7,"bd":33},{"h":"center","v":"center","nf":5,"bd":33},{"b":1,"h":"center","v":"center","nf":2,"bd":34},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":11,"fl":3},{"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":48,"fl":2},{"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":0},{"b":1,"h":"center","v":"center","w":1,"bd":6},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":10},{"b":1,"h":"center","v":"center","nf":0,"bd":23},{"bd":41},{"bd":49},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":50},{"h":"center","v":"center","nf":0,"bd":12},{"b":1,"v":"center","s":1,"nf":8,"bd":9},{"b":1,"v":"center","s":1,"nf":5,"bd":14},{"b":1,"h":"center","v":"center","nf":9,"bd":13},{"b":1,"h":"center","v":"center","nf":2,"bd":32},{"bd":6},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":41},{"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":51,"fl":2},{"sz":9.0,"b":1,"h":"center","v":"center","nf":10,"bd":24},{"sz":9.0,"b":1,"h":"center","v":"center","nf":8,"bd":8},{"sz":8.0,"b":1,"h":"center","v":"center","nf":5,"bd":8},{"sz":9.0,"b":1,"h":"center","v":"center","nf":11,"bd":7},{"b":1,"h":"right","v":"center","nf":2,"bd":24},{"b":1,"h":"center","v":"center","nf":0,"bd":49,"fl":4},{"b":1,"h":"center","v":"center","w":1,"bd":28},{"sz":9.0,"b":1,"h":"center","v":"center","nf":10,"bd":52},{"sz":9.0,"b":1,"h":"center","v":"center","nf":8,"bd":29},{"sz":8.0,"b":1,"h":"center","v":"center","nf":5,"bd":29},{"sz":9.0,"b":1,"h":"center","v":"center","nf":11,"bd":30},{"b":1,"h":"right","v":"center","nf":2,"bd":52},{"sz":10.0,"b":1,"h":"center","v":"center","s":1,"nf":1,"bd":0},{"b":1,"h":"center","v":"center","bd":53},{"b":1,"v":"center","s":1,"nf":2,"bd":5},{"sz":10.0,"b":1,"h":"center","v":"center","nf":1,"bd":0},{"bd":16},{"b":1,"v":"center","nf":2,"bd":32},{"b":1,"h":"center","v":"center","bd":4},{"b":1,"h":"center","v":"center","w":1,"bd":12},{"sz":9.0,"b":1,"h":"center","v":"center","nf":8,"bd":52},{"sz":9.0,"b":1,"h":"center","v":"center","nf":12,"bd":29},{"b":1,"h":"center","v":"center","bd":46},{"bd":54},{"sz":9.0,"b":1,"h":"center","v":"center","s":1,"nf":8,"bd":52},{"sz":9.0,"b":1,"h":"center","v":"center","s":1,"nf":12,"bd":55},{"sz":8.0,"b":1,"h":"center","v":"center","s":1,"nf":5,"bd":14},{"sz":9.0,"b":1,"h":"center","v":"center","s":1,"nf":11,"bd":13},{"sz":10.0,"b":1,"h":"center","v":"center","nf":1,"bd":56},{"bd":57},{"b":1,"h":"center","v":"center","nf":0,"bd":35},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":35},{"b":1,"h":"center","v":"center","nf":0,"bd":58},{"bd":59},{"bd":60},{"b":1,"v":"center","s":1,"nf":2,"bd":17},{"bd":58},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":16},{"sz":12.0,"b":1,"h":"center","v":"center","w":1,"nf":2,"bd":35},{"b":1,"v":"center","nf":0,"bd":35},{"b":1,"h":"center","v":"center","nf":13,"bd":57},{"sz":10.5,"b":1,"h":"center","v":"center","nf":0,"bd":48},{"b":1,"h":"center","v":"center","s":1,"nf":0,"bd":35,"fl":2},{"sz":12.0,"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":35},{"b":1,"h":"center","v":"center","nf":1,"bd":60},{"sz":10.5,"b":1,"h":"center","v":"center","nf":0,"bd":61},{"nf":0,"bd":39},{"nf":0},{"sz":8.0,"nf":0},{"h":"center","v":"center"},{"h":"center","nf":0},{"b":1,"h":"center","v":"center","nf":0,"bd":0,"fl":5},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":3,"fl":5},{"sz":10.5,"b":1,"h":"center","v":"center","nf":0,"bd":4,"fl":5},{"b":1,"h":"center","v":"center","nf":0,"bd":48},{"b":1,"h":"center","v":"center","nf":0,"bd":39},{"b":1,"h":"center","v":"center","nf":0,"bd":28,"fl":0},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":23,"fl":0},{"sz":10.5,"b":1,"h":"center","v":"center","nf":0,"bd":25,"fl":0},{"sz":16.0,"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":33},{"sz":10.5,"b":1,"h":"center","v":"center","nf":0,"bd":34},{"b":1,"c":"FF0000","h":"center","v":"center","nf":0,"bd":35},{"sz":12.0,"h":"center","v":"center","nf":0,"bd":61},{"h":"left"},{"sz":10.5,"b":1,"h":"center","v":"center","bd":19},{"nf":0,"bd":40},{"b":1,"c":"FF0000","v":"center","nf":0},{"b":1,"h":"left","v":"center","bd":40},{"b":1,"h":"center","v":"center","nf":14},{"b":1,"v":"center","nf":15},{"b":1,"v":"center","nf":15,"bd":40},{"sz":12.0,"b":1,"h":"center","v":"center","nf":0,"bd":59},{"b":1,"h":"left","v":"center"},{"b":1,"h":"center","v":"center","nf":0},{"sz":8.0,"b":1,"h":"center","v":"center","nf":0},{"b":1,"h":"center","v":"center","nf":0,"bd":40},{"h":"center","v":"center","nf":0},{"h":"right","v":"center","nf":0,"bd":45},{"h":"right","v":"center","nf":0,"bd":59},{"sz":8.0,"h":"right","v":"center","nf":0,"bd":59},{"h":"left","v":"center","nf":0,"bd":59},{"h":"center","nf":0,"bd":59},{"nf":0,"bd":17},{"b":1,"h":"center","v":"center","bd":3},{"b":1,"h":"left","v":"center","nf":0,"bd":25},{"b":1,"h":"left","v":"center","w":1,"s":1,"nf":0,"bd":24},{"sz":12.0,"b":1,"h":"center","v":"center","s":1,"nf":16,"bd":34},{"b":1,"h":"center","v":"center","nf":0,"bd":46},{"b":1,"h":"left","v":"center","nf":0,"bd":62},{"bd":55},{"b":1,"h":"center","v":"center","nf":0,"bd":3,"fl":1},{"b":1,"h":"center","nf":0,"bd":3,"fl":1},{"b":1,"h":"center","nf":0,"bd":28},{"b":1,"h":"center","nf":0,"bd":23},{"b":1,"nf":0,"bd":23},{"b":1,"nf":0,"bd":25},{"b":1,"h":"center","nf":0,"bd":33},{"b":1,"nf":0,"bd":33},{"b":1,"nf":0,"bd":34},{"b":1,"h":"center","v":"center","nf":0,"bd":51,"fl":2},{"b":1,"h":"center","v":"center","nf":0,"bd":48,"fl":2},{"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":24},{"b":1,"h":"right","v":"center","nf":2,"bd":4},{"b":1,"h":"right","v":"center","nf":2,"bd":25},{"b":1,"h":"center","nf":0,"bd":12},{"b":1,"h":"center","nf":0,"bd":9},{"b":1,"h":"center","v":"center","nf":0,"bd":63},{"b":1,"h":"left","v":"center","s":1,"bd":23},{"b":1,"h":"right","v":"center","nf":2,"bd":27},{"sz":10.0,"h":"left","v":"center","nf":4,"bd":13},{"b":1,"h":"center","v":"center","nf":5,"bd":33},{"b":1,"v":"center","nf":2,"bd":9},{"b":1,"h":"center","v":"center","nf":0,"bd":49},{"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":61,"fl":2},{"b":1,"h":"left","v":"center","bd":23},{"sz":10.0,"b":1,"h":"center","v":"center","nf":6,"bd":13},{"sz":10.0,"b":1,"h":"center","v":"center","nf":0,"bd":33},{"b":1,"h":"center","v":"center","s":1,"nf":0,"bd":33},{"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":1},{"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":19},{"sz":8.0,"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":19},{"bd":50},{"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":8},{"sz":8.0,"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":8},{"b":1,"h":"center","v":"center","nf":0,"bd":33},{"b":1,"h":"center","v":"center","s":1,"nf":8,"bd":9},{"b":1,"v":"center","s":1,"nf":5,"bd":9},{"b":1,"h":"center","v":"center","nf":9,"bd":64},{"b":1,"h":"center","v":"center","nf":2,"bd":10},{"sz":10.0,"b":1,"h":"center","v":"center","s":1,"nf":8,"bd":63},{"sz":10.0,"b":1,"h":"center","v":"center","s":1,"nf":8,"bd":2},{"sz":8.0,"b":1,"h":"center","v":"center","nf":5,"bd":2},{"sz":9.0,"b":1,"h":"center","v":"center","nf":11,"bd":1},{"b":1,"h":"center","v":"center","nf":0,"bd":20,"fl":4},{"sz":10.0,"b":1,"h":"center","v":"center","s":1,"nf":8,"bd":52},{"sz":10.0,"b":1,"h":"center","v":"center","s":1,"nf":8,"bd":29},{"sz":10.0,"b":1,"h":"center","v":"center","s":1,"nf":1,"bd":20},{"b":1,"h":"center","v":"center","bd":65},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":63},{"sz":10.0,"b":1,"h":"center","v":"center","s":1,"nf":1,"bd":12},{"bd":66},{"sz":10.0,"b":1,"h":"center","v":"center","nf":1,"bd":1},{"b":1,"h":"center","v":"center","bd":63},{"sz":10.0,"b":1,"h":"center","v":"center","s":1,"nf":1,"bd":1},{"sz":10.0,"b":1,"h":"center","v":"center","s":1,"nf":8,"bd":9},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":34},{"sz":10.0,"b":1,"h":"center","v":"center","nf":1,"bd":13},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":9},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":17},{"b":1,"h":"center","v":"center","nf":0,"bd":60},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":59},{"sz":12.0,"b":1,"h":"center","v":"center","w":1,"nf":0},{"sz":8.0,"b":1,"h":"center","v":"center","w":1,"nf":0},{"b":1},{"b":1,"c":"FF0000","h":"center","v":"center","nf":0},{"h":"center","v":"center","nf":0,"bd":39,"fl":2},{"h":"center","v":"center","nf":0,"fl":2},{"b":1,"c":"FF0000","h":"left","v":"center","nf":0},{"sz":12.0,"b":1,"h":"center","v":"center","nf":0,"bd":39},{"b":1,"h":"center","v":"center","nf":0,"bd":23,"fl":5},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":23,"fl":5},{"sz":10.5,"b":1,"h":"center","v":"center","nf":0,"bd":23,"fl":5},{"s":1,"nf":0},{"sz":10.5,"nf":0},{"sz":10.5,"nf":0,"bd":40},{"b":1,"h":"center","v":"center","nf":0,"bd":23,"fl":0},{"sz":10.5,"b":1,"h":"center","v":"center","nf":0,"bd":23,"fl":0},{"b":1,"v":"center","nf":0},{"sz":8.0,"b":1,"v":"center","nf":0},{"b":1,"c":"FF0000","h":"left","v":"center","nf":0,"bd":39},{"sz":14.0,"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":23},{"sz":10.5,"b":1,"h":"center","v":"center","nf":0,"bd":23},{"sz":14.0,"b":1,"h":"center","v":"center","nf":14,"bd":67},{"sz":24.0,"b":1,"h":"center","v":"center","nf":0,"bd":67},{"nf":0,"bd":45},{"nf":0,"bd":59},{"sz":8.0,"nf":0,"bd":59}],"C":["0=허가번호|1|2|3|3|3|1|4=장소|5|3|3|3|3|6","7=행 사 명|8|9|10|10|10|10|10|10|10|8|11=일  자|12|13","14=대 관 자|15|16|17|17|17|17|17|17|17|15|18|19|20","21=구    분|22|23=검표수|24|24|24|25|26=매   표   수|10|8|26=매표총액|22|27|8","28|8|28|10|10|10|8|29=계|29=예매|29=직매|30|8|29=매     당|31=산 출 액","32|33|34|35|35|35|36|37|37|37|38=      |36|37|39","40=계|41|42= |17|17|17|15|43@SUM(H6:H6)|43|43|44|15|43|45","46=①\n관  람  료\n수       입|47|48=관람료       수입에        따른        사용료|49|49|49|49|49|49|49|49|50|51=징수총액|50","52|53|54=사용료 (체육경기\n10%, 프로, 체육\n외 경기12.5%)\n       <A>|24|24|24|25|55=조례제11조\n3항(증액)\n<B>|55=조례 제13조\n에 의한 감면\n<C>|22|56=차감징수액\n<(A+B)-C>|53|57=①관람료수입|58@K12","52|53|52|59|59|59|22|60|61|22|61|53|62=②입장료|63@K14","52|53|28|10|10|10|8|64|30|8|30|65|62=③중계방송료|63@K16","66|20|42|17|17|17|15|43|44|15|67|41|68=④상행위사용료|63@L19","46=②\n입  장  료|47|69=일반(입장인원x200원)|3|3|3|1|70=감면율(80%)|3|1|71=계|6|72=⑤부속시설사용료|73@H27","66|20|74|17|75|76|15|77|17|15|78@C14*F14*H14|41|79=공과금|73@L27","46=③\n중계방송료|47|80=행사촬영|10|10|10|10|8|81=감면율(80%)|8|82=계|65|62=⑥전용사용료|83@C28","66|20|84|15|85|86|17|15|87|15|88@C16*F16*I16|41|62=추가전용사용료|89#0","90=④\n상   행  위\n사   용   료|47|91=애 드 벌 룬\n및 유 사 물|24|24|24|25|4=선  전  광  고|3|3|1|71=계|92=⑦소         계\n(징수대상총액)|93@SUM(N9:N16)","52|53|28|10|10|10|8|94=플 래 카 드|35|35|36|95|96|97","52|53|98|17|17|17|15|99|100|101|15|102@H19*I19*J19|103|104","105=⑤\n부속\n시설\n사용료|0|1|106|107|108|109|110@D20*F20*G20|111=공 과 금|59|59|22|112=⑧전용사용료\n    기 납 부 액|93@C28+C29","52|79|36|113|114|115|116|117@D21*F21*G21|118@M2|1|119=전기료|120|103|104","52|79|36|113|114|115|116|117@D22*F22*G22|121|1|122|123|112=⑨예  치  금|93#0","52|79|36|113|114|115|116|117@D23*F23*G23|121|1|124|123|103|104","52|79|36|113|114|115|116|117@D24*F24*G24|121|1|124|123|125=금회징수액\n( ⑦-⑧⑨ )|93@N17-N20-N22","52|79|36|126|127|115|116|117@D25*F25*G25*E25|118@M2|1|119=수도료|120|96|97","52|128|129|130|131|132|133|117@D26*F26*G26*E26|134|135|122|123|96|97","66|136=소   계|49|49|49|49|50|137@SUM(H20:H26)|138=소  계|139|140|141@SUM(L21:L26)|142|143","48=⑥전용사용료|50|144|49|49|49|50|145=허가일자|146|49|135|147=대전광역시체육시설관리운영조례 제11조에 |24|47","148=부속시설사용료|50|149|49|49|49|50|145=납부일자|150|139|140|151=의거 아래금액을 7일이내 납부하여야합니다.|139|20","152|153|153|153|153|154|153|155|156|157=* 시설사용료  |1|158@SUM(N9:N13)+N16|159|6","160=담  당|24|47|136=팀  장|24|24|47|161= |156|162=* 공 과 금|36|163@L27|164|33","52|59|53|66|139|139|20|52|153|14=합   계|15|165@SUM(L30:L31)|166=예금주:대전광역시시설관리공단 |41","167= |24|47|168|59|59|53|161|169|170=※ 본안과 같이 시설사용료를 정산코자 합니다.|24|24|24|171","52|59|53|52|59|59|53|52|172|59|59|59|59|173","52|59|53|52|59|59|53|52|174@TODAY()|59|59|59|175|176","66|139|20|66|139|139|20|52|177|59|59|59|178|173","52|179|179|179|179|180|179|179|59|59|59|59|179|181","52|179|179|179|179|180|179|182|59|59|59|59|179|181","183|184|184|184|184|185|184|186|139|139|139|139|187|188","79=허가번호|36|189@C1|3|3|3|1|94=장소|190@I1|35|35|35|35|33","7=행 사 명|8|191@C2|10|10|10|10|10|10|10|10|94=일  자|192@M2|13","193=대 관 자|129|194@C3|195|195|195|195|195|195|195|195|64|18|20","23=구    분|25|196=검표수|24|24|24|25|196=매   표   수|3|1|196=매표총액|25|197|1","28|8|30|10|10|10|8|29=계|29=예매|29=직매|30|8|29=매     당|31=산 출 액","198|36|199|35|35|35|36|200|200|200|199=      |36|200|201","14=계|15|202= |17|17|17|15|203@SUM(H45:H45)|203|203|202|15|203|204","46=①\n관  람  료\n수       입|47|205=관람료       수입에        따른        사용료|49|49|49|49|49|49|49|49|49|206=징수총액|47","52|53|54=사용료 (체육경기\n10%, 프로, 체육\n외 경기12.5%)\n       <A>|24|24|24|25|55=조례제11조\n3항(증액)\n<B>|55=조례 제13조\n에 의한 감면\n<C>|22|207=차감징수액\n<(A+B)-C>|59|57=①관람료수입|208@N9","52|53|52|59|59|59|22|60|61|22|61|59|62=②입장료|209@N10","52|53|28|10|10|10|8|64|30|8|30|10|62=③중계방송료|209@N11","66|20|210|17|17|17|15|203|202|15|211|17|68=④상행위사용료|209@N12","46=②\n입  장  료|47|69=일반(입장인원x200원)|3|3|3|1|70=감면율(80%)|3|1|212=계|3|213=⑤부속시설사용료|214@N13","66|20|74|17|75|215@F14|15|216@H14|17|15|217@K14|17|218=공과금|214@N14","219=③\n중계방송료|53|0@C15|24|24|24|24|25|4@I15|25|4=계|25|220=⑥전용사용료|214@N15","52|53|28|10|10|10|10|8|30|8|30|8|220=추가전용사용료|214@N16","66|20|221@C16|15|222|17|15|223@F16|216@I16|15|11@K16|17|92=⑦소         계\n(징수대상총액)|209@N17","90=④\n상   행  위\n사   용   료|47|224=애 드 벌 룬\n및 유 사 물|25|225|226|225|4=선  전  광  고|3|3|1|212=계|96|227","52|53|10|8|228|229|228|94=플 래 카 드|35|35|36|30|103|95","52|53|14|15|230|17|15|231@H19|232|233@J19|129|234@L19|112=⑧전용사용료\n    기 납 부 액|209@N20","105=⑤\n부    속\n시    설\n사용료|0@B20|1|235@D20|236|237|238@G20|58@H20|239=공 과 금|24|24|25|103|95","52|79@B21|36|240@D21|241|115|116@G21|63@H21|242@I21|25|243@K21|244@L21|112=⑨예  치  금|209@N22","52|79@B22|36|240@D22|241|115|116@G22|63@H22|245|15|246|244|103|95","52|79@B23|36|240@D23|241|115|116@G23|63@H23|247|1|248@K23|244@L23|112=금회징수액\n( ⑦-⑧⑨ )|209@N24","52|79@B24|36|240@D24|241|115|116@G24|63@H24|247|1|248@K24|244@L24|96|227","52|79@B25|36|240@D25|127@E25|115|116@G25|63@H25|249@I25|1|243@K25|244@L25|96|227","52|14@B26|15|250@D26|131@E26|132|133@G26|251@H26|252|15|246|253|96|227","66|136=소   계|49|49|49|49|50|254@SUM(H60:H66)|255=소  계|139|140|256@SUM(L61:L66)|103|95","48=⑥전용사용료|50|144@C28|49|49|49|50|145=허가일자|146@I28|49|135|147=대전광역시체육시설관리운영조례 제11조에 |24|47","48=추가사용료|50|149@C29|50|257|258|257|259|179= |260|260|151=의거 아래금액을 7일이내 납부하여야합니다.|139|20","261|262|257|257|257|258|257|59|179|263=※ 입금전 계좌번호 확인 필수(금액별로 해당 계좌로 입금)|260|179|179|181","264=상기와 같이 정산하였습니다.|59|59|59|59|59|59|59|156|265=* 시설사용료  |36|266@SUM(N48:N52)+N55|267|36","52|59|59|59|59|59|59|59|156|153|153|268|269|270","52|59|59|59|59|59|59|59|153|271=* 공 과 금|36|163@L67|272|36","152|153|153|273|273|274|273|273|169|153|153|268|269|270","275= |153|153|273|273|274|273|273|172|94=합   계|36|276@L71+L73|277=예금주:대전광역시시설관리공단 |36","275|153|153|273|273|274|273|273|172|179|179|179|179|181","278@I35|59|59|59|59|59|59|59|59|59|59|59|59|53","152|153|153|153|153|154|153|153|153|153|153|153|153|171","279=대 전 광 역 시 시 설 관 리 공 단 이 사 장|59|59|59|59|59|59|59|59|59|59|59|59|53","52|59|59|59|59|59|59|59|59|59|59|59|59|53","280|281|281|281|281|282|281|281|281|281|281|281|281|188"]};
+const SETTLE_FORM = {"W":[6.21875, 5.88671875, 4.77734375, 7.77734375, 3.77734375, 3.77734375, 5.21875, 9.77734375, 4.44140625, 6.77734375, 7.33203125, 9.109375, 12.77734375, 12.77734375],"H":[21.0,28.5,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,18.0,10.5,26.25,18.75,7.5,12.75,81.75,21.95,28.5,21.95,23.25,18.0,18.75,21.75,24.0,18.75,24.0,30.0,21.75,22.5,21.0,20.25,20.25,17.25,18.75,18.0,21.75,18.0,22.5,22.5,22.5,22.5,22.5,22.5,22.5,22.5,22.5,21.0,21.75,9.0,19.5,9.75,18.75,8.25,20.25,18.0,16.5,null,14.25],"M":[[0,0,1,2],[0,2,1,5],[0,8,1,6],[1,0,1,2],[1,2,1,9],[1,11,2,1],[1,12,1,2],[2,0,1,2],[2,2,1,9],[2,12,1,2],[3,0,2,2],[3,2,2,5],[3,7,1,3],[3,10,2,2],[3,12,1,2],[5,0,1,2],[5,2,1,5],[5,10,1,2],[6,0,1,2],[6,2,1,5],[6,10,1,2],[7,0,5,2],[7,2,1,10],[7,12,1,2],[8,2,3,5],[8,7,3,1],[8,8,3,2],[8,10,3,2],[11,2,1,5],[11,8,1,2],[11,10,1,2],[12,0,2,2],[12,2,1,5],[12,7,1,3],[12,10,1,2],[13,2,1,2],[13,5,1,2],[13,7,1,3],[13,10,1,2],[14,0,2,2],[14,2,1,6],[14,8,1,2],[14,10,1,2],[15,2,1,2],[15,5,1,3],[15,8,1,2],[15,10,1,2],[16,0,3,2],[16,2,2,5],[16,7,1,4],[16,11,2,1],[16,12,3,1],[17,7,1,4],[18,2,1,5],[18,9,1,2],[19,0,8,1],[19,1,1,2],[19,8,1,4],[19,12,2,1],[20,1,1,2],[20,8,1,2],[20,10,2,1],[21,1,1,2],[21,8,1,2],[21,12,2,1],[22,1,1,2],[22,8,1,2],[23,1,1,2],[23,8,1,2],[23,12,4,1],[24,1,1,2],[24,8,1,2],[24,10,2,1],[25,1,1,2],[25,8,1,2],[26,1,1,6],[26,8,1,3],[27,0,1,2],[27,2,1,5],[27,8,1,3],[27,11,1,3],[28,0,1,2],[28,2,1,5],[28,8,1,3],[28,11,1,3],[29,9,1,2],[29,12,1,2],[30,0,2,3],[30,3,2,4],[30,7,2,1],[30,9,1,2],[30,12,1,2],[31,9,1,2],[31,12,1,2],[32,0,4,3],[32,3,4,4],[32,7,4,1],[32,9,2,4],[34,8,1,4],[35,8,4,4],[39,0,1,2],[39,2,1,5],[39,8,1,6],[40,0,1,2],[40,2,1,9],[40,11,2,1],[40,12,2,2],[41,0,1,2],[41,2,1,9],[42,0,2,2],[42,2,2,5],[42,7,1,3],[42,10,2,2],[42,12,1,2],[44,0,1,2],[44,2,1,5],[44,10,1,2],[45,0,1,2],[45,2,1,5],[45,10,1,2],[46,0,5,2],[46,2,1,10],[46,12,1,2],[47,2,3,5],[47,7,3,1],[47,8,3,2],[47,10,3,2],[50,2,1,5],[50,8,1,2],[50,10,1,2],[51,0,2,2],[51,2,1,5],[51,7,1,3],[51,10,1,2],[52,2,1,2],[52,5,1,2],[52,7,1,3],[52,10,1,2],[53,0,3,2],[53,2,2,6],[53,8,2,2],[53,10,2,2],[55,2,1,2],[55,4,1,3],[55,8,1,2],[55,10,1,2],[55,12,3,1],[55,13,3,1],[56,0,3,2],[56,2,2,2],[56,7,1,4],[56,11,2,1],[57,7,1,4],[58,2,1,2],[58,4,1,3],[58,9,1,2],[58,12,2,1],[58,13,2,1],[59,0,8,1],[59,1,1,2],[59,8,1,4],[60,1,1,2],[60,8,1,2],[60,10,2,1],[60,12,2,1],[60,13,2,1],[61,1,1,2],[61,8,1,2],[62,1,1,2],[62,8,1,2],[62,12,5,1],[62,13,5,1],[63,1,1,2],[63,8,1,2],[64,1,1,2],[64,8,1,2],[64,10,2,1],[65,1,1,2],[65,8,1,2],[66,1,1,6],[66,8,1,3],[67,0,1,2],[67,2,1,5],[67,8,1,3],[67,11,1,3],[68,0,1,2],[68,2,1,2],[68,11,1,3],[70,0,3,8],[70,9,1,2],[70,12,1,2],[72,9,1,2],[72,12,1,2],[74,9,1,2],[74,12,1,2],[76,0,1,14],[78,0,2,14]],"NF":["_-* #,##0_-;\\-* #,##0_-;_-* \"-\"_-;_-@_-","@","#,##0\"원\"","#,##0\"원\"\\ \\ \\ \\ \"*\"","#,##0\"명\"","0%","General\"회\"","#,##0","#,##0\"원\"\\ \"*\"","\"*\"\\ General\"개\"","#,##0\"원\"\"*\"","\"*\"\\ General\"회\"","General\"개\"","yyyy\\.mm\\.dd","yyyy\"년\"\\ m\"월\"\\ d\"일\";@","mm-dd-yy","0_);[Red]\\(0\\)"],"BD":[{"t":"medium","b":"thin","l":"medium","r":"thin"},{"t":"medium","b":"thin","r":"thin"},{"t":"medium","b":"thin"},{"t":"medium","b":"thin","l":"thin","r":"thin"},{"t":"medium","b":"thin","l":"thin","r":"medium"},{"t":"medium","b":"thin","r":"medium"},{"b":"thin","l":"medium","r":"thin"},{"b":"thin","r":"thin"},{"b":"thin"},{"t":"thin","b":"medium","l":"thin"},{"t":"thin","l":"thin","r":"medium"},{"t":"thin","r":"medium"},{"t":"thin","b":"medium","l":"medium","r":"thin"},{"t":"thin","b":"medium","r":"thin"},{"t":"thin","b":"medium"},{"b":"medium","l":"thin"},{"b":"medium","l":"thin","r":"medium"},{"b":"medium","r":"medium"},{"r":"thin"},{"t":"medium"},{"t":"medium","r":"thin"},{"b":"thin","l":"thin","r":"thin"},{"b":"thin","l":"medium"},{"t":"thin","b":"thin","l":"thin","r":"thin"},{"b":"thin","l":"thin"},{"t":"thin","b":"thin","l":"thin","r":"medium"},{"t":"thin","b":"thin","l":"medium","r":"medium"},{"t":"thin","b":"thin","r":"medium"},{"t":"thin","b":"thin","l":"medium","r":"thin"},{"t":"thin","b":"thin"},{"t":"thin","b":"thin","r":"thin"},{"t":"thin","b":"medium","l":"medium","r":"medium"},{"t":"thin","b":"medium","r":"medium"},{"t":"thin","b":"medium","l":"thin","r":"thin"},{"t":"thin","b":"medium","l":"thin","r":"medium"},{"t":"medium","b":"medium","l":"medium","r":"medium"},{"t":"medium","r":"medium"},{"t":"medium","b":"medium"},{"t":"medium","b":"medium","r":"medium"},{"l":"medium"},{"r":"medium"},{"b":"thin","l":"thin","r":"medium"},{"l":"thin","r":"thin"},{"l":"thin"},{"b":"thin","r":"medium"},{"b":"medium","l":"medium"},{"t":"thin","l":"medium","r":"thin"},{"t":"thin","b":"medium","l":"medium"},{"t":"medium","l":"medium","r":"medium"},{"l":"medium","r":"thin"},{"l":"thin","r":"medium"},{"t":"medium","b":"medium","l":"medium"},{"t":"thin","b":"thin","l":"thin"},{"t":"medium","b":"medium","l":"thin","r":"medium"},{"t":"thin","r":"thin"},{"t":"thin"},{"t":"medium","b":"medium","l":"medium","r":"thin"},{"t":"medium","b":"medium","r":"thin"},{"b":"medium","l":"medium","r":"thin"},{"b":"medium"},{"b":"medium","r":"thin"},{"b":"medium","l":"medium","r":"medium"},{"t":"thin","l":"thin"},{"t":"medium","b":"thin","l":"thin"},{"t":"thin","l":"thin","r":"thin"},{"t":"medium","b":"medium","l":"thin","r":"thin"},{"b":"medium","l":"thin","r":"thin"},{"l":"medium","r":"medium"}],"FL":[{"p":"solid","fg":"FFFF00"},{"p":"solid","fg":"FFFFFF"},{"p":"gray0625","bg":"FFFFFF"},{"p":"solid","fg":"FFFFFF","bg":"FFFFFF"},{"p":"gray0625"},{"p":"solid","fg":"C1E5F5"}],"S":[{"b":1,"h":"center","v":"center","nf":0,"bd":0},{"bd":1},{"b":1,"h":"center","v":"center","bd":0,"fl":0},{"bd":2},{"b":1,"h":"center","v":"center","nf":0,"bd":3},{"b":1,"h":"left","v":"center","nf":0,"bd":4},{"bd":5},{"b":1,"h":"center","v":"center","nf":0,"bd":6},{"bd":7},{"b":1,"h":"left","v":"center","w":1,"s":1,"bd":7},{"bd":8},{"b":1,"h":"center","v":"center","nf":0,"bd":9},{"sz":12.0,"b":1,"h":"center","v":"center","s":1,"nf":1,"bd":10},{"bd":11},{"b":1,"h":"center","v":"center","nf":0,"bd":12},{"bd":13},{"b":1,"h":"left","v":"center","nf":0,"bd":12},{"bd":14},{"bd":15},{"sz":12.0,"b":1,"h":"center","v":"center","s":1,"nf":1,"bd":16},{"bd":17},{"b":1,"h":"center","v":"center","nf":0,"bd":6,"fl":1},{"bd":18},{"b":1,"h":"center","v":"center","nf":0,"bd":0,"fl":1},{"bd":19},{"bd":20},{"b":1,"h":"center","v":"center","nf":0,"bd":21,"fl":1},{"h":"center","nf":0,"bd":21,"fl":1},{"bd":22},{"b":1,"h":"center","v":"center","nf":0,"bd":23,"fl":1},{"bd":24},{"b":1,"h":"center","v":"center","nf":0,"bd":25,"fl":1},{"b":1,"h":"center","nf":0,"bd":26},{"bd":27},{"h":"center","nf":0,"bd":28},{"bd":29},{"bd":30},{"nf":0,"bd":23},{"h":"center","nf":0,"bd":23},{"nf":0,"bd":25},{"b":1,"h":"center","v":"center","nf":0,"bd":31},{"bd":32},{"h":"center","nf":0,"bd":12},{"nf":0,"bd":33},{"h":"center","nf":0,"bd":33},{"nf":0,"bd":34},{"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":35,"fl":2},{"bd":36},{"b":1,"h":"center","v":"center","nf":0,"bd":35,"fl":2},{"bd":37},{"bd":38},{"b":1,"h":"center","v":"center","nf":0,"bd":38,"fl":2},{"bd":39},{"bd":40},{"b":1,"h":"center","w":1,"nf":0,"bd":0},{"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":21},{"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":41},{"b":1,"h":"left","v":"center","bd":0},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":4},{},{"bd":42},{"bd":43},{"b":1,"h":"left","v":"center","bd":28},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":25},{"bd":21},{"bd":44},{"bd":45},{"h":"center","nf":0,"bd":34},{"b":1,"h":"left","v":"center","bd":46},{"sz":10.0,"b":1,"h":"center","v":"center","nf":0,"bd":0},{"sz":10.0,"b":1,"h":"center","v":"center","nf":0,"bd":3},{"b":1,"h":"center","v":"center","nf":0,"bd":4},{"b":1,"h":"left","v":"center","s":1,"bd":46},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":11},{"sz":10.0,"h":"center","v":"center","nf":3,"bd":47},{"sz":10.0,"h":"center","v":"center","nf":3,"bd":14},{"sz":10.0,"h":"center","v":"center","nf":4,"bd":13},{"sz":10.0,"h":"center","v":"center","nf":5,"bd":33},{"b":1,"v":"center","nf":2,"bd":34},{"b":1,"h":"center","v":"center","nf":0,"bd":28},{"h":"center","v":"center","nf":0,"bd":7},{"h":"center","v":"center","nf":0,"bd":21},{"b":1,"h":"center","v":"center","nf":0,"bd":41},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":27,"fl":3},{"sz":10.0,"h":"center","v":"center","nf":6,"bd":13},{"sz":10.0,"h":"center","v":"center","nf":0,"bd":14},{"h":"center","v":"center","s":1,"nf":7,"bd":33},{"h":"center","v":"center","nf":5,"bd":33},{"b":1,"h":"center","v":"center","nf":2,"bd":34},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":11,"fl":3},{"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":48,"fl":2},{"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":0},{"b":1,"h":"center","v":"center","w":1,"bd":6},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":10},{"b":1,"h":"center","v":"center","nf":0,"bd":23},{"bd":41},{"bd":49},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":50},{"h":"center","v":"center","nf":0,"bd":12},{"b":1,"v":"center","s":1,"nf":8,"bd":9},{"b":1,"v":"center","s":1,"nf":5,"bd":14},{"b":1,"h":"center","v":"center","nf":9,"bd":13},{"b":1,"h":"center","v":"center","nf":2,"bd":32},{"bd":6},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":41},{"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":51,"fl":2},{"sz":9.0,"b":1,"h":"center","v":"center","nf":10,"bd":24},{"sz":9.0,"b":1,"h":"center","v":"center","nf":8,"bd":8},{"sz":8.0,"b":1,"h":"center","v":"center","nf":5,"bd":8},{"sz":9.0,"b":1,"h":"center","v":"center","nf":11,"bd":7},{"b":1,"h":"right","v":"center","nf":2,"bd":24},{"b":1,"h":"center","v":"center","nf":0,"bd":49,"fl":4},{"b":1,"h":"center","v":"center","w":1,"bd":28},{"sz":9.0,"b":1,"h":"center","v":"center","nf":10,"bd":52},{"sz":9.0,"b":1,"h":"center","v":"center","nf":8,"bd":29},{"sz":8.0,"b":1,"h":"center","v":"center","nf":5,"bd":29},{"sz":9.0,"b":1,"h":"center","v":"center","nf":11,"bd":30},{"b":1,"h":"right","v":"center","nf":2,"bd":52},{"sz":10.0,"b":1,"h":"center","v":"center","s":1,"nf":1,"bd":0},{"b":1,"h":"center","v":"center","bd":53},{"b":1,"v":"center","s":1,"nf":2,"bd":5},{"sz":10.0,"b":1,"h":"center","v":"center","nf":1,"bd":0},{"bd":16},{"b":1,"v":"center","nf":2,"bd":32},{"b":1,"h":"center","v":"center","bd":4},{"b":1,"h":"center","v":"center","w":1,"bd":12},{"sz":9.0,"b":1,"h":"center","v":"center","nf":8,"bd":52},{"sz":9.0,"b":1,"h":"center","v":"center","nf":12,"bd":29},{"b":1,"h":"center","v":"center","bd":46},{"bd":54},{"sz":9.0,"b":1,"h":"center","v":"center","s":1,"nf":8,"bd":52},{"sz":9.0,"b":1,"h":"center","v":"center","s":1,"nf":12,"bd":55},{"sz":8.0,"b":1,"h":"center","v":"center","s":1,"nf":5,"bd":14},{"sz":9.0,"b":1,"h":"center","v":"center","s":1,"nf":11,"bd":13},{"sz":10.0,"b":1,"h":"center","v":"center","nf":1,"bd":56},{"bd":57},{"b":1,"h":"center","v":"center","nf":0,"bd":35},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":35},{"b":1,"h":"center","v":"center","nf":0,"bd":58},{"bd":59},{"bd":60},{"b":1,"v":"center","s":1,"nf":2,"bd":17},{"bd":58},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":16},{"sz":12.0,"b":1,"h":"center","v":"center","w":1,"nf":2,"bd":35},{"b":1,"v":"center","nf":0,"bd":35},{"b":1,"h":"center","v":"center","nf":13,"bd":57},{"sz":10.5,"b":1,"h":"center","v":"center","nf":0,"bd":48},{"b":1,"h":"center","v":"center","s":1,"nf":0,"bd":35,"fl":2},{"sz":12.0,"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":35},{"b":1,"h":"center","v":"center","nf":1,"bd":60},{"sz":10.5,"b":1,"h":"center","v":"center","nf":0,"bd":61},{"nf":0,"bd":39},{"nf":0},{"sz":8.0,"nf":0},{"h":"center","v":"center"},{"h":"center","nf":0},{"b":1,"h":"center","v":"center","nf":0,"bd":0,"fl":5},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":3,"fl":5},{"sz":10.5,"b":1,"h":"center","v":"center","nf":0,"bd":4,"fl":5},{"b":1,"h":"center","v":"center","nf":0,"bd":48},{"b":1,"h":"center","v":"center","nf":0,"bd":39},{"b":1,"h":"center","v":"center","nf":0,"bd":28,"fl":0},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":23,"fl":0},{"sz":10.5,"b":1,"h":"center","v":"center","nf":0,"bd":25,"fl":0},{"sz":16.0,"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":33},{"sz":10.5,"b":1,"h":"center","v":"center","nf":0,"bd":34},{"b":1,"c":"FF0000","h":"center","v":"center","nf":0,"bd":35},{"sz":12.0,"h":"center","v":"center","nf":0,"bd":61},{"h":"left"},{"sz":10.5,"b":1,"h":"center","v":"center","bd":19},{"nf":0,"bd":40},{"b":1,"c":"FF0000","v":"center","nf":0},{"b":1,"h":"left","v":"center","bd":40},{"b":1,"h":"center","v":"center","nf":14},{"b":1,"v":"center","nf":15},{"b":1,"v":"center","nf":15,"bd":40},{"sz":12.0,"b":1,"h":"center","v":"center","nf":0,"bd":59},{"b":1,"h":"left","v":"center"},{"b":1,"h":"center","v":"center","nf":0},{"sz":8.0,"b":1,"h":"center","v":"center","nf":0},{"b":1,"h":"center","v":"center","nf":0,"bd":40},{"h":"center","v":"center","nf":0},{"h":"right","v":"center","nf":0,"bd":45},{"h":"right","v":"center","nf":0,"bd":59},{"sz":8.0,"h":"right","v":"center","nf":0,"bd":59},{"h":"left","v":"center","nf":0,"bd":59},{"h":"center","nf":0,"bd":59},{"nf":0,"bd":17},{"b":1,"h":"center","v":"center","bd":3},{"b":1,"h":"left","v":"center","nf":0,"bd":25},{"b":1,"h":"left","v":"center","w":1,"s":1,"nf":0,"bd":24},{"sz":12.0,"b":1,"h":"center","v":"center","s":1,"nf":16,"bd":34},{"b":1,"h":"center","v":"center","nf":0,"bd":46},{"b":1,"h":"left","v":"center","nf":0,"bd":62},{"bd":55},{"b":1,"h":"center","v":"center","nf":0,"bd":3,"fl":1},{"b":1,"h":"center","nf":0,"bd":3,"fl":1},{"b":1,"h":"center","nf":0,"bd":28},{"b":1,"h":"center","nf":0,"bd":23},{"b":1,"nf":0,"bd":23},{"b":1,"nf":0,"bd":25},{"b":1,"h":"center","nf":0,"bd":33},{"b":1,"nf":0,"bd":33},{"b":1,"nf":0,"bd":34},{"b":1,"h":"center","v":"center","nf":0,"bd":51,"fl":2},{"b":1,"h":"center","v":"center","nf":0,"bd":48,"fl":2},{"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":24},{"b":1,"h":"right","v":"center","nf":2,"bd":4},{"b":1,"h":"right","v":"center","nf":2,"bd":25},{"b":1,"h":"center","nf":0,"bd":12},{"b":1,"h":"center","nf":0,"bd":9},{"b":1,"h":"center","v":"center","nf":0,"bd":63},{"b":1,"h":"left","v":"center","s":1,"bd":23},{"b":1,"h":"right","v":"center","nf":2,"bd":27},{"sz":10.0,"h":"left","v":"center","nf":4,"bd":13},{"b":1,"h":"center","v":"center","nf":5,"bd":33},{"b":1,"v":"center","nf":2,"bd":9},{"b":1,"h":"center","v":"center","nf":0,"bd":49},{"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":61,"fl":2},{"b":1,"h":"left","v":"center","bd":23},{"sz":10.0,"b":1,"h":"center","v":"center","nf":6,"bd":13},{"sz":10.0,"b":1,"h":"center","v":"center","nf":0,"bd":33},{"b":1,"h":"center","v":"center","s":1,"nf":0,"bd":33},{"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":1},{"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":19},{"sz":8.0,"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":19},{"bd":50},{"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":8},{"sz":8.0,"b":1,"h":"center","v":"center","w":1,"nf":0,"bd":8},{"b":1,"h":"center","v":"center","nf":0,"bd":33},{"b":1,"h":"center","v":"center","s":1,"nf":8,"bd":9},{"b":1,"v":"center","s":1,"nf":5,"bd":9},{"b":1,"h":"center","v":"center","nf":9,"bd":64},{"b":1,"h":"center","v":"center","nf":2,"bd":10},{"sz":10.0,"b":1,"h":"center","v":"center","s":1,"nf":8,"bd":63},{"sz":10.0,"b":1,"h":"center","v":"center","s":1,"nf":8,"bd":2},{"sz":8.0,"b":1,"h":"center","v":"center","nf":5,"bd":2},{"sz":9.0,"b":1,"h":"center","v":"center","nf":11,"bd":1},{"b":1,"h":"center","v":"center","nf":0,"bd":20,"fl":4},{"sz":10.0,"b":1,"h":"center","v":"center","s":1,"nf":8,"bd":52},{"sz":10.0,"b":1,"h":"center","v":"center","s":1,"nf":8,"bd":29},{"sz":10.0,"b":1,"h":"center","v":"center","s":1,"nf":1,"bd":20},{"b":1,"h":"center","v":"center","bd":65},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":63},{"sz":10.0,"b":1,"h":"center","v":"center","s":1,"nf":1,"bd":12},{"bd":66},{"sz":10.0,"b":1,"h":"center","v":"center","nf":1,"bd":1},{"b":1,"h":"center","v":"center","bd":63},{"sz":10.0,"b":1,"h":"center","v":"center","s":1,"nf":1,"bd":1},{"sz":10.0,"b":1,"h":"center","v":"center","s":1,"nf":8,"bd":9},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":34},{"sz":10.0,"b":1,"h":"center","v":"center","nf":1,"bd":13},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":9},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":17},{"b":1,"h":"center","v":"center","nf":0,"bd":60},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":59},{"sz":12.0,"b":1,"h":"center","v":"center","w":1,"nf":0},{"sz":8.0,"b":1,"h":"center","v":"center","w":1,"nf":0},{"b":1},{"b":1,"c":"FF0000","h":"center","v":"center","nf":0},{"h":"center","v":"center","nf":0,"bd":39,"fl":2},{"h":"center","v":"center","nf":0,"fl":2},{"b":1,"c":"FF0000","h":"left","v":"center","nf":0},{"sz":12.0,"b":1,"h":"center","v":"center","nf":0,"bd":39},{"b":1,"h":"center","v":"center","nf":0,"bd":23,"fl":5},{"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":23,"fl":5},{"sz":10.5,"b":1,"h":"center","v":"center","nf":0,"bd":23,"fl":5},{"s":1,"nf":0},{"sz":10.5,"nf":0},{"sz":10.5,"nf":0,"bd":40},{"b":1,"h":"center","v":"center","nf":0,"bd":23,"fl":0},{"sz":10.5,"b":1,"h":"center","v":"center","nf":0,"bd":23,"fl":0},{"b":1,"v":"center","nf":0},{"sz":8.0,"b":1,"v":"center","nf":0},{"b":1,"c":"FF0000","h":"left","v":"center","nf":0,"bd":39},{"sz":14.0,"b":1,"h":"right","v":"center","s":1,"nf":2,"bd":23},{"sz":10.5,"b":1,"h":"center","v":"center","nf":0,"bd":23},{"sz":14.0,"b":1,"h":"center","v":"center","nf":14,"bd":67},{"sz":24.0,"b":1,"h":"center","v":"center","nf":0,"bd":67},{"nf":0,"bd":45},{"nf":0,"bd":59},{"sz":8.0,"nf":0,"bd":59}],"C":["0=허가번호|1|2|3|3|3|1|4=장소|5|3|3|3|3|6","7=행 사 명|8|9|10|10|10|10|10|10|10|8|11=일  자|12|13","14=대 관 자|15|16|17|17|17|17|17|17|17|15|18|19|20","21=구    분|22|23=검표수|24|24|24|25|26=매   표   수|10|8|26=매표총액|22|27|8","28|8|28|10|10|10|8|29=계|29=예매|29=직매|30|8|29=매     당|31=산 출 액","32|33|34|35|35|35|36|37|37|37|38=      |36|37|39","40=계|41|42= |17|17|17|15|43@SUM(H6:H6)|43|43|44|15|43|45","46=①\n관  람  료\n수       입|47|48=관람료       수입에        따른        사용료|49|49|49|49|49|49|49|49|50|51=징수총액|50","52|53|54=사용료 (체육경기\n10%, 프로, 체육\n외 경기12.5%)\n       <A>|24|24|24|25|55=조례제11조\n3항(증액)\n<B>|55=조례 제13조\n에 의한 감면\n<C>|22|56=차감징수액\n<(A+B)-C>|53|57=①관람료수입|58@K12","52|53|52|59|59|59|22|60|61|22|61|53|62=②입장료|63@K14","52|53|28|10|10|10|8|64|30|8|30|65|62=③중계방송료|63@K16","66|20|42|17|17|17|15|43|44|15|67|41|68=④상행위사용료|63@L19","46=②\n입  장  료|47|69=일반(입장인원x200원)|3|3|3|1|70=감면율(80%)|3|1|71=계|6|72=⑤부속시설사용료|73@H27","66|20|74|17|75|76|15|77|17|15|78@C14*F14*H14|41|79=공과금|73@L27","46=③\n중계방송료|47|80=행사촬영|10|10|10|10|8|81=감면율(80%)|8|82=계|65|62=⑥전용사용료|83@C28","66|20|84|15|85|86|17|15|87|15|88@C16*F16*I16|41|62=추가전용사용료|89#0","90=④\n상   행  위\n사   용   료|47|91=애 드 벌 룬\n및 유 사 물|24|24|24|25|4=선  전  광  고|3|3|1|71=계|92=⑦소         계\n(징수대상총액)|93@SUM(N9:N16)","52|53|28|10|10|10|8|94=플 래 카 드|35|35|36|95|96|97","52|53|98|17|17|17|15|99|100|101|15|102@H19*I19*J19|103|104","105=⑤\n부속\n시설\n사용료|0|1|106|107|108|109|110@D20*F20*G20|111=공 과 금|59|59|22|112=⑧전용사용료\n    기 납 부 액|93@C28+C29","52|79|36|113|114|115|116|117@D21*F21*G21|118@M2|1|119=전기료|120|103|104","52|79|36|113|114|115|116|117@D22*F22*G22|121|1|122|123|112=⑨예  치  금|93#0","52|79|36|113|114|115|116|117@D23*F23*G23|121|1|124|123|103|104","52|79|36|113|114|115|116|117@D24*F24*G24|121|1|124|123|125=금회징수액\n( ⑦-⑧⑨ )|93@N17-N20-N22","52|79|36|126|127|115|116|117@D25*F25*G25*E25|118@M2|1|119=수도료|120|96|97","52|128|129|130|131|132|133|117@D26*F26*G26*E26|134|135|122|123|96|97","66|136=소   계|49|49|49|49|50|137@SUM(H20:H26)|138=소  계|139|140|141@SUM(L21:L26)|142|143","48=⑥전용사용료|50|144|49|49|49|50|145=허가일자|146|49|135|147=대전광역시체육시설관리운영조례 제11조에 |24|47","148=부속시설사용료|50|149|49|49|49|50|145=납부일자|150|139|140|151=의거 아래금액을 7일이내 납부하여야합니다.|139|20","152|153|153|153|153|154|153|155|156|157=* 시설사용료  |1|158@SUM(N9:N13)+N16|159|6","160=담  당|24|47|136=팀  장|24|24|47|161= |156|162=* 공 과 금|36|163@L27|164|33","52|59|53|66|139|139|20|52|153|14=합   계|15|165@SUM(L30:L31)|166=예금주:대전광역시시설관리공단 |41","167= |24|47|168|59|59|53|161|169|170=※ 본안과 같이 시설사용료를 정산코자 합니다.|24|24|24|171","52|59|53|52|59|59|53|52|172|59|59|59|59|173","52|59|53|52|59|59|53|52|174@TODAY()|59|59|59|175|176","66|139|20|66|139|139|20|52|177|59|59|59|178|173","52|179|179|179|179|180|179|179|59|59|59|59|179|181","52|179|179|179|179|180|179|182|59|59|59|59|179|181","183|184|184|184|184|185|184|186|139|139|139|139|187|188","79=허가번호|36|189@C1|3|3|3|1|94=장소|190@I1|35|35|35|35|33","7=행 사 명|8|191@C2|10|10|10|10|10|10|10|10|94=일  자|192@M2|13","193=대 관 자|129|194@C3|195|195|195|195|195|195|195|195|64|18|20","23=구    분|25|196=검표수|24|24|24|25|196=매   표   수|3|1|196=매표총액|25|197|1","28|8|30|10|10|10|8|29=계|29=예매|29=직매|30|8|29=매     당|31=산 출 액","198|36|199|35|35|35|36|200|200|200|199=      |36|200|201","14=계|15|202= |17|17|17|15|203@SUM(H45:H45)|203|203|202|15|203|204","46=①\n관  람  료\n수       입|47|205=관람료       수입에        따른        사용료|49|49|49|49|49|49|49|49|49|206=징수총액|47","52|53|54=사용료 (체육경기\n10%, 프로, 체육\n외 경기12.5%)\n       <A>|24|24|24|25|55=조례제11조\n3항(증액)\n<B>|55=조례 제13조\n에 의한 감면\n<C>|22|207=차감징수액\n<(A+B)-C>|59|57=①관람료수입|208@N9","52|53|52|59|59|59|22|60|61|22|61|59|62=②입장료|209@N10","52|53|28|10|10|10|8|64|30|8|30|10|62=③중계방송료|209@N11","66|20|210|17|17|17|15|203|202|15|211|17|68=④상행위사용료|209@N12","46=②\n입  장  료|47|69=일반(입장인원x200원)|3|3|3|1|70=감면율(80%)|3|1|212=계|3|213=⑤부속시설사용료|214@N13","66|20|74|17|75|215@F14|15|216@H14|17|15|217@K14|17|218=공과금|214@N14","219=③\n중계방송료|53|0@C15|24|24|24|24|25|4@I15|25|4=계|25|220=⑥전용사용료|214@N15","52|53|28|10|10|10|10|8|30|8|30|8|220=추가전용사용료|214@N16","66|20|221@C16|15|222|17|15|223@F16|216@I16|15|11@K16|17|92=⑦소         계\n(징수대상총액)|209@N17","90=④\n상   행  위\n사   용   료|47|224=애 드 벌 룬\n및 유 사 물|25|225|226|225|4=선  전  광  고|3|3|1|212=계|96|227","52|53|10|8|228|229|228|94=플 래 카 드|35|35|36|30|103|95","52|53|14|15|230|17|15|231@H19|232|233@J19|129|234@L19|112=⑧전용사용료\n    기 납 부 액|209@N20","105=⑤\n부    속\n시    설\n사용료|0@B20|1|235@D20|236|237|238@G20|58@H20|239=공 과 금|24|24|25|103|95","52|79@B21|36|240@D21|241|115|116@G21|63@H21|242@I21|25|243@K21|244@L21|112=⑨예  치  금|209@N22","52|79@B22|36|240@D22|241|115|116@G22|63@H22|245|15|246|244|103|95","52|79@B23|36|240@D23|241|115|116@G23|63@H23|247|1|248@K23|244@L23|112=금회징수액\n( ⑦-⑧⑨ )|209@N24","52|79@B24|36|240@D24|241|115|116@G24|63@H24|247|1|248@K24|244@L24|96|227","52|79@B25|36|240@D25|127@E25|115|116@G25|63@H25|249@I25|1|243@K25|244@L25|96|227","52|14@B26|15|250@D26|131@E26|132|133@G26|251@H26|252|15|246|253|96|227","66|136=소   계|49|49|49|49|50|254@SUM(H60:H66)|255=소  계|139|140|256@SUM(L61:L66)|103|95","48=⑥전용사용료|50|144@C28|49|49|49|50|145=허가일자|146@I28|49|135|147=대전광역시체육시설관리운영조례 제11조에 |24|47","48=추가사용료|50|149@C29|50|257|258|257|259|179= |260|260|151=의거 아래금액을 7일이내 납부하여야합니다.|139|20","261|262|257|257|257|258|257|59|179|263=※ 입금전 계좌번호 확인 필수(금액별로 해당 계좌로 입금)|260|179|179|181","264=상기와 같이 정산하였습니다.|59|59|59|59|59|59|59|156|265=* 시설사용료  |36|266@SUM(N48:N52)+N55|267|36","52|59|59|59|59|59|59|59|156|153|153|268|269|270","52|59|59|59|59|59|59|59|153|271=* 공 과 금|36|163@L67|272|36","152|153|153|273|273|274|273|273|169|153|153|268|269|270","275= |153|153|273|273|274|273|273|172|94=합   계|36|276@L71+L73|277=예금주:대전광역시시설관리공단 |36","275|153|153|273|273|274|273|273|172|179|179|179|179|181","278@I35|59|59|59|59|59|59|59|59|59|59|59|59|53","152|153|153|153|153|154|153|153|153|153|153|153|153|171","279=대 전 광 역 시 시 설 관 리 공 단 이 사 장|59|59|59|59|59|59|59|59|59|59|59|59|53","52|59|59|59|59|59|59|59|59|59|59|59|59|53","280|281|281|281|281|282|281|281|281|281|281|281|281|188"]};
 
 const SETTLE_ANNEX_ROWS = 7;   // 서식의 ⑤ 부속시설 칸 수 (원본 그대로)
 
@@ -3906,6 +3904,8 @@ function settleWorkbook(d) {
   wb.rowH = F.H.slice();
   wb.merges = F.M.map(m => m.slice());
   wb.breaks = [39];                        // 39줄 뒤에서 장을 넘긴다 (원본과 같다)
+  wb.printArea = "$A$1:$N$81";             // 서식 밖은 인쇄하지 않는다 (원본과 같다)
+  wb.header = '&C&"돋움,굵게"&26대관 사용료 정산서';   // 장마다 머리글 (원본과 같다)
   const st = settleStyles(wb);
   const formStyle = [];                    // 칸마다 원본 서식 번호 — 표시형식만 갈아끼울 때 쓴다
 
@@ -3969,6 +3969,11 @@ function settleWorkbook(d) {
   [["M30", d.useAcct], ["M31", d.utilAcct], ["M71", d.useAcct], ["M73", d.utilAcct]]
     .forEach(x => at(x[0], { t: x[1], s: styAt(x[0], { s: 1 }) }));
   at("I36", { t: "대관담당자 :" });          // 이름은 비워 둔다 (손으로 적는다)
+
+  /* 서식에 원래 들어 있는 안내 문구가 칸보다 길어 앞뒤 글자가 잘린다 (원본도 그렇다).
+     글을 고치지 않고 「칸에 맞춤」만 켜서 언제나 다 보이게 한다 */
+  ["L28", "L29", "M32", "L68", "L69", "M75"].forEach(ref =>
+    at(ref, { s: styAt(ref, { s: 1, w: 0 }) }));
 
   // 제출용(2장) 은 1장을 수식으로 따라간다. 원본이 숫자로 박아 둔 칸만 맞춘다
   at("I59", { n: keep });
@@ -4123,6 +4128,7 @@ function renderAll() {
   $("#yearInput").value = view.year;
   $("#monthInput").value = view.month;
   applyRole();
+  applySetPane();
   renderCalendar();
   renderRail();
   renderList();
@@ -4132,6 +4138,13 @@ function renderAll() {
 
 /* 로그인한 계정의 역할을 화면에 반영한다.
    담당자가 아니면 설정을 만질 수 없고, 관리자 전용 칸은 화면에서 아예 빠진다 */
+/* 요금 기준 화면에서 지금 고른 묶음만 보여준다 */
+function applySetPane() {
+  const cur = view.setPane || "fac";
+  $$("#setSeg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.sp === cur)));
+  $$("#pane-settings .settings > .card").forEach(c => { c.hidden = c.dataset.sp !== cur; });
+}
+
 function applyRole() {
   const role = currentRole();
   const admin = role === "manager";
@@ -4160,12 +4173,29 @@ function openSettings() {
   box.hidden = !admin;
   if (admin) {
     $("#setFeeManagers").value = (state.settings.feeManagers || []).join("\n");
+    const sl = state.settings.settle || {};
+    $("#setBankUse").value  = sl.useBank  || "";
+    $("#setAcctUse").value  = sl.useAcct  || "";
+    $("#setBankUtil").value = sl.utilBank || "";
+    $("#setAcctUtil").value = sl.utilAcct || "";
+    renderAcctPreview();
     applyViewerLabels();
   }
   applyRole();
   renderServerCard();
   $("#settingsBox").hidden = false;
 }
+/* 정산서에 찍히는 모양을 그대로 보여준다. 관리자 칸이 화면에 있을 때만 뜻이 있다 */
+function renderAcctPreview() {
+  const el = $("#setAcctPreview");
+  if (!el) return;
+  const sl = state.settings.settle || {};
+  const txt = (b, n) => (String(b || "").trim() && String(n || "").trim())
+    ? String(b).trim() + ":" + String(n).trim() : "(빈칸 — 손으로 적습니다)";
+  el.textContent = "정산서에 찍히는 모양 — 시설사용료 " + txt(sl.useBank, sl.useAcct) +
+    " · 공과금 " + txt(sl.utilBank, sl.utilAcct);
+}
+
 /* 게시된 화면(아티팩트)에서는 파일 저장이 막혀 있어 붙여넣기로 건넨다.
    관리자 칸은 열 때마다 새로 그려지므로 그때그때 다시 붙인다 */
 function applyViewerLabels() {
@@ -4339,6 +4369,14 @@ function init() {
     view.listMode = b.dataset.lm;
     renderList();
   });
+  /* 요금 기준 화면 — 세 묶음을 한 번에 하나씩 본다 (다 펼치면 스크롤이 너무 길다).
+     조회하는 사람도 볼 수 있어야 하므로 감추는 것이 아니라 전환만 한다 */
+  $("#setSeg").addEventListener("click", e => {
+    const b = e.target.closest("[data-sp]");
+    if (!b) return;
+    view.setPane = b.dataset.sp;
+    applySetPane();
+  });
   // 공과금을 한 칸으로 볼지, 전기료·수도료로 나눠 볼지
   $("#utilSeg").addEventListener("click", e => {
     const b = e.target.closest("[data-us]");
@@ -4470,21 +4508,6 @@ function init() {
       const d = state.discounts.find(x => x.id === dcBox.dataset.did);
       d[t.dataset.k] = t.dataset.k === "rate" ? Number(t.value) : t.value;
       save(); fillSelects(); renderAll(); return;
-    }
-    // 정산서 입금 계좌
-    const acctMap = { setBankUse: "useBank", setAcctUse: "useAcct",
-                      setBankUtil: "utilBank", setAcctUtil: "utilAcct" };
-    if (acctMap[t.id]) {
-      state.settings.settle = state.settings.settle || {};
-      state.settings.settle[acctMap[t.id]] = t.value;
-      save();
-      const sl = state.settings.settle;
-      const acctTxt = (b, n) => (String(b || "").trim() && String(n || "").trim())
-        ? String(b).trim() + ":" + String(n).trim() : "(빈칸 — 손으로 적습니다)";
-      $("#setAcctPreview").textContent =
-        "정산서에 찍히는 모양 — 시설사용료 " + acctTxt(sl.useBank, sl.useAcct) +
-        " · 공과금 " + acctTxt(sl.utilBank, sl.utilAcct);
-      return;
     }
     const map = {
       setRounding: "rounding", setWeekendRate: "weekendRate", setNightRate: "nightRate",
@@ -4643,12 +4666,23 @@ function init() {
     if (currentRole() !== "manager") { toast("담당자 계정으로 로그인해야 합니다"); return; }
     run();
   });
+  /* 관리자 전용 칸은 열 때마다 새로 만들어지므로 리스너를 직접 붙이지 않고 여기서 위임한다 */
   $("#settingsBox").addEventListener("input", e => {
-    if (e.target.id !== "setFeeManagers") return;
     if (currentRole() !== "manager") return;
-    state.settings.feeManagers = e.target.value.split("\n")
-      .map(x => x.trim().toLowerCase()).filter(x => x.includes("@"));
-    save(); renderAll();
+    const t = e.target;
+    if (t.id === "setFeeManagers") {
+      state.settings.feeManagers = t.value.split("\n")
+        .map(x => x.trim().toLowerCase()).filter(x => x.includes("@"));
+      save(); renderAll(); return;
+    }
+    // 정산서 입금 계좌
+    const acct = { setBankUse: "useBank", setAcctUse: "useAcct",
+                   setBankUtil: "utilBank", setAcctUtil: "utilAcct" }[t.id];
+    if (acct) {
+      state.settings.settle = state.settings.settle || {};
+      state.settings.settle[acct] = t.value;
+      save(); renderAcctPreview();
+    }
   });
 
   $("#printBtn").addEventListener("click", openPrintBox);
