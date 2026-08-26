@@ -1291,7 +1291,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-08-26.17";
+const APP_VERSION = "2026-08-26.18";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -4080,25 +4080,60 @@ function settleData(list) {
 }
 
 /* 정산서 파일을 만든다 — 위가 보관용, 아래가 제출용 (한 시트, 39줄 뒤에 쪽 나눔) */
+/* 고른 건을 정산서 한 장씩으로 나눈다.
+   **장소·신청 단체·이용 목적이 모두 같은 건만 한 장으로 묶는다** — 같은 행사가
+   여러 날에 걸친 경우다. 날짜는 8.28~8.29 처럼 이어 붙는다.
+   셋 중 하나라도 다르면 서로 다른 행사이므로 파일을 따로 낸다 */
+function settleGroups(list) {
+  const groups = new Map();
+  list.forEach(r => {
+    const key = [r.facilityId, (r.applicant || "").trim(), (r.purpose || "").trim()].join("\u0000");
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(r);
+  });
+  return Array.from(groups.values());   // 넣은 차례 = 날짜 차례
+}
+
+function settleFileName(d, withPlace) {
+  const safe = v => String(v || "").replace(/[\\/:*?"<>|]/g, "").trim();
+  return "정산서_" + (withPlace ? safe(d.place).slice(0, 12) + "_" : "") +
+    (safe(d.event) || safe(d.tenant) || "행사").slice(0, 30) +
+    "_" + (d.dateLabel || "").replace(/[^0-9.~]/g, "") + ".xlsx";
+}
+
 function exportSettlement(list) {
   if (!list.length) { toast("정산서로 낼 예약을 먼저 체크하세요"); return; }
-  const d = settleData(list);
-  if (!d.count) { toast("정산서로 낼 예약을 먼저 체크하세요"); return; }
   if (typeof claude !== "undefined" && claude.use) {
     toast("게시된 화면에서는 파일 저장이 막혀 있습니다. 내려받은 파일이나 주소에서 받아 주세요");
     return;
   }
-  const name = "정산서_" + (d.event || d.tenant || "행사").replace(/[\\/:*?"<>|]/g, "").slice(0, 30) +
-    "_" + (d.dateLabel || "").replace(/[^0-9.~]/g, "") + ".xlsx";
-  downloadBytes(name, xwXlsx(settleWorkbook(d)),
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  const groups = settleGroups(list.filter(r => r.status !== "취소"));
+  const made = [], over = [];
+  let mixed = false;
+  const seen = {};
+  groups.forEach(g => {
+    const d = settleData(g);
+    if (!d.count) return;
+    let name = settleFileName(d, groups.length > 1);
+    seen[name] = (seen[name] || 0) + 1;               // 이름이 겹치면 뒤에 번호를 붙인다
+    if (seen[name] > 1) name = name.replace(/\.xlsx$/, "(" + seen[name] + ").xlsx");
+    made.push({ name: name, bytes: xwXlsx(settleWorkbook(d)) });
+    if (d.over.length) over.push.apply(over, d.over);
+    if (d.mixedRate) mixed = true;
+  });
+  if (!made.length) { toast("정산서로 낼 예약을 먼저 체크하세요"); return; }
 
-  toast(d.over.length
-    ? "정산서를 만들었습니다 — 부속시설 칸이 " + SETTLE_ANNEX_ROWS + "줄뿐이라 " +
-      d.over.map(x => x.name).join("·") + " 은(는) 빠졌습니다. 엑셀에서 손으로 넣으세요"
-    : d.mixedRate
-      ? "정산서를 만들었습니다 — 고른 예약의 감면율이 서로 달라 첫 건의 감면율을 썼습니다"
-      : "정산서를 만들었습니다 (전용사용료·허가일자는 손으로 적으세요)");
+  // 한꺼번에 여러 개를 내려받으면 브라우저가 막는 일이 있어 조금씩 띄워서 보낸다
+  const MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  made.forEach((f, i) => setTimeout(() => downloadBytes(f.name, f.bytes, MIME), i * 350));
+
+  const many = made.length > 1
+    ? "정산서 " + made.length + "장을 만들었습니다 — 장소·신청 단체·이용 목적이 다른 건은 따로 냈습니다"
+    : "정산서를 만들었습니다 (전용사용료·허가일자는 손으로 적으세요)";
+  toast(over.length
+    ? many + " · 부속시설 칸이 " + SETTLE_ANNEX_ROWS + "줄뿐이라 " +
+      Array.from(new Set(over.map(x => x.name))).join("·") + " 은(는) 빠졌습니다. 엑셀에서 손으로 넣으세요"
+    : mixed ? many + " · 감면율이 서로 다른 건은 첫 건의 감면율을 썼습니다" : many);
 }
 
 /* 체크해 둔 예약. 화면을 다시 그려도 남지만 자료에는 넣지 않는다 */
