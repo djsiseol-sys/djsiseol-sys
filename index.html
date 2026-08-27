@@ -1176,13 +1176,13 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
         </div>
 
         <div class="hr"></div>
-        <h3>통제 도장 그림</h3>
-        <p class="hint" style="margin:0 0 8px;line-height:1.6">정산서 첫 장 우측 아래에 붙는 도장 그림입니다.
-          기본으로 <b>원본 정산서에 들어 있던 그림</b>이 그대로 들어갑니다 —
-          코드로 다시 그리지 않으므로 모양이 달라지지 않습니다.
-          <b>그림에 연도가 찍혀 있어</b> 해가 바뀌면 한글 원본에서 연도만 고쳐
-          그림으로 저장한 뒤 여기에 올리세요. 크기와 자리는 올린 그림도 원본과 같게 맞춥니다.</p>
-        <p class="hint" id="setStampWarn" hidden style="margin:0 0 8px;line-height:1.6;color:var(--alert)"></p>
+        <h3>통제 도장</h3>
+        <p class="hint" style="margin:0 0 8px;line-height:1.6">정산서 첫 장 우측 아래에 붙는 도장입니다.
+          <b>한글 원본 파일의 도형 값을 그대로 읽어</b> 같은 자리·같은 크기로 그립니다.
+          <b>가운데 줄의 연도는 올해로 자동</b>이고, 월·일은 손으로 적으시면 됩니다.
+          원본보다 여덟 배로 그려 넣어 인쇄해도 또렷합니다.
+          <br>다른 도장을 쓰시려면 그림을 올리세요 — 자리와 크기는 그대로 맞춥니다.
+          <b>올린 그림은 연도가 자동으로 바뀌지 않습니다.</b></p>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
           <img id="setStampPrev" alt="통제 도장 미리보기"
                style="width:95px;height:95px;object-fit:contain;border:1px solid var(--line);
@@ -1393,7 +1393,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-08-27.24";
+const APP_VERSION = "2026-08-27.25";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -3722,6 +3722,7 @@ function exportTable(fmt, rows, mode, periodLabel) {
 
   wb.page = { orient: "landscape", fitW: 1 };   // 종이 한 폭에 담는다
   const GR = "FF999999", YL = "FFC8961A", ALERT = "A8574C";
+  const DAY = "medium|FF555555";     // 날짜 묶음을 가르는 굵은 아래줄
   const box = c => ({ t: "thin|" + c, b: "thin|" + c, l: "thin|" + c, r: "thin|" + c });
   /* 준비 건은 **줄 바깥쪽에만** 노란 테두리를 두른다. 칸마다 두르면 격자가 겹쳐 보여서,
      위·아래는 모든 칸에 긋고 왼쪽·오른쪽은 양 끝 칸에만 긋는다 (화면·종이와 같다) */
@@ -3747,17 +3748,27 @@ function exportTable(fmt, rows, mode, periodLabel) {
   data.forEach((row, i) => {
     const r = 2 + i;
     const prep = row.kind === "준비";
+    // 날짜 묶음의 마지막 줄 — 아래에 굵은 줄을 그어 날짜끼리 한눈에 갈라 보이게 한다
+    const endOfDay = (i === data.length - 1) || data[i + 1].date !== row.date;
     // 이 줄에서 실제로 그려지는 칸들 (앞줄에 합쳐진 날짜·요일 칸은 빠진다)
     const drawn = xcols.filter(k => !(MERGE_COLS.includes(k) && span[i] === 0));
     // 준비 테두리를 입힐 칸 — 여러 줄에 걸친 병합 칸에는 입히지 않는다
     const marked = drawn.filter(k => !(MERGE_COLS.includes(k) && span[i] > 1));
+    const dayEnd = b => endOfDay ? Object.assign({}, b, { b: DAY }) : b;
     xcols.forEach((k, c) => {
       const merged = MERGE_COLS.includes(k);
-      if (merged && span[i] === 0) return;                 // 앞줄에 합쳐졌다
+      if (merged && span[i] === 0) {
+        /* 앞줄에 합쳐진 칸. 글자는 넣지 않지만 **서식은 넣어야 한다** —
+           세로로 합쳐진 칸의 아래 테두리는 맨 아랫줄 칸이 들고 있기 때문이다.
+           비워 두면 날짜 칸만 굵은 줄이 빠져 보인다 */
+        xwPut(wb, r, c, { s: S({ bd: dayEnd(box(GR)), v: "top" }) });
+        return;
+      }
       if (merged && span[i] > 1) wb.merges.push([r, c, span[i], 1]);
       const col = LIST_COLS[k];
       const wide = merged && span[i] > 1;
-      const bd = (prep && !wide) ? prepBox(k === marked[0], k === marked[marked.length - 1]) : box(GR);
+      let bd = (prep && !wide) ? prepBox(k === marked[0], k === marked[marked.length - 1]) : box(GR);
+      if (!wide) bd = dayEnd(bd);          // 여러 줄에 걸친 칸은 맨 아랫줄이 대신 긋는다
       const base = { bd: bd, v: "top" };
       if (col.sum) {                                       // 금액 — 숫자로 넣는다
         const v = Number(row[k]) || 0;
@@ -3780,6 +3791,13 @@ function exportTable(fmt, rows, mode, periodLabel) {
       if (k === "time") {                                  // 시작 시각만 붉게 (화면과 같다)
         xwPut(wb, r, c, { s: S(base),
           rich: [{ t: row.r.start, b: 1, c: ALERT, sz: 10 }, { t: "–" + row.r.end, sz: 10 }] });
+        return;
+      }
+      if (col.cls === "num") {                             // 인원 — 글자가 아니라 숫자로
+        const v = Number(row[k]);
+        xwPut(wb, r, c, (row[k] == null || row[k] === "" || !isFinite(v))
+          ? { s: S(Object.assign({ h: "right" }, base)) }
+          : { n: v, s: S(Object.assign({ h: "right" }, base)) });
         return;
       }
       xwPut(wb, r, c, { t: listCellText(row, k), s: S(base) });
@@ -4141,53 +4159,83 @@ function settleStyles(wb) {
 }
 
 /* ── 통제 도장 ──────────────────────────────────────────────
-   **그리지 않는다. 원본 엑셀에 들어 있던 그림을 그대로 심는다.**
-   담당자가 한글(`44cb8d31…hwp`)에서 만들어 붙여 넣은 그 그림이고,
-   원본 `xl/media/image1.png` 에서 바이트째로 뽑아 왔다 (95×95 · 1,975바이트).
-   예전에는 이 모양을 캔버스로 흉내 내 그렸는데, 글꼴이 달라 획이 어긋나고
-   원본보다 흐려 보였다. **다시 그리는 쪽으로 되돌리지 않는다.**
+   담당자가 붙이던 **한글 원본(`c565842c…hwp`)의 그리기 개체를 그대로 옮겨 그린다.**
+   한글 파일 안에는 그림이 들어 있지 않다 — 원·선·글상자로 된 벡터 도형이라
+   꺼내 쓸 그림이 없다. 그래서 파일을 풀어 **도형 값을 읽어 내** 같은 자리에 그린다.
+   눈대중이 아니라 파일에서 읽은 값이다 (`BodyText/Section0` · `DocInfo`).
 
-   붙는 자리와 크기도 원본 그대로다 (`SETTLE_STAMP_AT`) —
-   M36 자리에서 시작해 1,114,425 EMU(117px) 사각형이다.
+     상자     7086 × 7086 HWPUNIT (1 HWPUNIT = 1/7200 인치)
+     원       중심 (3543,3543) · 반지름 3543 · 파랑 #0000FF · 굵기 34
+     가로줄   (88,2829)–(7038,2841) · (88,4367)–(6988,4367)
+     글씨     새굴림 9pt — 통 제(장평 100%) · 연도(100%) · 체육시설사업팀(90%, 자간 −10%)
 
-   **그림에 연도(2026)가 찍혀 있다.** 그림이라 코드로 고칠 수 없으므로,
-   해가 바뀌면 담당자가 한글에서 연도만 고쳐 그림으로 저장한 뒤
-   `⚙ 설정 → 통제 도장 그림` 에 올린다. 올린 그림이 있으면 그것을 쓴다.
-   올해와 그림의 연도가 다르면 설정 화면과 정산서를 낼 때 알린다 */
-const STAMP_YEAR = 2026;             // 기본 그림에 찍혀 있는 연도
-/* 원본 앵커 — 원본 drawing1.xml 에서 그대로 옮긴 값이다. 눈대중으로 고치지 않는다 */
+   글자가 앉는 자리(`base`·`at`·`step`)는 **원본 그림에서 재어** HWPUNIT 으로 적었다.
+   글꼴 판마다 공백 폭이 달라도 도장 모양이 흐트러지지 않게, 글자를 하나씩
+   정해진 자리에 놓는다. **이 값을 눈대중으로 고치지 않는다** — 서식이 바뀌면
+   한글 원본을 다시 풀어 잰다.
+
+   **연도만 만드는 시점의 연도로 찍고 월·일은 손으로 적는다.**
+   엑셀에 들어갈 자리는 117px 인데 그 여덟 배(936px)로 그려 넣는다 — 원본 그림은
+   95px 짜리를 117px 로 늘려 써서 계단이 보였다. 크게 그려 넣으면 인쇄해도 또렷하다.
+   설정에서 그림을 올렸으면 그것을 대신 쓴다 */
+const STAMP_HU = 7086;                 // 도장 상자 (HWPUNIT)
+const STAMP_PX = 117;                  // 엑셀에서 차지하는 자리 (1,114,425 EMU)
+const STAMP_SCALE = 8;                 // 그 몇 배로 그려 넣을지
+/* 붙는 자리와 크기는 **원본 엑셀 `drawing1.xml` 그대로다.**
+   M36(12열·685800EMU / 35줄·152400EMU) 에서 1,114,425 EMU 사각형.
+   눈대중으로 고치지 않는다. `oneCellAnchor` 로 되돌리지도 않는다 —
+   줄 높이가 조금만 달라져도 자리가 밀린다 */
 const SETTLE_STAMP_AT = { col: 12, colOff: 685800, row: 35, rowOff: 152400,
                           toCol: 13, toColOff: 704850, toRow: 38, toRowOff: 771525,
                           cx: 1114425, cy: 1114425 };
-const SETTLE_STAMP_B64 =
-  "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";
+const STAMP_FONT = '"새굴림",NewGulim,"굴림",Gulim,"맑은 고딕","Malgun Gothic",sans-serif';
+const STAMP_ART = {
+  line: { color: "#0000FF", hu: 34 },
+  circle: { cx: 3543, cy: 3543, r: 3543 },
+  rules: [[88, 2829, 7038, 2841], [88, 4367, 6988, 4367]],
+  rows: [
+    { base: 2051, pt: 9, ratio: 1.00, runs: [
+        { text: "통", at: 2275 }, { text: "제", at: 4476 } ] },
+    { base: 3841, pt: 9, ratio: 1.00, runs: [
+        { text: "@Y.", at: 1791, step: 497 }, { text: ".", at: 4402 }, { text: ".", at: 5968 } ] },
+    { base: 5557, pt: 9, ratio: 0.90, runs: [
+        { text: "체육시설사업팀", at: 3430, step: 660 } ] }
+  ]
+};
+
+/* 도장을 canvas 에 그린다. S = 만들 그림의 한 변(px) */
+function stampCanvas(S, year) {
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = S;
+  const g = cv.getContext("2d");
+  const px = u => u / STAMP_HU * S;
+  g.fillStyle = "#FFFFFF"; g.fillRect(0, 0, S, S);
+  // 선은 한글이 정한 굵기(34)로 긋되, 엑셀에 들어가서 한 픽셀보다 얇아지지 않게 한다
+  const thin = Math.max(px(STAMP_ART.line.hu), S / STAMP_PX);
+  g.strokeStyle = STAMP_ART.line.color; g.lineWidth = thin;
+  const c = STAMP_ART.circle;
+  g.beginPath();
+  g.ellipse(px(c.cx), px(c.cy), px(c.r) - thin / 2, px(c.r) - thin / 2, 0, 0, Math.PI * 2);
+  g.stroke();
+  STAMP_ART.rules.forEach(L => {
+    g.beginPath(); g.moveTo(px(L[0]), px(L[1])); g.lineTo(px(L[2]), px(L[3])); g.stroke();
+  });
+  g.fillStyle = "#000000"; g.textAlign = "center"; g.textBaseline = "alphabetic";
+  STAMP_ART.rows.forEach(row => {
+    g.font = px(row.pt / 72 * 7200) + "px " + STAMP_FONT;
+    const y = px(row.base);
+    row.runs.forEach(run => {
+      const chars = Array.from(String(run.text).replace("@Y", year));
+      const step = px(run.step || 0);
+      const x0 = px(run.at) - (chars.length - 1) * step / 2;
+      // 장평은 가로로만 눌러 그린다 (글자 크기는 그대로)
+      g.save(); g.scale(row.ratio, 1);
+      chars.forEach((ch, i) => g.fillText(ch, (x0 + i * step) / row.ratio, y));
+      g.restore();
+    });
+  });
+  return cv;
+}
 
 /* base64 → 바이트 */
 function b64Bytes(b64) {
@@ -4196,26 +4244,20 @@ function b64Bytes(b64) {
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
   return out;
 }
+function canvasBytes(cv) { return b64Bytes(cv.toDataURL("image/png").split(",")[1]); }
 
-/* 정산서에 넣을 도장 그림. 설정에서 올린 것이 있으면 그것을, 없으면 원본 그림을 쓴다.
-   → { data, ext, mime } · 못 읽으면 null (그러면 원본처럼 빈칸으로 둔다) */
+/* 설정에서 올린 그림이 있으면 그것을, 없으면 올해 연도로 그린 도장을 쓴다.
+   → { data, ext, mime } · 못 만들면 null (그러면 원본처럼 빈칸으로 둔다) */
 function settleStamp() {
   const up = (state.settings.settle || {}).stamp;
   if (up && up.b64) {
     try { return { data: b64Bytes(up.b64), ext: up.ext || "png",
                    mime: up.mime || "image/png" }; } catch (e) {}
   }
-  try { return { data: b64Bytes(SETTLE_STAMP_B64), ext: "png", mime: "image/png" }; }
-  catch (e) { return null; }
-}
-
-/* 그림에 찍힌 연도가 올해와 다르면 알린다 (올린 그림은 담당자가 고른 것이라 묻지 않는다) */
-function stampYearWarning() {
-  if ((state.settings.settle || {}).stamp) return "";
-  const now = new Date().getFullYear();
-  return now === STAMP_YEAR ? "" :
-    "통제 도장 그림에 " + STAMP_YEAR + " 년이 찍혀 있습니다. " +
-    "⚙ 설정 → 통제 도장 그림 에서 " + now + " 년 그림을 올려 주세요.";
+  try {
+    return { data: canvasBytes(stampCanvas(STAMP_PX * STAMP_SCALE, new Date().getFullYear())),
+             ext: "png", mime: "image/png" };
+  } catch (e) { return null; }
 }
 
 /* 정산서 한 부 (보관용 + 제출용, 원본과 같은 81줄) */
@@ -4263,6 +4305,11 @@ function settleWorkbook(d) {
     return st.resolve(F.S[formStyle[rc[0]][rc[1]]], over);
   };
   const keep = d.keepRate;                 // 별표 6 의 「감면율」 칸은 실제로 받는 비율이다
+
+  /* 허가번호 칸(C1:G1) — 원본은 노란 바탕이지만 흰 바탕으로 낸다 (담당자 요청).
+     손으로 적는 칸이라 바탕색으로 세울 이유가 없다. 공과금 칸의 노랑은 그대로 둔다 */
+  ["C1", "D1", "E1", "F1", "G1"].forEach(ref =>
+    at(ref, { s: styAt(ref, { fl: null }) }));
 
   at("I1", { t: d.place });                // 장소
   at("C2", { t: d.event });                // 행사명
@@ -4478,13 +4525,10 @@ function exportSettlement(list) {
   const many = made.length > 1
     ? "정산서 " + made.length + "장을 만들었습니다 — 장소·신청 단체·이용 목적이 다른 건은 따로 냈습니다"
     : "정산서를 만들었습니다 (전용사용료·허가일자는 손으로 적으세요)";
-  // 도장 그림의 연도가 올해와 다르면 함께 알린다 (그림이라 코드로 고칠 수 없다)
-  const stampWarn = stampYearWarning();
   toast((over.length
     ? many + " · 부속시설 칸이 " + SETTLE_ANNEX_ROWS + "줄뿐이라 " +
       Array.from(new Set(over.map(x => x.name))).join("·") + " 은(는) 빠졌습니다. 엑셀에서 손으로 넣으세요"
-    : mixed ? many + " · 감면율이 서로 다른 건은 첫 건의 감면율을 썼습니다" : many)
-    + (stampWarn ? " · " + stampWarn : ""));
+    : mixed ? many + " · 감면율이 서로 다른 건은 첫 건의 감면율을 썼습니다" : many));
 }
 
 /* 체크해 둔 예약. 화면을 다시 그려도 남지만 자료에는 넣지 않는다 */
@@ -4606,15 +4650,17 @@ function renderStampCard() {
   const img = $("#setStampPrev");
   if (!img) return;
   const up = (state.settings.settle || {}).stamp;
-  img.src = up && up.b64 ? "data:" + (up.mime || "image/png") + ";base64," + up.b64
-                         : "data:image/png;base64," + SETTLE_STAMP_B64;
-  $("#setStampNote").textContent = up
-    ? "올린 그림: " + (up.name || "이름 없음")
-    : "원본 정산서에 들어 있던 그림 (" + STAMP_YEAR + " 년)";
+  const yy = new Date().getFullYear();
+  if (up && up.b64) {
+    img.src = "data:" + (up.mime || "image/png") + ";base64," + up.b64;
+    $("#setStampNote").textContent = "올린 그림: " + (up.name || "이름 없음") +
+      " — 연도가 그림에 그려져 있으므로 자동으로 바뀌지 않습니다";
+  } else {
+    try { img.src = stampCanvas(STAMP_PX * STAMP_SCALE, yy).toDataURL("image/png"); }
+    catch (e) { img.removeAttribute("src"); }
+    $("#setStampNote").textContent = "한글 원본대로 그립니다 — 가운데 줄이 올해(" + yy + ") 로 자동으로 들어갑니다";
+  }
   $("#setStampReset").hidden = !up;
-  const warn = stampYearWarning();
-  $("#setStampWarn").hidden = !warn;
-  $("#setStampWarn").textContent = warn;
 }
 
 /* 올린 그림을 자료에 담는다. 대장 전체가 한 행이라 큰 그림은 받지 않는다 */
