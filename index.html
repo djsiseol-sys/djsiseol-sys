@@ -288,6 +288,10 @@ tbody tr.is-prep td:last-child{border-right:2px solid var(--prep-line)}
 tfoot td{font-weight:600;background:var(--surface-2);border-top:1px solid var(--line-strong)}
 tfoot td.foot-label{white-space:nowrap;color:var(--ink-2)}
 td.memo{white-space:pre-wrap;word-break:break-word;min-width:180px}
+/* 담당자 요청 — 목록에서 메모와 시작 시각을 놓치지 않게 붉은 글씨로 세운다.
+   굵기는 600 까지만 쓴다 (700 이면 표 전체가 시끄러워진다). 새 색은 쓰지 않고 --alert 를 그대로 쓴다 */
+#listBody td.memo{color:var(--alert);font-weight:600}
+.t-start{color:var(--alert);font-weight:600}
 /* 목록 맨 왼쪽 — 그 날짜를 확인 완료로 표시했는지 */
 td.done,th.done{width:30px;text-align:center;padding-left:6px;padding-right:6px;color:var(--sun);font-weight:700}
 /* 요일 글씨 색 — 달력과 같다. 칸 전체가 아니라 글씨에만 쓴다 */
@@ -315,8 +319,9 @@ td.dow-sun{color:var(--sun);font-weight:600}
 }
 .field textarea{resize:vertical;min-height:52px}
 .field .hint{font-size:10.5px;color:var(--faint)}
-/* 계좌번호는 자릿수를 하나씩 짚어 보는 값이라 한 픽셀 크게 쓴다 */
-#setAcctUse,#setAcctUtil{font-size:calc(1em + 1px)}
+/* 은행·계좌번호는 자릿수를 하나씩 짚어 보는 값이라 크게 쓴다 */
+#setBankUse,#setBankUtil{font-size:calc(1em + 1px)}
+#setAcctUse,#setAcctUtil{font-size:calc(1em + 2px)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 .row21{display:grid;grid-template-columns:2fr 1fr;gap:10px}
@@ -1140,6 +1145,22 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
         <p class="field hint" id="setAcctPreview" style="margin:6px 0 0"></p>
 
         <div class="hr"></div>
+        <h3>대관담당자</h3>
+        <p class="field hint" style="margin:0 0 8px">정산서 첫 장의 <b>대관담당자 :</b> 칸에 찍힙니다.
+          담당이 여러 명이면 아래에 모두 적어 두고, 이번에 낼 정산서에 넣을 사람을 고르세요.</p>
+        <div class="row2">
+          <div class="field">
+            <label for="setOfficers">담당자 이름 (한 줄에 하나)</label>
+            <textarea id="setOfficers" placeholder="채 현 우&#10;홍 길 동"></textarea>
+          </div>
+          <div class="field">
+            <label for="setOfficer">정산서에 넣을 담당자</label>
+            <select id="setOfficer"></select>
+            <span class="hint">고르지 않으면 빈칸으로 나와 손으로 적을 수 있습니다.</span>
+          </div>
+        </div>
+
+        <div class="hr"></div>
         <h3>요금 담당 계정</h3>
           <div class="field">
             <label for="setFeeManagers">요금 담당 계정 (이메일, 한 줄에 하나)</label>
@@ -1305,7 +1326,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-08-26.19";
+const APP_VERSION = "2026-08-27.20";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -1478,7 +1499,8 @@ const DEFAULT_STATE = {
     feeManagers: [],
     /* 행사 정산서(9-D)의 입금 계좌. 「xx은행:계좌번호」 로 찍힌다.
        시설사용료와 공과금을 다른 계좌로 받으므로 두 벌을 따로 둔다 */
-    settle: { useBank: "", useAcct: "", utilBank: "", utilAcct: "" },
+    settle: { useBank: "", useAcct: "", utilBank: "", utilAcct: "",
+              officers: [], officer: "" },   // 대관담당자 이름 목록과 이번에 쓸 사람
     prepSurcharge: true,   // 준비시간에도 가산·감산을 적용할지
     articles: {
       base:    "별표 2 (제11조제1항 관련)",
@@ -1596,6 +1618,9 @@ function migrate(d) {
   st.feeManagers = (Array.isArray(st.feeManagers) ? st.feeManagers : [])
     .map(x => String(x).trim().toLowerCase()).filter(Boolean);
   st.settle = Object.assign({}, base.settings.settle, st.settle || {});
+  st.settle.officers = (Array.isArray(st.settle.officers) ? st.settle.officers : [])
+    .map(x => String(x).trim()).filter(Boolean);
+  if (!st.settle.officers.includes(st.settle.officer)) st.settle.officer = st.settle.officer || "";
   // 공휴일은 2040년까지 자동으로 잡히므로, 예전에 손으로 적어둔 것 중
   // 자동과 겹치는 날은 지운다. 대체공휴일처럼 자동에 없는 날만 남긴다
   st.holidays = st.holidays.filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x) && !autoHolidayName(x));
@@ -2826,7 +2851,11 @@ function renderList() {
         if (k === "applicant" && r.status === "취소")
           return "<td><s>" + esc(row.applicant) + "</s></td>";
         const extra = k === "dow" ? dowClassOf(r.date) : "";
-        return '<td class="' + c.cls + extra + '">' + esc(listCellText(row, k)) + "</td>";
+        // 시작 시각만 따로 세운다 (끝 시각은 그대로). 종이·엑셀에는 글자 그대로 나간다
+        const body = k === "time"
+          ? '<b class="t-start">' + esc(r.start) + "</b>–" + esc(r.end)
+          : esc(listCellText(row, k));
+        return '<td class="' + c.cls + extra + '">' + body + "</td>";
       }).join("") +
       (money ? '<td><button type="button" class="btn btn-sm" data-edit="' + r.id + '">수정</button></td>' : "") +
     "</tr>";
@@ -3812,6 +3841,8 @@ function xwXlsx(wb) {
     '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
     '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
     '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+    (wb.image ? '<Default Extension="png" ContentType="image/png"/>' +
+      '<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>' : "") +
     "</Types>";
   const rels = H + '<Relationships xmlns="' + NSp + '">' +
     '<Relationship Id="rId1" Type="' + NSr + '/officeDocument" Target="xl/workbook.xml"/></Relationships>';
@@ -3907,17 +3938,47 @@ function xwXlsx(wb) {
     '<pageSetup paperSize="9" scale="86" orientation="portrait"/>' +
     (wb.header ? '<headerFooter alignWithMargins="0"><oddHeader>' + xq(wb.header) + "</oddHeader></headerFooter>" : "") +
     (wb.breaks && wb.breaks.length ? '<rowBreaks count="' + wb.breaks.length + '" manualBreakCount="' + wb.breaks.length + '">' +
-      wb.breaks.map(b => '<brk id="' + b + '" max="' + (nCol - 1) + '" man="1"/>').join("") + "</rowBreaks>" : "") +
+      wb.breaks.map(b => '<brk id="' + b + '" man="1"/>').join("") + "</rowBreaks>" : "") +
+    (wb.image ? '<drawing r:id="rId1"/>' : "") +
     "</worksheet>";
 
-  return zipStore([
+  /* 그림 한 장 (통제 도장). 칸 하나에 붙여 두고 크기는 픽셀로 정한다.
+     1픽셀 = 9525 EMU 다 */
+  const im = wb.image;
+  const EMU = 9525;
+  const drawing = im ? H +
+    '<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" ' +
+      'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">' +
+    "<xdr:oneCellAnchor>" +
+      "<xdr:from><xdr:col>" + im.col + "</xdr:col><xdr:colOff>" + (im.dx || 0) * EMU + "</xdr:colOff>" +
+        "<xdr:row>" + im.row + "</xdr:row><xdr:rowOff>" + (im.dy || 0) * EMU + "</xdr:rowOff></xdr:from>" +
+      '<xdr:ext cx="' + im.w * EMU + '" cy="' + im.h * EMU + '"/>' +
+      "<xdr:pic><xdr:nvPicPr>" +
+        '<xdr:cNvPr id="1" name="' + xq(im.name || "그림") + '"/><xdr:cNvPicPr/></xdr:nvPicPr>' +
+        '<xdr:blipFill><a:blip xmlns:r="' + NSr + '" r:embed="rId1"/>' +
+        "<a:stretch><a:fillRect/></a:stretch></xdr:blipFill>" +
+        '<xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="' + im.w * EMU + '" cy="' + im.h * EMU + '"/></a:xfrm>' +
+        '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic>' +
+      "<xdr:clientData/></xdr:oneCellAnchor></xdr:wsDr>" : "";
+  const sheetRels = im ? H + '<Relationships xmlns="' + NSp + '">' +
+    '<Relationship Id="rId1" Type="' + NSr + '/drawing" Target="../drawings/drawing1.xml"/></Relationships>' : "";
+  const drawRels = im ? H + '<Relationships xmlns="' + NSp + '">' +
+    '<Relationship Id="rId1" Type="' + NSr + '/image" Target="../media/image1.png"/></Relationships>' : "";
+
+  const parts = [
     { name: "[Content_Types].xml", data: enc.encode(types) },
     { name: "_rels/.rels",         data: enc.encode(rels) },
     { name: "xl/workbook.xml",     data: enc.encode(book) },
     { name: "xl/_rels/workbook.xml.rels", data: enc.encode(brels) },
     { name: "xl/styles.xml",       data: enc.encode(styles) },
     { name: "xl/worksheets/sheet1.xml", data: enc.encode(sheet) }
-  ]);
+  ];
+  if (im) parts.push(
+    { name: "xl/worksheets/_rels/sheet1.xml.rels", data: enc.encode(sheetRels) },
+    { name: "xl/drawings/drawing1.xml",            data: enc.encode(drawing) },
+    { name: "xl/drawings/_rels/drawing1.xml.rels", data: enc.encode(drawRels) },
+    { name: "xl/media/image1.png",                 data: im.data });
+  return zipStore(parts);
 }
 
 /* ── 원본 서식에서 뽑아 온 표 ──────────────────────────────
@@ -3944,6 +4005,36 @@ function settleStyles(wb) {
   return { ids: F.S.map(s => resolve(s)), resolve: resolve };
 }
 
+/* 통제 도장 — 담당자가 한글로 만들어 붙이던 그림을 같은 모양으로 그린다.
+   파란 원에 가로 두 줄, 「통 제」 · 「연도.  .  .」 · 「체육시설사업팀」 세 줄이다.
+   **가운데 줄의 연도만 만드는 시점의 연도로 찍고 월·일은 손으로 적는다.**
+   두 배 크기로 그려서 절반으로 넣기 때문에 인쇄해도 또렷하다 */
+function settleStampPng() {
+  const S = 200, cv = document.createElement("canvas");
+  cv.width = cv.height = S;
+  const g = cv.getContext("2d");
+  const BLUE = "#1A1AD0";
+  g.fillStyle = "#FFFFFF"; g.fillRect(0, 0, S, S);
+  g.strokeStyle = BLUE; g.lineWidth = S * 0.013;
+  g.beginPath(); g.arc(S / 2, S / 2, S * 0.465, 0, Math.PI * 2); g.stroke();
+  // 가로 두 줄은 원보다 조금 넓게 긋는다 (원본과 같은 모양)
+  [0.395, 0.625].forEach(y => {
+    g.beginPath(); g.moveTo(S * 0.012, S * y); g.lineTo(S * 0.988, S * y); g.stroke();
+  });
+  const font = px => Math.round(px) + 'px "돋움",Dotum,"맑은 고딕","Malgun Gothic",sans-serif';
+  g.textAlign = "center"; g.textBaseline = "middle";
+  g.fillStyle = "#000000";
+  g.font = font(S * 0.125); g.fillText("통     제", S / 2, S * 0.265);
+  g.font = font(S * 0.100); g.fillText(new Date().getFullYear() + ".      .      .", S / 2, S * 0.512);
+  g.fillStyle = BLUE;
+  g.font = font(S * 0.092); g.fillText("체육시설사업팀", S / 2, S * 0.735);
+
+  const bin = atob(cv.toDataURL("image/png").split(",")[1]);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
 /* 정산서 한 부 (보관용 + 제출용, 원본과 같은 81줄) */
 function settleWorkbook(d) {
   const F = SETTLE_FORM;
@@ -3954,6 +4045,10 @@ function settleWorkbook(d) {
   wb.breaks = [39];                        // 39줄 뒤에서 장을 넘긴다 (원본과 같다)
   wb.printArea = "$A$1:$N$81";             // 서식 밖은 인쇄하지 않는다 (원본과 같다)
   wb.header = '&C&"돋움,굵게"&26대관 사용료 정산서';   // 장마다 머리글 (원본과 같다)
+  // 통제 도장 — 첫 장 우측 아래(M36) 에 붙인다. 원본에서 그림을 붙이던 자리다
+  try {
+    wb.image = { data: settleStampPng(), name: "통제", col: 12, row: 35, w: 96, h: 96, dx: 6, dy: 2 };
+  } catch (e) { /* 그림을 못 만들면 원본처럼 빈칸으로 둔다 */ }
   const st = settleStyles(wb);
   const formStyle = [];                    // 칸마다 원본 서식 번호 — 표시형식만 갈아끼울 때 쓴다
 
@@ -4024,7 +4119,8 @@ function settleWorkbook(d) {
   // 입금 계좌 (설정 화면 「정산서 입금 계좌」). 계좌번호가 길어도 잘리지 않게 담는다
   [["M30", d.useAcct], ["M31", d.utilAcct], ["M71", d.useAcct], ["M73", d.utilAcct]]
     .forEach(x => at(x[0], { t: x[1], s: styAt(x[0], { s: 1 }) }));
-  at("I36", { t: "대관담당자 :" });          // 이름은 비워 둔다 (손으로 적는다)
+  // 대관담당자 — 설정에서 고른 이름. 고르지 않았으면 비워 둬 손으로 적는다
+  at("I36", { t: "대관담당자 : " + (d.officer || "") });
 
   /* 서식에 원래 들어 있는 안내 문구가 칸보다 길어 앞뒤 글자가 잘린다 (원본도 그렇다).
      글을 고치지 않고 「칸에 맞춤」만 켜서 언제나 다 보이게 한다 */
@@ -4133,6 +4229,7 @@ function settleData(list) {
     power: power, water: water,
     useAcct: acct(set.useBank, set.useAcct),
     utilAcct: acct(set.utilBank, set.utilAcct),
+    officer: String(set.officer || "").trim(),
     count: live.length
   };
 }
@@ -4186,6 +4283,11 @@ function exportSettlement(list) {
   // 한꺼번에 여러 개를 내려받으면 브라우저가 막는 일이 있어 조금씩 띄워서 보낸다
   const MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
   made.forEach((f, i) => setTimeout(() => downloadBytes(f.name, f.bytes, MIME), i * 350));
+
+  /* 낸 건의 체크는 푼다 — 다음에 다른 건을 고를 때 앞의 체크가 섞이지 않게 한다.
+     달력 우측 상세와 목록이 같은 목록을 쓰므로 둘 다 함께 풀린다 */
+  settleSel.clear();
+  renderList(); renderRail(); updateSettleBtns();
 
   const many = made.length > 1
     ? "정산서 " + made.length + "장을 만들었습니다 — 장소·신청 단체·이용 목적이 다른 건은 따로 냈습니다"
@@ -4280,6 +4382,8 @@ function openSettings() {
     $("#setAcctUse").value  = sl.useAcct  || "";
     $("#setBankUtil").value = sl.utilBank || "";
     $("#setAcctUtil").value = sl.utilAcct || "";
+    $("#setOfficers").value = (sl.officers || []).join("\n");
+    renderOfficerPick();
     renderAcctPreview();
     applyViewerLabels();
   }
@@ -4287,6 +4391,16 @@ function openSettings() {
   renderServerCard();
   $("#settingsBox").hidden = false;
 }
+/* 적어 둔 담당자 이름으로 고르는 칸을 다시 만든다 */
+function renderOfficerPick() {
+  const sel = $("#setOfficer");
+  if (!sel) return;
+  const sl = state.settings.settle || {};
+  const list = sl.officers || [];
+  sel.innerHTML = '<option value="">(비워 둠 — 손으로 적습니다)</option>' +
+    list.map(n => '<option value="' + esc(n) + '"' + (n === sl.officer ? " selected" : "") + ">" + esc(n) + "</option>").join("");
+}
+
 /* 정산서에 찍히는 모양을 그대로 보여준다. 관리자 칸이 화면에 있을 때만 뜻이 있다 */
 function renderAcctPreview() {
   const el = $("#setAcctPreview");
@@ -4783,14 +4897,26 @@ function init() {
         .map(x => x.trim().toLowerCase()).filter(x => x.includes("@"));
       save(); renderAll(); return;
     }
+    state.settings.settle = state.settings.settle || {};
+    const sl = state.settings.settle;
+    // 대관담당자 — 이름 목록과 이번에 쓸 사람
+    if (t.id === "setOfficers") {
+      sl.officers = t.value.split("\n").map(x => x.trim()).filter(Boolean);
+      if (!sl.officers.includes(sl.officer)) sl.officer = "";
+      save(); renderOfficerPick(); return;
+    }
+    if (t.id === "setOfficer") { sl.officer = t.value; save(); return; }
     // 정산서 입금 계좌
     const acct = { setBankUse: "useBank", setAcctUse: "useAcct",
                    setBankUtil: "utilBank", setAcctUtil: "utilAcct" }[t.id];
-    if (acct) {
-      state.settings.settle = state.settings.settle || {};
-      state.settings.settle[acct] = t.value;
-      save(); renderAcctPreview();
-    }
+    if (acct) { sl[acct] = t.value; save(); renderAcctPreview(); }
+  });
+  // 고르기 칸은 input 이 아니라 change 로도 들어온다
+  $("#settingsBox").addEventListener("change", e => {
+    if (e.target.id !== "setOfficer" || currentRole() !== "manager") return;
+    state.settings.settle = state.settings.settle || {};
+    state.settings.settle.officer = e.target.value;
+    save();
   });
 
   $("#printBtn").addEventListener("click", openPrintBox);
