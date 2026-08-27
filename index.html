@@ -315,6 +315,8 @@ td.dow-sun{color:var(--sun);font-weight:600}
 }
 .field textarea{resize:vertical;min-height:52px}
 .field .hint{font-size:10.5px;color:var(--faint)}
+/* 계좌번호는 자릿수를 하나씩 짚어 보는 값이라 한 픽셀 크게 쓴다 */
+#setAcctUse,#setAcctUtil{font-size:calc(1em + 1px)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 .row21{display:grid;grid-template-columns:2fr 1fr;gap:10px}
@@ -392,6 +394,18 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;border:1px solid var(
 .setsec+.setsec{margin-top:2px}
 /* 담당자가 아니면 시설·요금 기준 화면을 볼 수는 있어도 고칠 수는 없다.
    (요금 기준을 감추면 "왜 이 금액인지" 를 보여준다는 이 도구의 목적이 깨진다) */
+/* 로그인하지 않은 사람 — 요금과 정산서, 고치는 단추를 화면에서 뺀다.
+   금액 자체는 그리지도 않는다 (renderRail·renderSummary·renderList 참고).
+   **⚙ 설정 창은 잠그지 않는다** — 잠그면 로그인할 방법이 없어진다 */
+body.viewer .tabs [data-pane="fees"],body.viewer .tabs [data-pane="settings"],
+body.viewer #newBtn,body.viewer #saveNow,body.viewer #settleBtn,body.viewer #listSettle,
+body.viewer #railDone,body.viewer #railHoliday,body.viewer #utilSeg,
+body.viewer .selchk,body.viewer .selcol,
+body.viewer .item-actions [data-edit],body.viewer .item-actions [data-copy],
+body.viewer .item-actions [data-detail],
+body.viewer #listBody [data-edit],body.viewer #listHead th:last-child,
+body.viewer #listBody td:last-child,body.viewer #listFoot td:last-child{display:none!important}
+
 body.no-admin #pane-settings input,body.no-admin #pane-settings select,body.no-admin #pane-settings textarea{
   pointer-events:none;opacity:.72;
 }
@@ -1291,7 +1305,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-08-26.18";
+const APP_VERSION = "2026-08-26.19";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -2568,13 +2582,17 @@ function renderSummary() {
   const fee = a => a.reduce((n, r) => n + feeOf(r), 0);
   // 공과금 = 전기료 + 수도료 (실비). 이용료와 따로 볼 수 있게 떼어 놓는다
   const util = live.reduce((n, r) => n + feeParts(r).util, 0);
+  // 로그인하지 않은 사람에게는 금액을 그리지 않는다 (감추는 것이 아니라 넣지 않는다)
+  const money = currentRole() !== "viewer";
   $("#summary").innerHTML =
     stat("행사", ev.length + '<small>건</small>') +
     stat("준비", pr.length + '<small>건</small>') +
-    stat("행사 이용료", won(fee(ev)) + '<small>원</small>') +
-    stat("준비 이용료", won(fee(pr)) + '<small>원</small>') +
-    stat("공과금 (전기+수도)", won(util) + '<small>원</small>') +
-    stat("합계", won(fee(live)) + '<small>원</small>');
+    (money
+      ? stat("행사 이용료", won(fee(ev)) + '<small>원</small>') +
+        stat("준비 이용료", won(fee(pr)) + '<small>원</small>') +
+        stat("공과금 (전기+수도)", won(util) + '<small>원</small>') +
+        stat("합계", won(fee(live)) + '<small>원</small>')
+      : "");
 }
 function stat(k, v) { return '<div class="stat"><dt>' + k + "</dt><dd>" + v + "</dd></div>"; }
 
@@ -2611,8 +2629,9 @@ function renderRail() {
   // 행사와 준비시간을 함께 보여준다. 시간순 정렬
   const items = state.reservations.filter(r => r.date === d).sort(byFacility);
   const live = items.filter(r => r.status !== "취소");
+  const money = currentRole() !== "viewer";   // 로그인해야 금액을 본다
   $("#railSub").textContent = items.length
-    ? "예약 " + live.length + "건 · " + won(live.reduce((a, r) => a + feeOf(r), 0)) + "원"
+    ? "예약 " + live.length + "건" + (money ? " · " + won(live.reduce((a, r) => a + feeOf(r), 0)) + "원" : "")
     : "예약 없음";
 
   if (!items.length) {
@@ -2635,30 +2654,35 @@ function renderRail() {
       '<div class="item-name">' + esc(r.applicant) + (r.purpose ? ' <span class="item-fac">' + esc(r.purpose) + "</span>" : "") + "</div>" +
       '<div class="item-meta">' +
         (r.headcount ? "<span>" + r.headcount + "명</span>" : "") +
-        (Number(dc.rate) > 0
+        (money && Number(dc.rate) > 0
           ? "<span>감면 " + esc(dc.name) + (String(dc.name).includes(dc.rate + "%") ? "" : " " + dc.rate + "%") + "</span>"
           : "") +
-        (fp.util ? "<span>공과금 " + won(fp.util) + "원</span>" : "") +
+        (money && fp.util ? "<span>공과금 " + won(fp.util) + "원</span>" : "") +
       "</div>" +
-      '<div class="item-fee">' + won(fp.total) + "원" + (r.feeOverride !== "" && r.feeOverride != null ? " (직접 입력)" : "") +
-        (fc.note ? ' <span class="item-fac">' + esc(fc.note) + "</span>" : "") + "</div>" +
+      (money
+        ? '<div class="item-fee">' + won(fp.total) + "원" + (r.feeOverride !== "" && r.feeOverride != null ? " (직접 입력)" : "") +
+          (fc.note ? ' <span class="item-fac">' + esc(fc.note) + "</span>" : "") + "</div>"
+        : "") +
       // 메모는 일정 바로 밑에 강조해서 붙인다 — 여기부터 보는 직원이 많다
       (r.memo ? '<div class="item-memo"><b>메모</b>' + esc(r.memo) + "</div>" : "") +
       (cf ? '<div class="warn">⚠ 같은 시설에 시간이 겹치는 예약이 있습니다</div>' : "") +
-      '<div class="fee-box fee-detail" data-fee="' + r.id + '" hidden>' + feeLinesHtml(fc) +
-        (r.feeOverride !== "" && r.feeOverride != null
-          ? '<div class="fee-line"><span>직접 입력한 금액<span class="why">위 산정액 대신 이 금액을 씁니다</span></span><span>' + won(r.feeOverride) + "원</span></div>"
-          : "") +
-      "</div>" +
-      '<div class="item-actions">' +
-        // 정산서로 낼 건을 여기서 고른다. 여러 날에 걸친 행사는 여러 건을 함께 체크한다
-        '<label class="selchk" title="정산서에 넣을 건으로 고릅니다">' +
-          '<input type="checkbox" data-settle="' + r.id + '"' + (settleSel.has(r.id) ? " checked" : "") + '>' +
-          "<span>정산서</span></label>" +
-        '<button type="button" class="btn btn-sm" data-detail="' + r.id + '">산정 상세</button>' +
-        '<button type="button" class="btn btn-sm" data-edit="' + r.id + '">수정</button>' +
-        '<button type="button" class="btn btn-sm" data-copy="' + r.id + '">복제</button>' +
-      "</div></div>";
+      (money
+        ? '<div class="fee-box fee-detail" data-fee="' + r.id + '" hidden>' + feeLinesHtml(fc) +
+          (r.feeOverride !== "" && r.feeOverride != null
+            ? '<div class="fee-line"><span>직접 입력한 금액<span class="why">위 산정액 대신 이 금액을 씁니다</span></span><span>' + won(r.feeOverride) + "원</span></div>"
+            : "") + "</div>"
+        : "") +
+      (money
+        ? '<div class="item-actions">' +
+          // 정산서로 낼 건을 여기서 고른다. 여러 날에 걸친 행사는 여러 건을 함께 체크한다
+          '<label class="selchk" title="정산서에 넣을 건으로 고릅니다">' +
+            '<input type="checkbox" data-settle="' + r.id + '"' + (settleSel.has(r.id) ? " checked" : "") + '>' +
+            "<span>정산서</span></label>" +
+          '<button type="button" class="btn btn-sm" data-detail="' + r.id + '">산정 상세</button>' +
+          '<button type="button" class="btn btn-sm" data-edit="' + r.id + '">수정</button>' +
+          '<button type="button" class="btn btn-sm" data-copy="' + r.id + '">복제</button>' +
+        "</div>"
+        : "") + "</div>";
   }).join("");
 }
 
@@ -2764,12 +2788,18 @@ function listRows() {
 }
 
 function renderList() {
-  const mode = LIST_MODES[view.listMode] ? view.listMode : "view";
+  // 로그인하지 않으면 금액이 없는 조회용만 본다 (수익집계용에는 이용료가 들어 있다)
+  const money = currentRole() !== "viewer";
+  const mode = (money && LIST_MODES[view.listMode]) ? view.listMode : "view";
   const cols = colsOf(mode);
   const src = listRows();
   const rows = src.map(listRow);
 
-  $$("#listModeSeg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lm === mode)));
+  $$("#listModeSeg button").forEach(b => {
+    b.setAttribute("aria-pressed", String(b.dataset.lm === mode));
+    // 수익집계용은 금액을 보는 화면이라 로그인해야 고를 수 있다
+    b.hidden = !money && b.dataset.lm !== "view";
+  });
   // 공과금 전환은 금액을 보는 화면에서만 뜻이 있다
   $("#utilSeg").hidden = mode !== "income";
   $$("#utilSeg button").forEach(b =>
@@ -2778,16 +2808,19 @@ function renderList() {
   /* 맨 왼쪽 체크 칸과 맨 오른쪽 단추 칸은 **`LIST_COLS` 밖에 둔다** —
      열 정의를 늘리면 인쇄·엑셀·CSV 까지 따라 늘어나기 때문이다.
      종이에서는 둘 다 뺀다 (`@media print` 의 `.selcol` 참고) */
-  $("#listHead").innerHTML = '<tr><th class="selcol" title="정산서에 넣을 건">정산</th>' + cols.map(k =>
+  $("#listHead").innerHTML = "<tr>" +
+    (money ? '<th class="selcol" title="정산서에 넣을 건">정산</th>' : "") + cols.map(k =>
     "<th" + (LIST_COLS[k].cls === "num" ? ' style="text-align:right"' : "") + ">" + LIST_COLS[k].label + "</th>"
-  ).join("") + "<th></th></tr>";
+  ).join("") + (money ? "<th></th>" : "") + "</tr>";
 
   $("#listBody").innerHTML = rows.length ? rows.map(row => {
     const r = row.r;
     return "<tr" + (conflicts.has(r.id) ? ' style="background:var(--alert-soft)"' : "") +
       ((r.kind || "행사") === "준비" ? ' class="is-prep"' : "") + ">" +
-      '<td class="selcol"><input type="checkbox" data-settle="' + r.id + '"' +
-        (settleSel.has(r.id) ? " checked" : "") + ' aria-label="정산서에 넣기"></td>' +
+      (money
+        ? '<td class="selcol"><input type="checkbox" data-settle="' + r.id + '"' +
+          (settleSel.has(r.id) ? " checked" : "") + ' aria-label="정산서에 넣기"></td>'
+        : "") +
       cols.map(k => {
         const c = LIST_COLS[k];
         if (k === "applicant" && r.status === "취소")
@@ -2795,16 +2828,16 @@ function renderList() {
         const extra = k === "dow" ? dowClassOf(r.date) : "";
         return '<td class="' + c.cls + extra + '">' + esc(listCellText(row, k)) + "</td>";
       }).join("") +
-      '<td><button type="button" class="btn btn-sm" data-edit="' + r.id + '">수정</button></td>' +
+      (money ? '<td><button type="button" class="btn btn-sm" data-edit="' + r.id + '">수정</button></td>' : "") +
     "</tr>";
-  }).join("") : '<tr><td colspan="' + (cols.length + 2) + '" class="empty">조건에 맞는 예약이 없습니다</td></tr>';
+  }).join("") : '<tr><td colspan="' + (cols.length + (money ? 2 : 0)) + '" class="empty">조건에 맞는 예약이 없습니다</td></tr>';
 
   // 합계 줄 — 금액 열이 있을 때만 (수익집계용).
   // "N건 합계" 를 첫 칸에 넣으면 좁은 완료 칸에서 글자가 세로로 접힌다.
   // 금액이 시작되기 전 칸을 하나로 합쳐서 한 줄로 눕힌다
   const firstSum = cols.findIndex(k => LIST_COLS[k].sum);
   $("#listFoot").innerHTML = (rows.length && firstSum >= 0)
-    ? "<tr>" + '<td class="selcol"></td>' +
+    ? "<tr>" + (money ? '<td class="selcol"></td>' : "") +
       '<td class="foot-label" colspan="' + firstSum + '">' + rows.length + "건 합계</td>" +
       cols.slice(firstSum).map(k => {
         const c = LIST_COLS[k];
@@ -2812,7 +2845,7 @@ function renderList() {
         const v = rows.reduce((a, x) => a + Number(x[k] || 0), 0);
         // 칸을 비우는 열은 합계도 0이면 비운다. 위는 비었는데 아래만 0이면 어색하다
         return '<td class="num">' + ((c.blankZero && !v) ? "" : won(v)) + "</td>";
-      }).join("") + "<td></td></tr>"
+      }).join("") + (money ? "<td></td>" : "") + "</tr>"
     : "";
 
   // 위쪽 요약도 보는 눈에 맞춘다.
@@ -2867,6 +2900,14 @@ function feePeriodLabel() {
 }
 
 function renderFees() {
+  /* 로그인하지 않은 사람에게는 그리지 않는다. 탭을 감추는 것만으로는
+     표가 화면 소스에 남아 개발자도구로 금액을 들여다볼 수 있다 */
+  if (currentRole() === "viewer") {
+    ["#feeHead", "#feeBody", "#feeFoot", "#printHeadFee"].forEach(x => { $(x).innerHTML = ""; });
+    $("#feeCount").textContent = "";
+    $("#feeNote").textContent = "요금 관리는 로그인해야 볼 수 있습니다 (⚙ 설정)";
+    return;
+  }
   const cols = colsOf("fee");
   const src = feeRows();
   const rows = src.map(listRow);
@@ -2973,6 +3014,13 @@ function renderServerCard() {
 }
 
 function renderSettings() {
+  /* 시설 단가·부속시설 금액도 요금 정보다. 로그인하지 않으면 그리지 않는다 */
+  if (currentRole() === "viewer") {
+    ["#facilityList", "#annexItemList", "#discountList"].forEach(x => {
+      const el = $(x); if (el) el.innerHTML = "";
+    });
+    return;
+  }
   const s = state.settings;
   const H = s.hours || {};
   $("#setRounding").value = s.rounding;
@@ -3948,6 +3996,14 @@ function settleWorkbook(d) {
   at("I16", { n: keep });                  // ③ 중계방송료 감면율
   at("I19", { n: keep });                  // ④ 상행위 감면율
 
+  /* 서식에는 비율이 「감면율(80%)」 처럼 글자로 박혀 있다.
+     그 건의 감면율·조례 비율을 따라가게 고쳐 넣는다 (글자만 바꾸고 서식은 그대로 둔다) */
+  const dcLabel = "감면율(" + d.dcRate + "%)";
+  ["H13", "I15", "H52"].forEach(ref => at(ref, { t: dcLabel }));
+  const admLabel = "사용료 (체육경기\n" + d.admSports + "%, 프로, 체육\n외 경기" +
+    d.admOther + "%)\n       <A>";
+  ["C9", "C48"].forEach(ref => at(ref, { t: admLabel }));
+
   // ⑤ 부속시설 (별표 6) — 서식의 일곱 줄에 차례로 넣는다
   for (let i = 0; i < SETTLE_ANNEX_ROWS; i++) {
     const r = 20 + i, it = d.annex[i];
@@ -4067,6 +4123,8 @@ function settleData(list) {
     tenant: uniq(live.map(r => r.applicant)).join(", "),
     dateLabel: settleDateLabel(live.map(r => r.date)),
     admFee: Math.round(admFee),
+    admSports: Number(s.admSportsRate) || 0,     // 제12조 — 서식의 딱지에 그대로 쓴다
+    admOther: Number(s.admOtherRate) || 0,
     dcRate: dcRate,
     keepRate: (100 - dcRate) / 100,     // 별표 6 칸의 「감면율」 은 실제로 받는 비율이다
     mixedRate: rates.length > 1,
@@ -4102,6 +4160,8 @@ function settleFileName(d, withPlace) {
 }
 
 function exportSettlement(list) {
+  // 금액이 담긴 서류라 로그인한 사람만 낼 수 있다
+  if (currentRole() === "viewer") { toast("정산서는 로그인해야 낼 수 있습니다 (⚙ 설정)"); return; }
   if (!list.length) { toast("정산서로 낼 예약을 먼저 체크하세요"); return; }
   if (typeof claude !== "undefined" && claude.use) {
     toast("게시된 화면에서는 파일 저장이 막혀 있습니다. 내려받은 파일이나 주소에서 받아 주세요");
@@ -4185,6 +4245,13 @@ function applyRole() {
   const admin = role === "manager";
   document.body.classList.toggle("fee-only", role === "fee");
   document.body.classList.toggle("no-admin", !admin);
+  /* 로그인하지 않은 사람에게는 요금과 정산서를 아예 보여주지 않는다.
+     주소만 알면 누구나 열 수 있는 화면이라, 금액은 로그인한 직원만 본다.
+     화면에서 감추는 것에 그치지 않고 **금액을 아예 그리지 않는다** (renderRail·renderSummary·renderList) */
+  document.body.classList.toggle("viewer", role === "viewer");
+  // 볼 수 없는 탭에 머물러 있으면 달력으로 되돌린다
+  if (role === "viewer" && (view.pane === "fees" || view.pane === "settings")) setPane("calendar");
+  if (role === "viewer" && view.listMode !== "view") { view.listMode = "view"; }
 
   const badge = $("#roleBadge");
   if (badge) { badge.hidden = role !== "fee"; badge.textContent = "요금 담당"; }
@@ -4245,6 +4312,8 @@ function applyViewerLabels() {
    11. 이벤트
    ========================================================= */
 function setPane(p) {
+  // 로그인하지 않으면 요금 관리·요금 기준 탭은 열 수 없다
+  if (currentRole() === "viewer" && (p === "fees" || p === "settings")) p = "calendar";
   view.pane = p;
   $$(".tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.pane === p)));
   $$(".pane").forEach(s => s.classList.toggle("active", s.id === "pane-" + p));
@@ -4338,11 +4407,10 @@ function init() {
     toast(view.selected + (on ? " 을 확인 완료로 표시했습니다" : " 의 확인 표시를 뗐습니다"));
   });
 
-  // 제목을 누르면 달력 화면으로 돌아간다
-  $("#homeBtn").addEventListener("click", () => {
-    setPane("calendar");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  });
+  /* 제목을 누르면 첫 화면으로 새로고침한다.
+     탭만 옮기면 서버의 최신 자료를 다시 받지 않아 "새로 열었다" 는 느낌이 안 난다.
+     저장 안 된 변경이 있으면 beforeunload 가 물어본다 */
+  $("#homeBtn").addEventListener("click", () => { location.reload(); });
 
   $("#themeBtn").addEventListener("click", () => {
     const cur = document.documentElement.getAttribute("data-theme");
@@ -4393,6 +4461,7 @@ function init() {
   ["#listBody", "#railBody"].forEach(sel => $(sel).addEventListener("change", e => {
     const box = e.target.closest("[data-settle]");
     if (!box) return;
+    if (currentRole() === "viewer") { box.checked = false; return; }
     toggleSettleSel(box.dataset.settle, box.checked);
   }));
   $("#listSettle").addEventListener("click", () => exportSettlement(settleSelected()));
@@ -4401,6 +4470,10 @@ function init() {
   $("#listModeSeg").addEventListener("click", e => {
     const b = e.target.closest("[data-lm]");
     if (!b) return;
+    // 수익집계용에는 금액이 들어 있다. 로그인하지 않으면 조회용에 머문다
+    if (currentRole() === "viewer" && b.dataset.lm !== "view") {
+      toast("금액은 로그인해야 볼 수 있습니다 (⚙ 설정)"); return;
+    }
     view.listMode = b.dataset.lm;
     renderList();
   });
