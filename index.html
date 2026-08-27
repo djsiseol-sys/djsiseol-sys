@@ -1267,6 +1267,32 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 </div>
 
 <!-- ================= 인쇄 ================= -->
+<!-- 되돌릴 수 없는 일(지우기·초기화) 앞에서 한 번 더 막는다.
+     로그인한 계정의 비밀번호를 서버에 물어 확인한다 — 확인 창만 띄우면
+     실수로 한 번 눌렀을 때 그대로 지워진다 -->
+<div class="backdrop" id="pwBox" hidden>
+  <form class="modal" id="pwForm" style="max-width:440px" autocomplete="off">
+    <div class="modal-head">
+      <h2 id="pwTitle">정말 지울까요?</h2>
+      <button type="button" class="btn btn-quiet btn-sm" id="pwClose">닫기 ✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="notice" id="pwWhat" style="margin:0 0 12px"></p>
+      <div class="field">
+        <label for="pwInput" id="pwLabel">비밀번호</label>
+        <input type="password" id="pwInput" autocomplete="current-password">
+        <span class="hint" id="pwHint"></span>
+      </div>
+      <p class="field hint" id="pwMsg" style="margin:8px 0 0;color:var(--alert)"></p>
+    </div>
+    <div class="modal-foot">
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="pwCancel">취소</button>
+      <button type="submit" class="btn btn-danger" id="pwGo">확인</button>
+    </div>
+  </form>
+</div>
+
 <div class="backdrop" id="printBox" hidden>
   <div class="modal" style="max-width:560px">
     <div class="modal-head">
@@ -1326,7 +1352,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-08-27.20";
+const APP_VERSION = "2026-08-27.21";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -1895,6 +1921,22 @@ async function serverLogin(email, password) {
   storeSession();
   return d;
 }
+/* 로그인한 계정의 비밀번호가 맞는지 서버에 물어본다.
+   지금 쓰고 있는 토큰은 건드리지 않는다 — 틀렸을 때 로그인이 풀리면 안 된다 */
+async function verifyPassword(password) {
+  const cfg = serverCfg();
+  if (!cfg || !SERVER.email) return false;
+  try {
+    const res = await fetch(normalizeUrl(cfg.url) + "/auth/v1/token?grant_type=password", {
+      method: "POST",
+      headers: { apikey: cfg.anonKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ email: SERVER.email, password: password })
+    });
+    const d = await res.json().catch(() => ({}));
+    return !!(res.ok && d.access_token);
+  } catch (e) { return false; }
+}
+
 async function serverRefresh() {
   if (!SERVER.refresh) return false;
   const cfg = serverCfg();
@@ -4401,6 +4443,60 @@ function renderOfficerPick() {
     list.map(n => '<option value="' + esc(n) + '"' + (n === sl.officer ? " selected" : "") + ">" + esc(n) + "</option>").join("");
 }
 
+/* ── 되돌릴 수 없는 일 앞에서 한 번 더 막는다 ────────────
+   서버에 로그인해 쓰고 있으면 **그 계정의 비밀번호를 다시 받아 서버에 물어본다.**
+   확인 창만 띄우면 실수로 한 번 눌렀을 때 그대로 지워지기 때문이다.
+   서버를 쓰지 않는 자리(내려받은 파일·아티팩트)에는 물어볼 비밀번호가 없으므로
+   정해진 낱말을 그대로 치게 한다 — 손이 미끄러져 눌리는 것은 막아 준다.
+   opt = { title, what, go, word } · 통과하면 true 를 돌려준다 */
+function askConfirm(opt) {
+  const byPw = RUNTIME.server && !!SERVER.token && !!SERVER.email;
+  return new Promise(resolve => {
+    const box = $("#pwBox"), form = $("#pwForm"), input = $("#pwInput");
+    $("#pwTitle").textContent = opt.title;
+    $("#pwWhat").textContent = opt.what;
+    $("#pwGo").textContent = opt.go;
+    $("#pwMsg").textContent = "";
+    $("#pwLabel").textContent = byPw ? "비밀번호 다시 입력" : '확인 낱말 — “' + opt.word + '” 을 그대로 치세요';
+    $("#pwHint").textContent = byPw
+      ? "지금 로그인한 계정(" + (SERVER.email || "") + ")의 비밀번호입니다."
+      : "서버에 로그인해 쓰는 자리에서는 비밀번호를 다시 묻습니다.";
+    input.type = byPw ? "password" : "text";
+    input.value = "";
+    box.hidden = false;
+    setTimeout(() => input.focus(), 30);
+
+    const done = v => {
+      form.removeEventListener("submit", onGo);
+      $("#pwCancel").removeEventListener("click", onNo);
+      $("#pwClose").removeEventListener("click", onNo);
+      document.removeEventListener("keydown", onKey);
+      box.hidden = true; input.value = "";
+      resolve(v);
+    };
+    const onNo = () => done(false);
+    const onKey = e => { if (e.key === "Escape") onNo(); };
+    async function onGo(e) {
+      e.preventDefault();
+      const v = input.value;
+      if (!v) { $("#pwMsg").textContent = byPw ? "비밀번호를 입력하세요" : "확인 낱말을 치세요"; return; }
+      if (!byPw) {
+        if (v.trim() !== opt.word) { $("#pwMsg").textContent = "낱말이 다릅니다"; input.select(); return; }
+        return done(true);
+      }
+      $("#pwGo").disabled = true; $("#pwMsg").textContent = "확인하는 중…";
+      const ok = await verifyPassword(v);
+      $("#pwGo").disabled = false;
+      if (!ok) { $("#pwMsg").textContent = "비밀번호가 맞지 않습니다"; input.select(); return; }
+      done(true);
+    }
+    form.addEventListener("submit", onGo);
+    $("#pwCancel").addEventListener("click", onNo);
+    $("#pwClose").addEventListener("click", onNo);
+    document.addEventListener("keydown", onKey);
+  });
+}
+
 /* 정산서에 찍히는 모양을 그대로 보여준다. 관리자 칸이 화면에 있을 때만 뜻이 있다 */
 function renderAcctPreview() {
   const el = $("#setAcctPreview");
@@ -4802,11 +4898,16 @@ function init() {
       save(); fillSelects(); renderSettings(); renderAll();
     }
   });
-  function doClearRes() {
+  async function doClearRes() {
     if (!RUNTIME.writable) { toast("조회 전용이라 지울 수 없습니다"); return; }
     const n = state.reservations.length;
     if (!n) { toast("지울 예약이 없습니다"); return; }
-    if (!confirm("예약 " + n + "건을 모두 지웁니다. 시설·요금 기준은 그대로 둡니다.\n되돌릴 수 없습니다. 계속할까요?")) return;
+    const ok = await askConfirm({
+      title: "예약을 모두 지울까요?",
+      what: "예약 " + n + "건이 사라집니다. 시설·요금 기준은 그대로 둡니다. 되돌릴 수 없습니다.",
+      go: "확인하고 " + n + "건 지우기", word: "예약삭제"
+    });
+    if (!ok) return;
     state.reservations = [];
     clearPending();                 // 복구 대기분이 되살아나지 않게 함께 지운다
     $("#recoverBar").hidden = true;
@@ -4814,9 +4915,15 @@ function init() {
     renderAll();
     toast("예약 " + n + "건을 지웠습니다");
   }
-  function doResetAll() {
+  async function doResetAll() {
     if (!RUNTIME.writable) { toast("조회 전용이라 초기화할 수 없습니다"); return; }
-    if (!confirm("모든 예약과 설정을 초기 상태로 되돌립니다. 계속할까요?")) return;
+    const ok = await askConfirm({
+      title: "전체 데이터를 초기화할까요?",
+      what: "예약 " + state.reservations.length + "건과 시설·단가·감면·공휴일·계좌 등 " +
+            "설정이 모두 처음 상태로 돌아갑니다. 되돌릴 수 없습니다.",
+      go: "확인하고 초기화", word: "전체초기화"
+    });
+    if (!ok) return;
     state = structuredClone(DEFAULT_STATE);
     clearPending();                 // 지운 예약이 복구 안내로 되살아나지 않게 한다
     $("#recoverBar").hidden = true;
