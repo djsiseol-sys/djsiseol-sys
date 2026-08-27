@@ -341,6 +341,12 @@ td.dow-sun{color:var(--sun);font-weight:600}
 .modal-body{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
 .modal-foot{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;align-items:center}
 .modal-foot .spacer{margin-left:auto}
+/* 설정창은 길다. 「설정 저장」 이 늘 보이도록 아랫줄을 붙박이로 두고 가운데만 굴린다 */
+#settingsBox{align-items:center}
+#settingsBox>.modal{display:flex;flex-direction:column;max-height:calc(100vh - 80px)}
+#settingsBox>.modal>.modal-head,#settingsBox>.modal>.modal-foot{flex:0 0 auto}
+#settingsBox>.modal>.modal-body{overflow:auto;flex:1 1 auto}
+#setSaveNote{font-size:11.5px;color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fee-box{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
 /* 24시간제 시·분 고르기. 칸이 좁아지면 글자가 잘리는 대신 두 줄로 접힌다
    (설정 화면의 시간대 칸이 좁을 때) */
@@ -384,7 +390,7 @@ body.fee-only #newBtn,body.fee-only #railDone,body.fee-only #railHoliday,body.fe
 body.fee-only .item-actions [data-copy],body.fee-only #listBody [data-edit],body.fee-only #resetAll,
 body.fee-only #clearRes,body.fee-only #importJson,body.fee-only #importPaste,body.fee-only #addFacility,
 body.fee-only #addDiscount,body.fee-only #addAnnex,body.fee-only [data-delfac],body.fee-only [data-deldc],
-body.fee-only [data-delannex]{display:none!important}
+body.fee-only [data-delannex],body.fee-only #setPaneSave,body.fee-only #setSave{display:none!important}
 body.fee-only #pane-settings input,body.fee-only #pane-settings select,body.fee-only #pane-settings textarea{
   pointer-events:none;opacity:.72;
 }
@@ -392,6 +398,9 @@ body.fee-only #serverCard input,body.fee-only #serverCard select,body.fee-only #
   pointer-events:auto;opacity:1;
 }
 /* 설정창 */
+.setbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.setbar .seg{margin:0}
+.setbar .spacer{flex:1 1 auto}
 .setsec{display:flex;flex-direction:column;gap:11px}
 .setsec h3{margin:0;font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;font-weight:600}
 kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;border:1px solid var(--line-strong);
@@ -416,7 +425,8 @@ body.no-admin #pane-settings input,body.no-admin #pane-settings select,body.no-a
 }
 body.no-admin #pane-settings [data-delfac],body.no-admin #pane-settings [data-deldc],
 body.no-admin #pane-settings [data-delannex],body.no-admin #addFacility,
-body.no-admin #addDiscount,body.no-admin #addAnnex{display:none!important}
+body.no-admin #addDiscount,body.no-admin #addAnnex,
+body.no-admin #setPaneSave,body.no-admin #setSave{display:none!important}
 .paidbox{width:16px;height:16px;accent-color:var(--accent);margin:0;cursor:pointer;flex:0 0 auto}
 /* 금액 칸 안의 입금 체크 — 숫자는 오른쪽 정렬을 지킨다 */
 .amtchk{display:flex;align-items:center;justify-content:flex-end;gap:7px;cursor:pointer}
@@ -730,10 +740,15 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
     </p>
     <!-- 세 묶음이 한 화면에 다 펼쳐지면 스크롤이 너무 길어진다.
          목록·공과금 전환과 같은 방식으로 한 번에 하나씩 본다 -->
-    <div class="seg" id="setSeg" role="group" aria-label="요금 기준 종류" style="margin:0 0 12px">
-      <button type="button" data-sp="fac" aria-pressed="true">시설 · 단가</button>
-      <button type="button" data-sp="rate" aria-pressed="false">가산 · 감산 · 감면</button>
-      <button type="button" data-sp="calc" aria-pressed="false">계산 방식</button>
+    <div class="setbar">
+      <div class="seg" id="setSeg" role="group" aria-label="요금 기준 종류">
+        <button type="button" data-sp="fac" aria-pressed="true">시설 · 단가</button>
+        <button type="button" data-sp="rate" aria-pressed="false">가산 · 감산 · 감면</button>
+        <button type="button" data-sp="calc" aria-pressed="false">계산 방식</button>
+      </div>
+      <span class="spacer"></span>
+      <!-- 요금 기준은 자동 저장이 2분 뒤에 걸린다. 고치고 바로 올리고 싶을 때 쓴다 -->
+      <button type="button" class="btn btn-primary btn-sm" id="setPaneSave">설정 저장</button>
     </div>
     <div class="settings">
 
@@ -948,7 +963,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
             <div class="fee-line"><span>산정</span><span>기본액의 % · 시간당 별도 단가 · 무료</span></div>
             <div class="fee-line"><span>가산·감산</span><span>위 설정에 따름 (기본: 미적용)</span></div>
           </div>
-          <p class="field hint" style="margin:0">
+          <p class="hint" style="margin:0;line-height:1.6">
             기본 전용사용료는 <b>1회</b> 금액입니다. 사용시간이 길어져도 금액이 늘지 않고,
             시설에 <b>1회 기준 시간</b>을 넣어둔 경우에만 그 시간을 넘긴 만큼 초과사용료가 붙습니다.
             충무체육관·한밭체육관·한밭야구장은 별표 2 에 기준 시간이 정해져 있지 않아 0(제한 없음)으로 두었습니다.
@@ -1120,7 +1135,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 <template id="adminTpl">
         <div class="hr"></div>
         <h3>정산서 입금 계좌</h3>
-        <p class="field hint" style="margin:0 0 8px">행사 정산서의 <b>시설사용료</b>·<b>공과금</b> 칸 옆에
+        <p class="hint" style="margin:0 0 8px;line-height:1.6">행사 정산서의 <b>시설사용료</b>·<b>공과금</b> 칸 옆에
           <b>은행:계좌번호</b> 형식으로 찍힙니다. 비워 두면 그 칸이 빈칸으로 나와 손으로 적을 수 있습니다.</p>
         <div class="row2">
           <div class="field">
@@ -1146,7 +1161,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 
         <div class="hr"></div>
         <h3>대관담당자</h3>
-        <p class="field hint" style="margin:0 0 8px">정산서 첫 장의 <b>대관담당자 :</b> 칸에 찍힙니다.
+        <p class="hint" style="margin:0 0 8px;line-height:1.6">정산서 첫 장의 <b>대관담당자 :</b> 칸에 찍힙니다.
           담당이 여러 명이면 아래에 모두 적어 두고, 이번에 낼 정산서에 넣을 사람을 고르세요.</p>
         <div class="row2">
           <div class="field">
@@ -1180,14 +1195,14 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
           <button type="button" class="btn btn-sm" id="importJson">JSON 불러오기</button>
           <button type="button" class="btn btn-sm" id="importPaste" hidden>JSON 붙여넣기</button>
         </div>
-        <p class="field hint" style="margin:6px 0 0">대장 전체를 파일로 받아 두거나 되돌립니다.
+        <p class="hint" style="margin:6px 0 0;line-height:1.6">대장 전체를 파일로 받아 두거나 되돌립니다.
           달마다 한 번씩 내려받아 보관하면 사고가 나도 되살릴 수 있습니다.</p>
         <div class="hr"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button type="button" class="btn btn-danger btn-sm" id="clearRes">예약만 전부 지우기</button>
           <button type="button" class="btn btn-danger btn-sm" id="resetAll">전체 데이터 초기화</button>
         </div>
-        <p class="field hint" style="margin:6px 0 0">‘예약만 전부 지우기’ 는 시설·요금 기준은 그대로 두고 예약 건만 지웁니다.
+        <p class="hint" style="margin:6px 0 0;line-height:1.6">‘예약만 전부 지우기’ 는 시설·요금 기준은 그대로 두고 예약 건만 지웁니다.
           서버에도 바로 반영되고, 이 브라우저에 남아 있던 복구 대기분도 함께 지웁니다.
           <b>되돌릴 수 없으니 먼저 JSON 으로 내보내 두세요.</b></p>
       </template>
@@ -1262,6 +1277,12 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
         <br>안내받은 번호와 다르면 옛 화면을 보고 있는 것입니다.
         <kbd>Ctrl</kbd>+<kbd>F5</kbd> 로 새로고침해 보세요.
       </p>
+    </div>
+    <div class="modal-foot" id="setFoot">
+      <span class="hint" id="setSaveNote" style="margin:0"></span>
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="setCloseFoot">닫기</button>
+      <button type="button" class="btn btn-primary" id="setSave">설정 저장</button>
     </div>
   </div>
 </div>
@@ -1352,7 +1373,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-08-27.21";
+const APP_VERSION = "2026-08-27.22";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -1775,7 +1796,12 @@ async function pushShared() {
   }
 }
 
-function setSaveState(t) { const el = $("#saveState"); if (el) el.textContent = t; }
+function setSaveState(t) {
+  const el = $("#saveState"); if (el) el.textContent = t;
+  // 설정창이 열려 있으면 거기에도 같은 상태를 적는다
+  const n = $("#setSaveNote");
+  if (n && $("#settingsBox") && !$("#settingsBox").hidden) n.textContent = t;
+}
 
 /* 저장 못 한 변경 임시 보관 → 다음에 열 때 복구 제안 */
 function stashPending() {
@@ -3661,78 +3687,102 @@ function exportTable(fmt, rows, mode, periodLabel) {
     download(name, tsv, "text/plain");
     return;
   }
-  // 열 너비 — 그 열에 들어간 값 중 가장 긴 것에 맞춘다
-  const widths = cols.map(k => {
+  /* ── 엑셀 (.xlsx) — 정산서와 같은 방식으로 진짜 OOXML 파일을 만든다.
+     예전에는 HTML 표를 .xls 이름으로 넘겨서 "파일 형식과 확장명이 일치하지 않습니다"
+     경고가 떴다. **완료 칸은 넣지 않는다** — 종이·화면에서만 쓰는 표시다 */
+  const xcols = cols.filter(k => k !== "done");
+  const wb = xwNew(m === "fee" ? "사용료관리" : "예약내역");
+  // 열 너비 — 그 열에 들어간 값 중 가장 긴 것에 맞춘다 (한글은 두 칸으로 센다)
+  wb.cols = xcols.map(k => {
     let w = textWidth(LIST_COLS[k].label);
-    data.forEach(row => {
-      const t = listCellText(row, k);
-      String(t).split("\n").forEach(line => { w = Math.max(w, textWidth(line)); });
-    });
-    return Math.min(60, w + 2) * 8;   // 글자 한 칸을 8px 로 본다
+    data.forEach(row => String(listCellText(row, k)).split("\n")
+      .forEach(line => { w = Math.max(w, textWidth(line)); }));
+    return Math.min(60, w + 3);
   });
 
-  /* 준비 건은 **줄 바깥쪽에만** 노란 테두리를 두른다.
-     칸마다 두르면 격자가 겹쳐 보여서, 위·아래는 모든 칸에 긋고
-     왼쪽·오른쪽은 양 끝 칸에만 긋는다. 굵기도 얇게(1pt) 잡았다.
-     바탕색은 넣지 않는다 — 화면 목록과 같게 테두리로만 구분한다 */
-  const YL = "#C8961A", GR = "#999999";
-  const body = data.map((row, i) => {
+  wb.page = { orient: "landscape", fitW: 1 };   // 종이 한 폭에 담는다
+  const GR = "FF999999", YL = "FFC8961A", ALERT = "A8574C";
+  const box = c => ({ t: "thin|" + c, b: "thin|" + c, l: "thin|" + c, r: "thin|" + c });
+  /* 준비 건은 **줄 바깥쪽에만** 노란 테두리를 두른다. 칸마다 두르면 격자가 겹쳐 보여서,
+     위·아래는 모든 칸에 긋고 왼쪽·오른쪽은 양 끝 칸에만 긋는다 (화면·종이와 같다) */
+  const prepBox = (first, last) => ({
+    t: "thin|" + YL, b: "thin|" + YL,
+    l: "thin|" + (first ? YL : GR), r: "thin|" + (last ? YL : GR)
+  });
+  const S = o => xwStyle(wb, Object.assign({ fn: "맑은 고딕", sz: 10 }, o));
+
+  const sTitle = S({ sz: 13, b: 1, h: "left", v: "center" });
+  const sHead  = S({ b: 1, h: "center", v: "center", bd: box(GR), fl: { p: "solid", fg: "DDDDDD" } });
+  const sFoot  = S({ b: 1, bd: box(GR), fl: { p: "solid", fg: "EEEEEE" } });
+  const sFootN = S({ b: 1, h: "right", bd: box(GR), fl: { p: "solid", fg: "EEEEEE" }, nf: "#,##0" });
+
+  // 제목 · 머리글
+  const title = (periodLabel || "") + (m === "fee" ? " 시설 사용료 관리대장"
+                                                   : " 시설 예약 " + LIST_MODES[m].name + " 목록");
+  xwPut(wb, 0, 0, { t: title, s: sTitle });
+  wb.merges.push([0, 0, 1, xcols.length]);
+  xcols.forEach((k, c) => xwPut(wb, 1, c, { t: LIST_COLS[k].label, s: sHead }));
+  wb.rowH[0] = 21; wb.rowH[1] = 19;
+
+  data.forEach((row, i) => {
+    const r = 2 + i;
     const prep = row.kind === "준비";
-    const plain = "border:.5pt solid " + GR + ";";
     // 이 줄에서 실제로 그려지는 칸들 (앞줄에 합쳐진 날짜·요일 칸은 빠진다)
-    const drawn = cols.filter(k => !(MERGE_COLS.includes(k) && span[i] === 0));
+    const drawn = xcols.filter(k => !(MERGE_COLS.includes(k) && span[i] === 0));
     // 준비 테두리를 입힐 칸 — 여러 줄에 걸친 병합 칸에는 입히지 않는다
     const marked = drawn.filter(k => !(MERGE_COLS.includes(k) && span[i] > 1));
-    const first = marked[0], last = marked[marked.length - 1];
-    const prepBorder = k =>
-      "border-top:1pt solid " + YL + ";border-bottom:1pt solid " + YL + ";" +
-      "border-left:" + (k === first ? "1pt solid " + YL : ".5pt solid " + GR) + ";" +
-      "border-right:" + (k === last ? "1pt solid " + YL : ".5pt solid " + GR) + ";";
-    return "<tr>" + drawn.map(k => {
+    xcols.forEach((k, c) => {
       const merged = MERGE_COLS.includes(k);
-      const rs = merged && span[i] > 1 ? ' rowspan="' + span[i] + '"' : "";
-      const c = LIST_COLS[k];
-      const align = c.cls === "num" ? "right" : "left";
-      const fmtAttr = c.sum ? ' x:num style="mso-number-format:\'#,##0\';' : ' style="';
-      const val = c.sum ? String(row[k] || 0) : listCellText(row, k);
-      // 날짜·요일은 여러 줄을 합친 칸이라 준비 테두리 대신 보통 테두리를 쓴다
-      const bd = (prep && !(merged && span[i] > 1)) ? prepBorder(k) : plain;
-      // 요일은 화면과 같게 토=파랑, 일·공휴일=빨강
-      const dc = k === "dow" ? { " dow-sat": "color:#20558C;font-weight:bold;",
-                                 " dow-sun": "color:#B03A3A;font-weight:bold;" }[dowClassOf(row.date)] || "" : "";
-      return "<td" + rs + fmtAttr + bd + dc + "text-align:" + align + ";vertical-align:top;" +
-        (c.cls === "memo" ? "mso-wrap-text:yes;" : "white-space:nowrap;") + '">' + xesc(val) + "</td>";
-    }).join("") + "</tr>";
-  }).join("");
-
-  const sums = cols.map(k => {
-    const c = LIST_COLS[k];
-    if (!c.sum) return null;
-    const v = data.reduce((a, x) => a + Number(x[k] || 0), 0);
-    return (c.blankZero && !v) ? "" : v;
+      if (merged && span[i] === 0) return;                 // 앞줄에 합쳐졌다
+      if (merged && span[i] > 1) wb.merges.push([r, c, span[i], 1]);
+      const col = LIST_COLS[k];
+      const wide = merged && span[i] > 1;
+      const bd = (prep && !wide) ? prepBox(k === marked[0], k === marked[marked.length - 1]) : box(GR);
+      const base = { bd: bd, v: "top" };
+      if (col.sum) {                                       // 금액 — 숫자로 넣는다
+        const v = Number(row[k]) || 0;
+        xwPut(wb, r, c, (col.blankZero && !v)
+          ? { s: S(Object.assign({ h: "right" }, base)) }
+          : { n: v, s: S(Object.assign({ h: "right", nf: '#,##0' }, base)) });
+        return;
+      }
+      if (k === "dow") {                                   // 요일 — 토 파랑, 일·공휴일 빨강
+        const dc = { " dow-sat": "20558C", " dow-sun": "B03A3A" }[dowClassOf(row.date)];
+        xwPut(wb, r, c, { t: listCellText(row, k),
+          s: S(Object.assign({ h: "center", b: dc ? 1 : 0, c: dc || null }, base)) });
+        return;
+      }
+      if (k === "memo") {                                  // 메모 — 화면과 같이 붉은 글씨
+        xwPut(wb, r, c, { t: listCellText(row, k),
+          s: S(Object.assign({ b: 1, c: ALERT, w: 1 }, base)) });
+        return;
+      }
+      if (k === "time") {                                  // 시작 시각만 붉게 (화면과 같다)
+        xwPut(wb, r, c, { s: S(base),
+          rich: [{ t: row.r.start, b: 1, c: ALERT, sz: 10 }, { t: "–" + row.r.end, sz: 10 }] });
+        return;
+      }
+      xwPut(wb, r, c, { t: listCellText(row, k), s: S(base) });
+    });
   });
-  // 합계 줄. 화면과 같이 금액이 시작되기 전 칸을 합쳐서 "N건 합계" 를 한 줄로 눕힌다
-  const firstSum = cols.findIndex(k => LIST_COLS[k].sum);
-  const footCell = "border:.5pt solid #999999;background:#EEEEEE;font-weight:bold;";
-  const foot = firstSum >= 0
-    ? '<tr><td colspan="' + firstSum + '" style="' + footCell + '">' + data.length + "건 합계</td>" +
-      cols.slice(firstSum).map((k, i) => '<td style="' + footCell + 'text-align:right">' +
-        (sums[firstSum + i] ? won(sums[firstSum + i]) : "") + "</td>").join("") + "</tr>"
-    : "";
 
-  const html =
-    '<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8">' +
-    "<style>td,th{font-family:'맑은 고딕';font-size:10pt}</style></head><body>" +
-    "<table border=1>" +
-    "<colgroup>" + widths.map(w => '<col width="' + w + '">').join("") + "</colgroup>" +
-    '<tr><td colspan="' + cols.length + '" style="font-size:13pt;font-weight:bold;border:none">' +
-      xesc((periodLabel || "") + (m === "fee" ? " 시설 사용료 관리대장"
-                                               : " 시설 예약 " + LIST_MODES[m].name + " 목록")) + "</td></tr>" +
-    "<tr>" + cols.map(k => '<th style="background:#DDDDDD;border:.5pt solid #999999;font-weight:bold">' +
-      xesc(LIST_COLS[k].label) + "</th>").join("") + "</tr>" +
-    body + foot +
-    "</table></body></html>";
-  download(name + ".xls", "\ufeff" + html, "application/vnd.ms-excel");
+  // 합계 줄 — 금액이 시작되기 전 칸을 합쳐서 "N건 합계" 를 한 줄로 눕힌다
+  const firstSum = xcols.findIndex(k => LIST_COLS[k].sum);
+  if (firstSum >= 0 && data.length) {
+    const r = 2 + data.length;
+    xwPut(wb, r, 0, { t: data.length + "건 합계", s: sFoot });
+    if (firstSum > 1) wb.merges.push([r, 0, 1, firstSum]);
+    for (let c = 1; c < firstSum; c++) xwPut(wb, r, c, { s: sFoot });
+    xcols.slice(firstSum).forEach((k, j) => {
+      const col = LIST_COLS[k];
+      const v = col.sum ? data.reduce((a, x) => a + Number(x[k] || 0), 0) : 0;
+      xwPut(wb, r, firstSum + j, (col.sum && !(col.blankZero && !v))
+        ? { n: v, s: sFootN } : { s: sFootN });
+    });
+  }
+
+  downloadBytes(name + ".xlsx", xwXlsx(wb),
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 }
 
 /* =========================================================
@@ -3873,6 +3923,8 @@ function xwAt(wb, ref, o) { const rc = refToRC(ref); xwPut(wb, rc[0], rc[1], o);
 function xwXlsx(wb) {
   const enc = new TextEncoder();
   const H = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  const pg = Object.assign({ orient: "portrait", scale: 0, fitW: 0, centerH: 0, centerV: 0,
+    mx: 0.25, mt: 0.5, mb: 0.4 }, wb.page || {});
   const NSm = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
   const NSr = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
   const NSp = "http://schemas.openxmlformats.org/package/2006/relationships";
@@ -3899,11 +3951,12 @@ function xwXlsx(wb) {
     '<Relationship Id="rId2" Type="' + NSr + '/styles" Target="styles.xml"/></Relationships>';
 
   // ── 서식
+  const argb = c => { const v = String(c).replace("#", ""); return v.length === 6 ? "FF" + v : v; };
   const side = (v, name) => {
     if (!v) return "<" + name + "/>";
     const p = String(v).split("|");
     return "<" + name + ' style="' + p[0] + '">' +
-      (p[1] ? '<color rgb="' + p[1] + '"/>' : "") + "</" + name + ">";
+      (p[1] ? '<color rgb="' + argb(p[1]) + '"/>' : "") + "</" + name + ">";
   };
   const styles = H + '<styleSheet xmlns="' + NSm + '">' +
     (wb.nf.length ? '<numFmts count="' + wb.nf.length + '">' +
@@ -3911,14 +3964,14 @@ function xwXlsx(wb) {
       "</numFmts>" : "") +
     '<fonts count="' + wb.font.length + '">' + wb.font.map(f =>
       "<font>" + (f.b ? "<b/>" : "") + '<sz val="' + f.sz + '"/>' +
-      (f.c ? '<color rgb="' + f.c + '"/>' : "") +
+      (f.c ? '<color rgb="' + argb(f.c) + '"/>' : "") +
       '<name val="' + xq(f.fn) + '"/><family val="3"/><charset val="129"/></font>').join("") + "</fonts>" +
     '<fills count="' + (wb.fl.length + 2) + '"><fill><patternFill patternType="none"/></fill>' +
       '<fill><patternFill patternType="gray125"/></fill>' +
       wb.fl.map(f => '<fill><patternFill patternType="' + f.p + '">' +
-        (f.fg ? '<fgColor rgb="FF' + f.fg + '"/>' : "") +
+        (f.fg ? '<fgColor rgb="' + argb(f.fg) + '"/>' : "") +
         // 바탕색이 없으면 그대로 둔다. 무늬 채우기에 indexed="64" 를 넣으면 새까맣게 칠해진다
-        (f.bg ? '<bgColor rgb="FF' + f.bg + '"/>' : (f.p === "solid" ? '<bgColor indexed="64"/>' : "")) +
+        (f.bg ? '<bgColor rgb="' + argb(f.bg) + '"/>' : (f.p === "solid" ? '<bgColor indexed="64"/>' : "")) +
         "</patternFill></fill>").join("") + "</fills>" +
     '<borders count="' + (wb.bd.length + 1) + '">' +
       "<border><left/><right/><top/><bottom/><diagonal/></border>" +
@@ -3953,6 +4006,16 @@ function xwXlsx(wb) {
       let inner = "", tp = "";
       if (cell.f != null) inner = "<f>" + xq(cell.f) + "</f>";
       else if (cell.n != null) inner = "<v>" + cell.n + "</v>";
+      else if (cell.rich) {
+        /* 한 칸 안에서 앞부분만 색·굵기를 달리한다 (목록의 시작 시각).
+           도막마다 글꼴을 다시 적어야 하므로 rPr 를 통째로 넣는다 */
+        tp = ' t="inlineStr"';
+        inner = "<is>" + cell.rich.map(r =>
+          "<r><rPr>" + (r.b ? "<b/>" : "") + '<sz val="' + (r.sz || 10) + '"/>' +
+          (r.c ? '<color rgb="' + argb(r.c) + '"/>' : "") +
+          '<rFont val="' + xq(r.fn || "맑은 고딕") + '"/><family val="3"/><charset val="129"/></rPr>' +
+          '<t xml:space="preserve">' + xq(r.t) + "</t></r>").join("") + "</is>";
+      }
       else if (cell.t != null && cell.t !== "") {
         tp = ' t="inlineStr"';
         inner = '<is><t xml:space="preserve">' + xq(cell.t) + "</t></is>";
@@ -3963,6 +4026,7 @@ function xwXlsx(wb) {
     sd += '<row r="' + (r + 1) + '"' + (h ? ' ht="' + h + '" customHeight="1"' : "") + ">" + cs + "</row>";
   }
   const sheet = H + '<worksheet xmlns="' + NSm + '" xmlns:r="' + NSr + '">' +
+    (pg.fitW ? "<sheetPr><pageSetUpPr fitToPage=\"1\"/></sheetPr>" : "") +
     '<dimension ref="A1:' + cellRef(nRow - 1, nCol - 1) + '"/>' +
     // 쪽 나눔 미리보기로 열면 인쇄 영역 바깥이 회색으로 눌려 서식만 또렷하게 보인다 (원본과 같다)
     '<sheetViews><sheetView view="pageBreakPreview" zoomScaleNormal="100" ' +
@@ -3974,10 +4038,14 @@ function xwXlsx(wb) {
     (wb.merges.length ? '<mergeCells count="' + wb.merges.length + '">' +
       wb.merges.map(m => '<mergeCell ref="' + cellRef(m[0], m[1]) + ":" +
         cellRef(m[0] + m[2] - 1, m[1] + m[3] - 1) + '"/>').join("") + "</mergeCells>" : "") +
-    '<printOptions horizontalCentered="1" verticalCentered="1"/>' +
-    '<pageMargins left="0.039370078740157" right="0.039370078740157" top="0.98425196850393" ' +
-      'bottom="0.35433070866141" header="0.43307086614173" footer="0.27559055118110"/>' +
-    '<pageSetup paperSize="9" scale="86" orientation="portrait"/>' +
+    // 인쇄 설정. 정산서는 서식 그대로, 목록은 가로 용지에 폭을 맞춘다
+    (pg.centerH || pg.centerV ? "<printOptions" + (pg.centerH ? ' horizontalCentered="1"' : "") +
+      (pg.centerV ? ' verticalCentered="1"' : "") + "/>" : "") +
+    '<pageMargins left="' + pg.mx + '" right="' + pg.mx + '" top="' + pg.mt + '" ' +
+      'bottom="' + pg.mb + '" header="0.31496062992126" footer="0.31496062992126"/>' +
+    '<pageSetup paperSize="9"' + (pg.scale ? ' scale="' + pg.scale + '"' : "") +
+      (pg.fitW ? ' fitToWidth="1" fitToHeight="0"' : "") +
+      ' orientation="' + pg.orient + '"/>' +
     (wb.header ? '<headerFooter alignWithMargins="0"><oddHeader>' + xq(wb.header) + "</oddHeader></headerFooter>" : "") +
     (wb.breaks && wb.breaks.length ? '<rowBreaks count="' + wb.breaks.length + '" manualBreakCount="' + wb.breaks.length + '">' +
       wb.breaks.map(b => '<brk id="' + b + '" man="1"/>').join("") + "</rowBreaks>" : "") +
@@ -4047,29 +4115,56 @@ function settleStyles(wb) {
   return { ids: F.S.map(s => resolve(s)), resolve: resolve };
 }
 
-/* 통제 도장 — 담당자가 한글로 만들어 붙이던 그림을 같은 모양으로 그린다.
-   파란 원에 가로 두 줄, 「통 제」 · 「연도.  .  .」 · 「체육시설사업팀」 세 줄이다.
-   **가운데 줄의 연도만 만드는 시점의 연도로 찍고 월·일은 손으로 적는다.**
-   두 배 크기로 그려서 절반으로 넣기 때문에 인쇄해도 또렷하다 */
+/* 통제 도장 — 담당자가 한글로 만들어 붙이던 그림을 **원본 그대로** 다시 그린다.
+   한글 원본(7086 HWPUNIT = 95px)과 거기서 뽑아 낸 그림을 픽셀 단위로 재서 얻은 값이다.
+
+     바탕 95×95 · 파랑 #0000FF · 선 굵기 1px
+     원   중심 (46.5, 46) 반지름 (46.5, 46)
+     가로줄 y = 37 · 57 (칸 폭 전체)
+     글씨  통 제          y 22 · 글자 가운데 x 30.5 / 60      · 글자 폭 10
+           연도.  .  .    y 46 · 「2026.」 가운데 24 (폭 27) · 점 59 / 80
+           체육시설사업팀  y 70 · 9.5 간격으로 17 부터        · 글자 폭 8
+
+   **바뀌는 것은 가운데 줄의 연도뿐이고 월·일은 손으로 적는다.**
+   글씨 크기는 재어 보고 원본과 같은 폭이 되게 맞춘다 — PC 마다 글꼴이 조금씩 달라도
+   도장 모양이 흐트러지지 않는다. 네 배로 그려 95px 로 넣기 때문에 인쇄해도 또렷하다.
+   **이 값을 눈대중으로 고치지 않는다** — 고쳐야 하면 한글 원본에서 다시 잰다 */
+const STAMP_PX = 95;                 // 원본과 같은 크기 (한글 7086 HWPUNIT)
 function settleStampPng() {
-  const S = 200, cv = document.createElement("canvas");
+  const K = 4, S = STAMP_PX * K;
+  const cv = document.createElement("canvas");
   cv.width = cv.height = S;
   const g = cv.getContext("2d");
-  const BLUE = "#1A1AD0";
   g.fillStyle = "#FFFFFF"; g.fillRect(0, 0, S, S);
-  g.strokeStyle = BLUE; g.lineWidth = S * 0.013;
-  g.beginPath(); g.arc(S / 2, S / 2, S * 0.465, 0, Math.PI * 2); g.stroke();
-  // 가로 두 줄은 원보다 조금 넓게 긋는다 (원본과 같은 모양)
-  [0.395, 0.625].forEach(y => {
-    g.beginPath(); g.moveTo(S * 0.012, S * y); g.lineTo(S * 0.988, S * y); g.stroke();
+
+  g.strokeStyle = "#0000FF"; g.lineWidth = K;
+  g.beginPath(); g.ellipse(46.5 * K, 46 * K, 46.5 * K - K / 2, 46 * K - K / 2, 0, 0, Math.PI * 2); g.stroke();
+  [37, 57].forEach(y => {
+    g.beginPath(); g.moveTo(0, (y + 0.5) * K); g.lineTo(S, (y + 0.5) * K); g.stroke();
   });
-  const font = px => Math.round(px) + 'px "돋움",Dotum,"맑은 고딕","Malgun Gothic",sans-serif';
-  g.textAlign = "center"; g.textBaseline = "middle";
-  g.fillStyle = "#000000";
-  g.font = font(S * 0.125); g.fillText("통     제", S / 2, S * 0.265);
-  g.font = font(S * 0.100); g.fillText(new Date().getFullYear() + ".      .      .", S / 2, S * 0.512);
-  g.fillStyle = BLUE;
-  g.font = font(S * 0.092); g.fillText("체육시설사업팀", S / 2, S * 0.735);
+
+  const FAM = '"돋움",Dotum,"맑은 고딕","Malgun Gothic",sans-serif';
+  g.fillStyle = "#000000"; g.textAlign = "center"; g.textBaseline = "middle";
+  /* 글자를 원본에서 잰 자리에 하나씩 놓는다.
+     띄어쓰기로 벌리면 PC 마다 공백 폭이 달라 자리가 어긋나므로 좌표로 박는다 */
+  const ink = t => {
+    const m = g.measureText(t);
+    return (m.actualBoundingBoxLeft != null && m.actualBoundingBoxRight != null)
+      ? m.actualBoundingBoxLeft + m.actualBoundingBoxRight : m.width * 0.82;
+  };
+  const sizeFor = (sample, wPx) => {          // 원본과 같은 글자 폭이 되는 크기
+    g.font = "100px " + FAM;
+    const w = ink(sample);
+    return w > 1 ? Math.max(6, Math.round(100 * wPx * K / w)) : 13 * K;
+  };
+  const row = (chars, centers, cy, size) => {
+    g.font = size + "px " + FAM;
+    chars.forEach((ch, i) => g.fillText(ch, centers[i] * K, cy * K));
+  };
+  row(["통", "제"], [30.5, 60], 22, sizeFor("통", 10));
+  const yy = new Date().getFullYear() + ".";
+  row([yy, ".", "."], [24, 59, 80], 46, sizeFor("2026.", 27));
+  row("체육시설사업팀".split(""), [17, 27.5, 36.5, 46.5, 56, 65.5, 74.5], 70, sizeFor("체", 8));
 
   const bin = atob(cv.toDataURL("image/png").split(",")[1]);
   const out = new Uint8Array(bin.length);
@@ -4087,9 +4182,12 @@ function settleWorkbook(d) {
   wb.breaks = [39];                        // 39줄 뒤에서 장을 넘긴다 (원본과 같다)
   wb.printArea = "$A$1:$N$81";             // 서식 밖은 인쇄하지 않는다 (원본과 같다)
   wb.header = '&C&"돋움,굵게"&26대관 사용료 정산서';   // 장마다 머리글 (원본과 같다)
+  wb.page = { orient: "portrait", scale: 86, centerH: 1, centerV: 1,
+              mx: 0.039370078740157, mt: 0.98425196850393, mb: 0.35433070866141 };
   // 통제 도장 — 첫 장 우측 아래(M36) 에 붙인다. 원본에서 그림을 붙이던 자리다
   try {
-    wb.image = { data: settleStampPng(), name: "통제", col: 12, row: 35, w: 96, h: 96, dx: 6, dy: 2 };
+    wb.image = { data: settleStampPng(), name: "통제", col: 12, row: 35,
+                 w: STAMP_PX, h: STAMP_PX, dx: 46, dy: 4 };
   } catch (e) { /* 그림을 못 만들면 원본처럼 빈칸으로 둔다 */ }
   const st = settleStyles(wb);
   const formStyle = [];                    // 칸마다 원본 서식 번호 — 표시형식만 갈아끼울 때 쓴다
@@ -4431,7 +4529,26 @@ function openSettings() {
   }
   applyRole();
   renderServerCard();
+  setSaveNote();
   $("#settingsBox").hidden = false;
+}
+
+/* 설정창 아래에 지금 저장 상태를 적는다.
+   자동 저장이 2분 뒤에 걸리므로, 아직 안 올라갔는지 눈에 보여야 한다 */
+function setSaveNote(msg) {
+  const el = $("#setSaveNote");
+  if (!el) return;
+  el.textContent = msg || ($("#saveState") ? $("#saveState").textContent : "");
+}
+
+/* 설정 저장 — 자동 저장(2분)을 기다리지 않고 지금 올린다.
+   설정창의 「설정 저장」 과 시설·요금 기준 탭 윗줄의 단추가 함께 쓴다 */
+function saveSettingsNow() {
+  if (currentRole() !== "manager") { toast("담당자 계정으로 로그인해야 합니다"); return; }
+  // 입력칸에 적고 아직 포커스가 남아 있는 값까지 반영되도록 한 번 흘려 보낸다
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  saveNow();
+  setSaveNote();
 }
 /* 적어 둔 담당자 이름으로 고르는 칸을 다시 만든다 */
 function renderOfficerPick() {
@@ -4984,13 +5101,16 @@ function init() {
   // 설정창 — 로그인과 데이터 관리를 여기 모았다
   $("#settingsBtn").addEventListener("click", openSettings);
   $("#setClose").addEventListener("click", () => { $("#settingsBox").hidden = true; });
+  $("#setCloseFoot").addEventListener("click", () => { $("#settingsBox").hidden = true; });
+  $("#setPaneSave").addEventListener("click", saveSettingsNow);
   /* 관리자 전용 칸은 설정창을 열 때마다 새로 만들어진다.
      그래서 단추마다 리스너를 붙이지 않고 창 전체에 한 번만 위임한다 */
   $("#settingsBox").addEventListener("click", e => {
     const b = e.target.closest("button");
     if (!b || !b.id) return;
     const run = { clearRes: doClearRes, resetAll: doResetAll, exportJson: doExportJson,
-                  importJson: doImportJson, importPaste: doImportPaste }[b.id];
+                  importJson: doImportJson, importPaste: doImportPaste,
+                  setSave: saveSettingsNow }[b.id];
     if (!run) return;
     if (currentRole() !== "manager") { toast("담당자 계정으로 로그인해야 합니다"); return; }
     run();
