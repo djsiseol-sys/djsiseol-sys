@@ -1393,7 +1393,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-08-27.28";
+const APP_VERSION = "2026-08-27.31";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -3712,32 +3712,39 @@ function exportTable(fmt, rows, mode, periodLabel) {
      경고가 떴다. **완료 칸은 넣지 않는다** — 종이·화면에서만 쓰는 표시다 */
   const xcols = cols.filter(k => k !== "done");
   const wb = xwNew(m === "fee" ? "사용료관리" : "예약내역");
+  /* 글자 크기 — 담당자 요청으로 14pt 다. 열 너비는 엑셀 기본 글꼴(11pt) 칸 수로 세므로
+     글자를 키운 만큼 넓혀야 글이 잘리지 않는다 */
+  const FSZ = 14, WMUL = FSZ / 11;
   // 열 너비 — 그 열에 들어간 값 중 가장 긴 것에 맞춘다 (한글은 두 칸으로 센다)
   wb.cols = xcols.map(k => {
     let w = textWidth(LIST_COLS[k].label);
     data.forEach(row => String(listCellText(row, k)).split("\n")
       .forEach(line => { w = Math.max(w, textWidth(line)); }));
-    return Math.min(60, w + 3);
+    return Math.min(80, Math.round((w + 3) * WMUL * 10) / 10);
   });
 
   wb.page = { orient: "landscape", fitW: 1 };   // 종이 한 폭에 담는다
-  const GR = "FF999999", YL = "FFC8961A", ALERT = "A8574C";
+  /* YL 은 준비 건 테두리색이다. 바탕이 파랑이 되면서 테두리도 같은 계열로 맞췄다.
+     글자색은 **엑셀 표준 색** 그대로 쓴다 (담당자 요청) — 빨강 FF0000 · 파랑 0070C0.
+     화면은 예전 색(`--alert`·`--sat`·`--sun`)을 그대로 쓴다 */
+  const GR = "FF999999", YL = "FF2E75B6";
+  const ALERT = "FF0000", SAT = "0070C0", SUN = "FF0000";
   const DAY = "medium|FF555555";     // 날짜 묶음을 가르는 굵은 아래줄
   /* 칸 바탕 — 종이에서 한눈에 갈라 보이게 **엑셀에만** 칠한다 (담당자 요청).
      화면·인쇄는 예전대로 테두리와 글자색으로만 구분한다. 둘을 같이 맞추려 하지 않는다.
      준비(노랑)와 토·일·공휴일(연한 살구색)은 서로 헷갈리지 않는 색으로 골랐다 */
-  const PREPFILL = { p: "solid", fg: "FFFF00" };   // 준비 — 원본 정산서와 같은 노랑
-  const HOLFILL  = { p: "solid", fg: "FCE4D6" };   // 토·일·공휴일 (연한 살구색)
+  const PREPFILL = { p: "solid", fg: "DEEBF7" };   // 준비 — 파랑 강조 5, 80% 더 밝게
+  const HOLFILL  = { p: "solid", fg: "FFF2CC" };   // 토·일·공휴일 — 황금색 강조 4, 80% 더 밝게
   const box = c => ({ t: "thin|" + c, b: "thin|" + c, l: "thin|" + c, r: "thin|" + c });
-  /* 준비 건은 **줄 바깥쪽에만** 노란 테두리를 두른다. 칸마다 두르면 격자가 겹쳐 보여서,
+  /* 준비 건은 **줄 바깥쪽에만** 테두리를 두른다. 칸마다 두르면 격자가 겹쳐 보여서,
      위·아래는 모든 칸에 긋고 왼쪽·오른쪽은 양 끝 칸에만 긋는다 (화면·종이와 같다) */
   const prepBox = (first, last) => ({
     t: "thin|" + YL, b: "thin|" + YL,
     l: "thin|" + (first ? YL : GR), r: "thin|" + (last ? YL : GR)
   });
-  const S = o => xwStyle(wb, Object.assign({ fn: "맑은 고딕", sz: 10 }, o));
+  const S = o => xwStyle(wb, Object.assign({ fn: "맑은 고딕", sz: FSZ }, o));
 
-  const sTitle = S({ sz: 13, b: 1, h: "left", v: "center" });
+  const sTitle = S({ sz: FSZ + 4, b: 1, h: "left", v: "center" });
   const sHead  = S({ b: 1, h: "center", v: "center", bd: box(GR), fl: { p: "solid", fg: "DDDDDD" } });
   const sFoot  = S({ b: 1, bd: box(GR), fl: { p: "solid", fg: "EEEEEE" } });
   const sFootN = S({ b: 1, h: "right", bd: box(GR), fl: { p: "solid", fg: "EEEEEE" }, nf: "#,##0" });
@@ -3748,7 +3755,7 @@ function exportTable(fmt, rows, mode, periodLabel) {
   xwPut(wb, 0, 0, { t: title, s: sTitle });
   wb.merges.push([0, 0, 1, xcols.length]);
   xcols.forEach((k, c) => xwPut(wb, 1, c, { t: LIST_COLS[k].label, s: sHead }));
-  wb.rowH[0] = 21; wb.rowH[1] = 19;
+  wb.rowH[0] = Math.round((FSZ + 4) * 1.6); wb.rowH[1] = Math.round(FSZ * 1.7);
 
   data.forEach((row, i) => {
     const r = 2 + i;
@@ -3788,7 +3795,7 @@ function exportTable(fmt, rows, mode, periodLabel) {
         return;
       }
       if (k === "dow") {                                   // 요일 — 토 파랑, 일·공휴일 빨강
-        const dc = { " dow-sat": "20558C", " dow-sun": "B03A3A" }[dowClassOf(row.date)];
+        const dc = { " dow-sat": SAT, " dow-sun": SUN }[dowClassOf(row.date)];
         xwPut(wb, r, c, { t: listCellText(row, k),
           s: S(Object.assign({ h: "center", b: dc ? 1 : 0, c: dc || null }, base)) });
         return;
@@ -3800,7 +3807,7 @@ function exportTable(fmt, rows, mode, periodLabel) {
       }
       if (k === "time") {                                  // 시작 시각만 붉게 (화면과 같다)
         xwPut(wb, r, c, { s: S(base),
-          rich: [{ t: row.r.start, b: 1, c: ALERT, sz: 10 }, { t: "–" + row.r.end, sz: 10 }] });
+          rich: [{ t: row.r.start, b: 1, c: ALERT, sz: FSZ }, { t: "–" + row.r.end, sz: FSZ }] });
         return;
       }
       if (col.cls === "num") {                             // 인원 — 글자가 아니라 숫자로
