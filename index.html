@@ -1393,7 +1393,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-08-27.25";
+const APP_VERSION = "2026-08-27.26";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -3723,6 +3723,9 @@ function exportTable(fmt, rows, mode, periodLabel) {
   wb.page = { orient: "landscape", fitW: 1 };   // 종이 한 폭에 담는다
   const GR = "FF999999", YL = "FFC8961A", ALERT = "A8574C";
   const DAY = "medium|FF555555";     // 날짜 묶음을 가르는 굵은 아래줄
+  /* 준비 건은 **칸 전체를 노랗게 칠한다** (담당자 요청 — 종이에서 한눈에 띄어야 한다).
+     화면·인쇄는 예전대로 테두리로만 구분한다. 엑셀만 칠한다 */
+  const PREPFILL = { p: "solid", fg: "FFF2CC" };
   const box = c => ({ t: "thin|" + c, b: "thin|" + c, l: "thin|" + c, r: "thin|" + c });
   /* 준비 건은 **줄 바깥쪽에만** 노란 테두리를 두른다. 칸마다 두르면 격자가 겹쳐 보여서,
      위·아래는 모든 칸에 긋고 왼쪽·오른쪽은 양 끝 칸에만 긋는다 (화면·종이와 같다) */
@@ -3769,7 +3772,8 @@ function exportTable(fmt, rows, mode, periodLabel) {
       const wide = merged && span[i] > 1;
       let bd = (prep && !wide) ? prepBox(k === marked[0], k === marked[marked.length - 1]) : box(GR);
       if (!wide) bd = dayEnd(bd);          // 여러 줄에 걸친 칸은 맨 아랫줄이 대신 긋는다
-      const base = { bd: bd, v: "top" };
+      // 여러 줄에 걸친 날짜 칸은 칠하지 않는다 — 행사 줄까지 통째로 물든다
+      const base = (prep && !wide) ? { bd: bd, v: "top", fl: PREPFILL } : { bd: bd, v: "top" };
       if (col.sum) {                                       // 금액 — 숫자로 넣는다
         const v = Number(row[k]) || 0;
         xwPut(wb, r, c, (col.blankZero && !v)
