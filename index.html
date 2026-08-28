@@ -1393,7 +1393,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-08-27.26";
+const APP_VERSION = "2026-08-27.27";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -3725,7 +3725,7 @@ function exportTable(fmt, rows, mode, periodLabel) {
   const DAY = "medium|FF555555";     // 날짜 묶음을 가르는 굵은 아래줄
   /* 준비 건은 **칸 전체를 노랗게 칠한다** (담당자 요청 — 종이에서 한눈에 띄어야 한다).
      화면·인쇄는 예전대로 테두리로만 구분한다. 엑셀만 칠한다 */
-  const PREPFILL = { p: "solid", fg: "FFF2CC" };
+  const PREPFILL = { p: "solid", fg: "FFE699" };
   const box = c => ({ t: "thin|" + c, b: "thin|" + c, l: "thin|" + c, r: "thin|" + c });
   /* 준비 건은 **줄 바깥쪽에만** 노란 테두리를 두른다. 칸마다 두르면 격자가 겹쳐 보여서,
      위·아래는 모든 칸에 긋고 왼쪽·오른쪽은 양 끝 칸에만 긋는다 (화면·종이와 같다) */
