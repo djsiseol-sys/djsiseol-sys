@@ -204,6 +204,8 @@ main{max-width:1440px;margin:0 auto;padding:18px 20px 60px}
 .chip>span.n{white-space:normal;word-break:keep-all;overflow-wrap:anywhere;text-overflow:clip}
 .chip .n{font-size:12px;font-weight:500;opacity:1}
 .chip .t{font-family:"IBM Plex Mono",monospace;margin-right:3px;font-size:10px;letter-spacing:-.04em;display:inline!important}
+/* 인원수 — 인쇄 창에서 골랐을 때만 아랫줄 끝에 붙는다. 목적과 헷갈리지 않게 흐리게 쓴다 */
+.chip .hc{font-family:"IBM Plex Mono",monospace;font-size:10px;font-weight:400;opacity:.75;margin-left:4px;white-space:nowrap}
 /* 상태는 화면에서 쓰지 않기로 해서 테두리는 전부 실선이다 (예전 '신청' 파선 없음) */
 .chip.cancelled{opacity:.5;text-decoration:line-through}
 .chip.is-prep{border-color:var(--prep-line);box-shadow:inset 3px 0 0 var(--prep-line)}
@@ -468,6 +470,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 .pc-page .chip>span:first-child{font-size:10.5px;opacity:1}
 .pc-page .chip .t{font-size:10.5px}
 .pc-page .chip .n{font-size:12.5px;font-weight:600}
+.pc-page .chip .hc{font-size:11px;opacity:.85}
 .pc-legend{display:flex;gap:12px;font-size:10px;color:#333;margin-left:auto;align-items:center;flex-wrap:wrap}
 .pc-legend>span{white-space:nowrap}
 .pc-legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px;
@@ -1359,6 +1362,14 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
         </select>
         <span class="hint">행사와 준비를 한 장에 섞지 않고 달력을 따로 찍습니다.</span>
       </div>
+      <div class="field" id="printCalHeadBox">
+        <label for="printCalHead">인원수</label>
+        <select id="printCalHead">
+          <option value="off">인원수 없이 인쇄 (지금까지와 같음)</option>
+          <option value="on">인원수도 함께 인쇄</option>
+        </select>
+        <span class="hint">고르면 각 일정의 이용 목적 뒤에 <b>120명</b> 처럼 붙습니다. 인원을 적지 않은 건에는 나오지 않습니다.</span>
+      </div>
       <div class="fee-box" id="printDateBox" hidden>
         <div class="fee-head">
           <h3>인쇄할 날짜</h3>
@@ -1393,7 +1404,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-08-27.31";
+const APP_VERSION = "2026-08-27.32";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -2590,12 +2601,14 @@ function monthReservations(y, m) {
    종이에 찍힌 것과 화면에 뜬 것이 달라지지 않게 하려는 것이다.
      kinds  그릴 건 구분. 화면은 ["행사"] 만, 인쇄는 행사/준비를 따로 뽑는다
      cap    한 칸에 보여줄 개수. 0 이면 제한 없음(인쇄)
-     live   달력 화면인지 (누를 수 있는 칸·선택 표시) */
+     live   달력 화면인지 (누를 수 있는 칸·선택 표시)
+     head   인원수를 칩에 함께 띄울지 (인쇄 창에서 고른다. 화면 달력은 띄우지 않는다) */
 function calCellsHtml(o) {
   const y = o.year, m = o.month;
   const kinds = o.kinds || ["행사"];
   const cap = o.cap || 0;
   const live = o.live !== false;
+  const showHead = o.head === true;
   const startDow = new Date(y, m - 1, 1).getDay();
   const daysInMonth = new Date(y, m, 0).getDate();
   const prevDays = new Date(y, m - 1, 0).getDate();
@@ -2633,12 +2646,17 @@ function calCellsHtml(o) {
          목적을 안 적은 건은 빈 줄이 되어버리므로 신청 단체로 대신한다.
          두 값 모두 짚어 보게 마우스를 올리면 나오는 설명에는 함께 담는다 */
       const label = (r.purpose || "").trim() || r.applicant;
+      /* 인원수는 골랐을 때만 붙인다. 아랫줄(목적) 끝에 붙이는 것은 일부러다 —
+         윗줄(시각·시설)은 한 줄로 자르므로 인원수를 넣으면 시설명이 잘린다.
+         아랫줄은 줄을 바꾸므로 인원수가 길어도 아무것도 잘리지 않는다 */
+      const hc = showHead && r.headcount ? '<span class="hc">' + esc(String(r.headcount)) + "명</span>" : "";
       return "<" + (live ? "button type=\"button\"" : "span") + ' class="chip' + cls + cf + pk +
         '" data-fc="' + colorOf(f) + '"' + (live ? ' data-edit="' + r.id + '"' : "") + ' title="' +
         esc(r.start + "–" + r.end + " " + (f ? f.name : "") + "\n" + r.applicant +
-            (r.purpose ? " / " + r.purpose : "")) + '">' +
+            (r.purpose ? " / " + r.purpose : "") +
+            (r.headcount ? " / " + r.headcount + "명" : "")) + '">' +
         '<span><span class="t">' + esc(r.start) + "–" + esc(r.end) + "</span>" + esc(f ? f.name : "?") + "</span>" +
-        '<span class="n">' + esc(label) + "</span></" + (live ? "button" : "span") + ">";
+        '<span class="n">' + esc(label) + hc + "</span></" + (live ? "button" : "span") + ">";
     }).join("");
     const more = (live && items.length > n)
       ? '<button type="button" class="chip-more" data-day="' + date + '">+ ' + (items.length - n) + "건 더</button>"
@@ -3461,6 +3479,7 @@ function updatePrintBoxUI() {
   const k = $("#printKind").value;
   $("#printDateBox").hidden = k !== "detail";
   $("#printCalKindBox").hidden = k !== "cal";
+  $("#printCalHeadBox").hidden = k !== "cal";
   $("#printHint").textContent =
     k === "cal"    ? "가로 용지로 한 달 달력을 찍습니다. 한 칸에 그 날 것을 모두 펼쳐 보여줍니다." :
     k === "detail" ? "고른 날짜만 세로 용지에 표로 찍습니다. 메모와 공과금까지 함께 나옵니다." :
@@ -3495,7 +3514,7 @@ function pickedPrintDates() {
 /* 달력 인쇄판을 만든다.
    행사와 준비를 한 장에 섞지 않고 **달력을 따로** 뽑는다 —
    현장에 붙여 두는 종이가 다르기 때문이다 (행사 일정표 / 준비 작업표) */
-function buildPrintCalendar(kindList) {
+function buildPrintCalendar(kindList, showHead) {
   const y = view.year, m = view.month;
   const mr = monthReservations(y, m).filter(r => r.status !== "취소");
   const org = state.settings.orgNote || "";
@@ -3509,7 +3528,7 @@ function buildPrintCalendar(kindList) {
         "<span>" + kind + " " + n + "건</span>" +
         (org ? "<span>" + esc(org) + "</span>" : "") + legend + "</div>" +
       '<div class="dow"><div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div></div>' +
-      '<div class="grid">' + calCellsHtml({ year: y, month: m, kinds: [kind], cap: 0, live: false }) + "</div>" +
+      '<div class="grid">' + calCellsHtml({ year: y, month: m, kinds: [kind], cap: 0, live: false, head: showHead === true }) + "</div>" +
       "</div></section>";
   }).join("");
   fitPrintPages();
@@ -3629,7 +3648,8 @@ function doPrint(kind) {
     // 행사 달력과 준비 달력을 따로 찍는다. 인쇄판에서는 "+N건 더" 없이 그 날 것을 다 편다
     const pick = $("#printCalKind").value;
     const kinds = pick === "both" ? ["행사", "준비"] : [pick];
-    buildPrintCalendar(kinds);
+    // 인원수를 함께 찍을지는 인쇄 창에서 고른다 (기본은 지금까지와 같이 넣지 않는다)
+    buildPrintCalendar(kinds, $("#printCalHead").value === "on");
     $("#printPage").textContent = "@page{size:A4 landscape;margin:7mm}";
     document.body.classList.add("print-cal");
   }
