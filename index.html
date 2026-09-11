@@ -1399,7 +1399,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-09-11.35";
+const APP_VERSION = "2026-09-11.36";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -4265,6 +4265,33 @@ const SETTLE_FORM = {"W":[6.21875, 5.88671875, 4.77734375, 7.77734375, 3.7773437
 
 const SETTLE_ANNEX_ROWS = 7;   // 서식의 ⑤ 부속시설 칸 수 (원본 그대로)
 
+/* ⑤ 부속시설 — 서식의 일곱 줄에 **늘 이 차례로** 앉힌다 (2026-09-11 담당자 요청).
+   안 쓴 줄도 이름은 찍고 0원으로 둔다 — 무엇을 안 썼는지가 종이에 보여야 한다.
+   **뒤 두 줄(탁자·의자)이 「개」 로 세는 자리다** — 서식의 개수 칸과 제출용 수식이
+   그 두 줄에만 걸려 있어서, 차례를 바꾸면 개수가 엉뚱한 줄에 찍힌다.
+   설정의 부속시설 항목을 `id` 로 먼저 찾고, 없으면 이름에 `key` 가 들어간 항목을 찾는다
+   (담당자가 이름을 고쳐도 자리를 잃지 않게).
+   `merge` 는 기본료가 붙는 항목(마이크)을 **한 줄로 합쳐** 낸다는 뜻이다 —
+   서식의 금액 칸이 「단가 × 감면율 × 회수」 라서 두 줄을 쓸 수 없다 (담당자 요청) */
+const SETTLE_ANNEX_SLOTS = [
+  { label: "집중조명",   id: "a4",  key: "집중조명" },
+  { label: "마이크시설", id: "a2",  key: "마이크",   merge: true },
+  { label: "전광판",     id: "a3",  key: "전광판" },
+  { label: "냉난방",     id: "a6",  key: "난방" },
+  { label: "바닥깔이",   id: "a10", key: "바닥깔이" },
+  { label: "탁자",       id: "a9",  key: "탁자", ea: true },
+  { label: "의자",       id: "a8",  key: "의자", ea: true }
+];
+/* 서식에 **제 칸이 따로 있는** 항목 — ⑤ 부속시설에 넣지 않는다 (담당자 요청).
+   ② 입장료 · ③ 중계방송료 · ④ 상행위(플래카드) 칸으로 간다.
+   등록창에서는 다른 부속시설과 같이 수량을 넣고, 산정(⑥)에도 그대로 들어간다 —
+   **정산서에서만 제자리로 갈라진다** */
+const SETTLE_OWN_ROWS = [
+  { slot: "entry",     id: "a16", key: "입장료" },
+  { slot: "broadcast", id: "a15", key: "중계방송" },
+  { slot: "placard",   id: "a14", key: "플래카드" }
+];
+
 /* 원본 서식을 이 파일의 서식으로 등록한다. 번호 차례는 원본 그대로 */
 function settleStyles(wb) {
   const F = SETTLE_FORM;
@@ -4443,6 +4470,24 @@ function settleWorkbook(d) {
   at("I16", { n: keep });                  // ③ 중계방송료 감면율
   at("I19", { n: keep });                  // ④ 상행위 감면율
 
+  /* ② 입장료 · ③ 중계방송료 · ④ 상행위(플래카드) — 서식에 제 칸이 있는 항목이다.
+     ⑤ 부속시설에 섞지 않고 여기에 넣는다 (담당자 요청).
+     계 칸은 서식의 수식이 스스로 곱한다 — ② K14=C14*F14*H14 · ③ K16=C16*F16*I16 ·
+     ④ L19=H19*I19*J19. 그래서 단가와 수량만 넣으면 된다.
+     안 쓴 항목은 단가·수량을 0 으로 두어 0원으로 찍힌다 */
+  at("C14", { n: d.entry.qty > 0 ? d.entry.unitFee : 0 });      // 입장료 단가
+  at("F14", { n: d.entry.qty });                                // 입장 인원
+  at("C16", { n: d.broadcast.qty > 0 ? d.broadcast.unitFee : 0 });
+  at("F16", { n: d.broadcast.qty });
+  at("H19", { n: d.placard.qty > 0 ? d.placard.unitFee : 0 });
+  at("J19", { n: d.placard.qty });
+  /* 서식에 「일반(입장인원x200원)」 으로 박혀 있는 딱지를 설정한 단가로 고쳐 넣는다
+     (감면율 딱지와 같은 방식이다). 입장료 항목을 지웠으면 서식 글을 그대로 둔다 */
+  if (d.entry.has) {
+    const entryLabel = "일반(입장인원x" + won(d.entry.unitFee) + "원)";
+    ["C13", "C52"].forEach(ref => at(ref, { t: entryLabel }));
+  }
+
   /* 서식에는 비율이 「감면율(80%)」 처럼 글자로 박혀 있다.
      그 건의 감면율·조례 비율을 따라가게 고쳐 넣는다 (글자만 바꾸고 서식은 그대로 둔다) */
   const dcLabel = "감면율(" + d.dcRate + "%)";
@@ -4451,18 +4496,18 @@ function settleWorkbook(d) {
     d.admOther + "%)\n       <A>";
   ["C9", "C48"].forEach(ref => at(ref, { t: admLabel }));
 
-  // ⑤ 부속시설 (별표 6) — 서식의 일곱 줄에 차례로 넣는다
+  /* ⑤ 부속시설 — 일곱 줄을 **늘 같은 차례로** 채운다 (SETTLE_ANNEX_SLOTS).
+     안 쓴 줄도 이름은 찍고 단가·수량을 0 으로 두어 0원으로 나온다 (담당자 요청).
+     뒤 두 줄(탁자·의자)만 개수 칸을 쓴다 — 서식의 금액 수식이 그렇게 짜여 있다 */
   for (let i = 0; i < SETTLE_ANNEX_ROWS; i++) {
     const r = 20 + i, it = d.annex[i];
     at("F" + r, { n: keep });
-    if (!it) continue;
-    const ea = annexCounts(it.unit);   // 「개」·「명」 은 개수 칸에 수량을 적는다
-    // 설정에서 붙인 이름이 칸보다 길 수 있다. 잘리지 않게 글씨를 줄여 담는다
-    at("B" + r, { t: it.name, s: styAt("B" + r, { s: 1 }) });
+    // 이름이 칸보다 길 수 있다. 잘리지 않게 글씨를 줄여 담는다
+    at("B" + r, { t: it.label, s: styAt("B" + r, { s: 1 }) });
     at("D" + r, { n: it.fee });
-    at("G" + r, { n: ea ? 1 : it.qty });
-    at("H" + r, { f: "D" + r + "*F" + r + "*G" + r + (ea ? "*E" + r : "") });
-    if (ea) at("E" + r, { n: it.qty, s: styAt("E" + r, { nf: 'General"' + it.unit + '"' }) });
+    at("G" + r, { n: it.ea ? 1 : it.qty });
+    at("H" + r, { f: "D" + r + "*F" + r + "*G" + r + (it.ea ? "*E" + r : "") });
+    if (it.ea) at("E" + r, { n: it.qty, s: styAt("E" + r, { nf: 'General"개"' }) });
   }
   // 공과금 — 전기료·수도료 (대장에 적은 실비 그대로. 감면을 타지 않는다)
   at("L21", { n: d.power });
@@ -4506,11 +4551,9 @@ function settleWorkbook(d) {
    ["C56", "C16"], ["H56", "F16"], ["H59", "H19"], ["J59", "J19"],
    ["K63", "K23"], ["L63", "L23"], ["K64", "K24"], ["L64", "L24"]]
     .forEach(x => at(x[0], { f: 'IF(' + x[1] + '="","",' + x[1] + ")" }));
-  // 쓰지 않은 부속시설 줄도 마찬가지다 (1장이 비었으니 2장도 비운다)
-  for (let i = 0; i < SETTLE_ANNEX_ROWS; i++) {
-    if (d.annex[i]) { at("B" + (60 + i), { s: styAt("B" + (60 + i), { s: 1 }) }); continue; }
-    ["B", "D", "E", "G"].forEach(col => at(col + (60 + i), { t: "", f: null, n: null }));
-  }
+  // 제출용 부속시설 이름도 잘리지 않게 줄여 담는다 (일곱 줄이 늘 차 있다)
+  for (let i = 0; i < SETTLE_ANNEX_ROWS; i++)
+    at("B" + (60 + i), { s: styAt("B" + (60 + i), { s: 1 }) });
   return wb;
 }
 
@@ -4562,26 +4605,37 @@ function settleData(list) {
     const a = (r.annex && typeof r.annex === "object") ? r.annex : {};
     Object.keys(a).forEach(id => { qty[id] = (qty[id] || 0) + (Number(a[id]) || 0); });
   });
-  /* 기본료가 붙는 항목(마이크)은 서식에서도 「기본료 1회」 줄을 따로 세운다 —
-     서식의 금액 칸이 「단가 × 감면율 × 회수」 수식이라 한 줄에 담을 수 없다 */
-  const annex = [];
-  (s.annexItems || []).forEach(it => {
-    const n = Number(qty[it.id]) || 0;
-    if (n <= 0) return;
-    const bf = Number(it.base) || 0;
-    if (bf > 0) annex.push({ name: it.baseName || (it.name + " 기본료"), fee: bf, unit: "1회", qty: 1 });
-    annex.push({ name: it.name, fee: Number(it.fee) || 0, unit: it.unit, qty: n });
+  /* 서식의 정해진 자리에 앉힌다 — 차례도 줄 수도 서식이 정한 그대로다.
+     같은 항목이 두 자리에 앉지 않게 한 번 찾은 것은 `taken` 에 담아 둔다 */
+  const items = s.annexItems || [];
+  const taken = new Set();
+  const findItem = spec =>
+    items.find(x => x.id === spec.id && !taken.has(x.id)) ||
+    items.find(x => !taken.has(x.id) && String(x.name).includes(spec.key));
+
+  // ② 입장료 · ③ 중계방송료 · ④ 상행위(플래카드) — 서식에 제 칸이 있다
+  const own = {};
+  SETTLE_OWN_ROWS.forEach(spec => {
+    const it = findItem(spec);
+    if (it) taken.add(it.id);
+    own[spec.slot] = { has: !!it, unitFee: it ? Number(it.fee) || 0 : 0,
+                       qty: it ? Number(qty[it.id]) || 0 : 0 };
   });
-  /* 서식의 일곱 줄에 앉힌다. 원본은 앞 다섯 줄을 「회」 로 세는 항목에,
-     뒤 두 줄(탁자·의자 자리)을 「개」 로 세는 항목에 쓰도록 짜여 있다.
-     그 자리에 맞춰 넣어야 개수 칸의 표시형식과 제출용 쪽 수식이 어긋나지 않는다 */
-  const slots = new Array(SETTLE_ANNEX_ROWS).fill(null), over = [];
-  const seat = (it, order) => {
-    const i = order.find(k => !slots[k]);
-    if (i == null) over.push(it); else slots[i] = it;
-  };
-  annex.filter(it => annexCounts(it.unit)).forEach(it => seat(it, [5, 6, 4, 3, 2, 1, 0]));
-  annex.filter(it => !annexCounts(it.unit)).forEach(it => seat(it, [0, 1, 2, 3, 4, 5, 6]));
+
+  // ⑤ 부속시설 — 일곱 줄을 늘 같은 차례로 채운다. 안 쓴 줄은 0원이다
+  const slots = SETTLE_ANNEX_SLOTS.map(spec => {
+    const it = findItem(spec);
+    if (it) taken.add(it.id);
+    const n = it ? Number(qty[it.id]) || 0 : 0;
+    if (!it || n <= 0) return { label: spec.label, fee: 0, qty: 0, ea: !!spec.ea };
+    // 마이크는 기본료와 개당을 합쳐 한 줄로 낸다 — 합친 금액을 단가 자리에, 회수는 1
+    if (spec.merge) return { label: spec.label, qty: 1, ea: false,
+                             fee: (Number(it.base) || 0) + (Number(it.fee) || 0) * n };
+    return { label: spec.label, fee: Number(it.fee) || 0, qty: n, ea: !!spec.ea };
+  });
+  // 서식에 자리가 없는데 쓴 항목 (예: 조명타워) — 화면에 알린다
+  const over = items.filter(x => Number(qty[x.id]) > 0 && !taken.has(x.id))
+                    .map(x => ({ name: x.name }));
 
   // 공과금 — 대장에 적은 실비를 그대로 옮긴다 (감면 없음)
   let power = 0, water = 0;
@@ -4601,8 +4655,9 @@ function settleData(list) {
     dcRate: dcRate,
     keepRate: (100 - dcRate) / 100,     // 별표 6 칸의 「감면율」 은 실제로 받는 비율이다
     mixedRate: rates.length > 1,
-    annex: slots,                      // 일곱 줄에 앉힌 부속시설 (빈 줄은 null)
-    over: over,                        // 서식의 일곱 줄을 넘겨 못 넣은 항목
+    annex: slots,                      // ⑤ 의 일곱 줄 (안 쓴 줄도 0원으로 들어 있다)
+    entry: own.entry, broadcast: own.broadcast, placard: own.placard,   // ②③④
+    over: over,                        // 서식에 자리가 없는데 쓴 항목
     power: power, water: water,
     useAcct: acct(set.useBank, set.useAcct),
     utilAcct: acct(set.utilBank, set.utilAcct),
@@ -4670,7 +4725,7 @@ function exportSettlement(list) {
     ? "정산서 " + made.length + "장을 만들었습니다 — 장소·신청 단체·이용 목적이 다른 건은 따로 냈습니다"
     : "정산서를 만들었습니다 (전용사용료·허가일자는 손으로 적으세요)";
   toast((over.length
-    ? many + " · 부속시설 칸이 " + SETTLE_ANNEX_ROWS + "줄뿐이라 " +
+    ? many + " · ⑤부속시설은 서식이 정한 " + SETTLE_ANNEX_ROWS + "줄뿐이라 " +
       Array.from(new Set(over.map(x => x.name))).join("·") + " 은(는) 빠졌습니다. 엑셀에서 손으로 넣으세요"
     : mixed ? many + " · 감면율이 서로 다른 건은 첫 건의 감면율을 썼습니다" : many));
 }
