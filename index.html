@@ -364,7 +364,8 @@ td.dow-sun{color:var(--sun);font-weight:600}
 .annex-row{display:flex;align-items:center;gap:10px;padding:3px 0;border-top:1px solid var(--line)}
 .annex-row:first-child{border-top:0}
 .annex-name{flex:1;font-size:12px;min-width:0}
-.annex-row input{width:74px;padding:3px 6px;border:1px solid var(--line-strong);border-radius:4px;background:var(--surface);text-align:right}
+.annex-row input{width:64px;padding:3px 6px;border:1px solid var(--line-strong);border-radius:4px;background:var(--surface);text-align:right}
+.annex-q{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);white-space:nowrap}
 #annexList:not([hidden]){margin-top:8px;border-top:1px solid var(--line);padding-top:4px}
 .fee-box h3{margin:0 0 7px;font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;font-weight:500}
 .fee-line{display:flex;justify-content:space-between;gap:12px;font-size:12px;padding:2px 0}
@@ -1399,7 +1400,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-09-11.36";
+const APP_VERSION = "2026-09-11.37";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -1445,6 +1446,7 @@ const BYULPYO6 = [
   { id: "a8",  name: "이동식 의자",              fee:   400, unit: "개",  article: "별표 6" },
   { id: "a9",  name: "이동식 탁자",              fee:   600, unit: "개",  article: "별표 6" },
   { id: "a10", name: "바닥깔이 설치",            fee: 20000, unit: "1회", article: "별표 6" },
+  /* 차례는 아래 ANNEX_ORDER 가 정한다 — 여기 적힌 순서가 아니라 그쪽을 고친다 */
   /* 한밭종합운동장에서 쓰지 않는 항목은 뺐다 (2026-09-11 담당자 요청) —
      권투링(a7) · 인조잔디 관수료(a11) · 롤러스케이트 대여(a12) · 빙상스케이트 대여(a13).
      `migrate` 가 예전 자료에서도 지운다. 다만 **그 항목을 쓴 예약이 남아 있으면 지우지 않는다**
@@ -1468,6 +1470,41 @@ const BYULPYO6 = [
 const ANNEX_UNITS = ["1회", "1일", "개", "명"];
 function annexCounts(unit) { return unit === "개" || unit === "명"; }
 function annexUnitWord(unit) { return annexCounts(unit) ? unit : "회"; }
+
+/* 설정 화면·등록창에 보이는 차례 (2026-09-11 담당자 요청).
+   **정산서 ⑤ 부속시설 일곱 줄과 같은 차례다** — 화면에서 적는 차례와
+   종이에 찍히는 차례가 달라 헷갈렸기 때문이다.
+   집중조명 · 마이크 · 전광판 · 냉난방 · 바닥깔이 · 탁자 · 의자 뒤에
+   서식에 자리가 없는 것(조명타워)과 제 칸이 따로 있는 것(플래카드·중계방송료·입장료)을 둔다.
+   여기 없는 항목(담당자가 새로 더한 것)은 뒤에 붙되 서로의 차례는 그대로 둔다 */
+const ANNEX_ORDER = ["a4", "a2", "a3", "a6", "a10", "a9", "a8", "a5", "a14", "a15", "a16"];
+function sortAnnexItems(list) {
+  const rank = x => { const i = ANNEX_ORDER.indexOf(x.id); return i < 0 ? ANNEX_ORDER.length : i; };
+  return list.map((x, i) => ({ x: x, i: i }))
+             .sort((a, b) => (rank(a.x) - rank(b.x)) || (a.i - b.i))
+             .map(o => o.x);
+}
+
+/* 그 예약이 이 부속시설을 얼마나 썼는지 — `{ count 수량, times 횟수 }`. 안 썼으면 null.
+   **금액 = 단가 × 수량 × 횟수** 다.
+     「개」·「명」  수량(개수·인원)과 횟수를 **따로** 적는다 (`annex` · `annexTimes`)
+     「1회」·「1일」 적은 숫자가 곧 횟수다 (수량은 늘 1)
+   횟수를 안 적었으면 1회로 본다 — 예전 자료가 그대로 맞는다 */
+function annexUse(r, it) {
+  const q = (r && r.annex && typeof r.annex === "object") ? r.annex : {};
+  const t = (r && r.annexTimes && typeof r.annexTimes === "object") ? r.annexTimes : {};
+  const n = Number(q[it.id]) || 0;
+  if (n <= 0) return null;
+  return annexCounts(it.unit)
+    ? { count: n, times: Math.max(1, Number(t[it.id]) || 1) }
+    : { count: 1, times: n };
+}
+/* 산정 내역·화면에 쓸 한 줄 — 「24개 × 2회」 · 「3회」 */
+function annexUseLabel(it, u) {
+  return annexCounts(it.unit)
+    ? u.count + it.unit + (u.times > 1 ? " × " + u.times + "회" : "")
+    : u.times + "회";
+}
 
 /* 예전 자료의 시설명을 별표 1 의 이름으로 맞춘다 */
 const FAC_ALIAS = { "야구장": "한밭야구장" };
@@ -1554,7 +1591,7 @@ function facSeed(id, name, color, prepAllowed) {
 }
 
 const DEFAULT_STATE = {
-  version: 7,
+  version: 8,
   settings: {
     rounding: 10,
 
@@ -1582,7 +1619,8 @@ const DEFAULT_STATE = {
     admSchoolCut: 20,      // 고등학교 이하의 경기 할인
 
     /* 별표 6 — 부속시설 사용료 */
-    annexItems: structuredClone(BYULPYO6),
+    // 차례는 ANNEX_ORDER 가 정한다 (설정·등록창·정산서가 같은 차례를 쓴다)
+    annexItems: sortAnnexItems(structuredClone(BYULPYO6)),
     discountAnnex: true,   // 부속시설(별표 6)에도 감면을 적용할지.
                            //   전기료·수도료(실비)는 이 값과 무관하게 언제나 감면 없음
 
@@ -1673,12 +1711,13 @@ function migrate(d) {
   const res = (Array.isArray(d.reservations) ? d.reservations : [])
     .map(r => {
       const x = Object.assign({ kind: "행사", linkId: null, useType: "체육경기", admission: null, schoolGame: false,
-                               annex: null, power: null, water: null,
+                               annex: null, annexTimes: null, power: null, water: null,
                                paid: false, paidPower: false, paidWater: false }, r);
       // 입금 확인 (요금 관리 화면에서 켠다).
       // 전기료·수도료는 행사가 끝난 뒤 실비로 따로 받으므로 따로 확인한다
       x.paid = !!x.paid; x.paidPower = !!x.paidPower; x.paidWater = !!x.paidWater;
       if (x.annex && typeof x.annex !== "object") x.annex = null;
+      if (x.annexTimes && typeof x.annexTimes !== "object") x.annexTimes = null;
       delete x.contact;          // 연락처 항목 폐지 — 예전 자료에 남아 있으면 함께 지운다
       return x;
     });
@@ -1770,10 +1809,12 @@ function migrate(d) {
       if (!st.annexItems.some(x => x.id === seed.id)) st.annexItems.push(structuredClone(seed));
     });
   }
+  // 설정·등록창의 차례를 정산서와 맞춘다 (뺀 것·더한 것을 다 정리한 뒤에 줄 세운다)
+  if (old < 8) st.annexItems = sortAnnexItems(st.annexItems);
   delete st.minHours; delete st.nightStart; delete st.holidayRate; delete st.surchargeArticle;
 
   // 시설은 늘 충무 → 한밭 → 야구장 차례로 둔다
-  return { version: 7, settings: st, facilities: sortFacilities(facs), discounts: dcs, reservations: res };
+  return { version: 8, settings: st, facilities: sortFacilities(facs), discounts: dcs, reservations: res };
 }
 
 function readLocal() {
@@ -2510,26 +2551,28 @@ function calcFee(r) {
   // ⑥⑦⑧ 부속시설 사용료 (별표 6) — 행사 종료 후 7일 이내에 징수한다 (제11조제2항)
   // 목록(수익집계용)에서 부속시설과 공과금(전기+수도)을 따로 떼어 보여주려고 나눠 센다
   let annexSum = 0, annexOnly = 0, utilSum = 0, powerSum = 0, waterSum = 0;
-  const qty = (r.annex && typeof r.annex === "object") ? r.annex : {};
   if (!isPrep) {
     (s.annexItems || []).forEach(it => {
-      const n = Number(qty[it.id]) || 0;
-      if (n <= 0) return;
-      /* 기본료가 붙는 항목 — 수량이 하나라도 있으면 1회분을 먼저 더한다.
-         마이크가 그렇다 (별표 6 의 「마이크시설·확성기 기본료」 를 합쳐 둔 것) */
+      const u = annexUse(r, it);
+      if (!u) return;
+      /* 기본료가 붙는 항목 — 수량이 하나라도 있으면 먼저 더한다. 마이크가 그렇다
+         (별표 6 의 「마이크시설·확성기 기본료」 를 합쳐 둔 것).
+         횟수만큼 붙는다 — 세 번 쓰면 기본료도 세 번이다 */
       const basefee = Number(it.base) || 0;
       if (basefee > 0) {
+        const bamt = basefee * u.times;
         out.lines.push({
-          label: "⑥ 부속시설 · " + (it.baseName || (it.name + " 기본료")) + " 1회",
-          why: won(basefee) + "원 × 1 · " + (it.baseArticle || it.article || A.annex),
-          amount: basefee
+          label: "⑥ 부속시설 · " + (it.baseName || (it.name + " 기본료")) + " " + u.times + "회",
+          why: won(basefee) + "원 × " + u.times + " · " + (it.baseArticle || it.article || A.annex),
+          amount: bamt
         });
-        annexSum += basefee; annexOnly += basefee;
+        annexSum += bamt; annexOnly += bamt;
       }
-      const amt = (Number(it.fee) || 0) * n;
+      const amt = (Number(it.fee) || 0) * u.count * u.times;
       out.lines.push({
-        label: "⑥ 부속시설 · " + it.name + " " + n + annexUnitWord(it.unit),
-        why: won(it.fee) + "원 × " + n + " · " + (it.article || A.annex),
+        label: "⑥ 부속시설 · " + it.name + " " + annexUseLabel(it, u),
+        why: won(it.fee) + "원 × " + u.count +
+             (u.times > 1 ? " × " + u.times + "회" : "") + " · " + (it.article || A.annex),
         amount: amt
       });
       annexSum += amt; annexOnly += amt;
@@ -3415,6 +3458,7 @@ function formToRes() {
     admission: prev && prev.admission != null ? prev.admission : null,
     schoolGame: prev ? !!prev.schoolGame : false,
     annex: readAnnexQty(),
+    annexTimes: readAnnexTimes(),
     power: $("#fPower").value === "" ? null : Number($("#fPower").value),
     water: $("#fWater").value === "" ? null : Number($("#fWater").value),
     discountId: $("#fDiscount").value,
@@ -3425,6 +3469,7 @@ function formToRes() {
 /* 별표 6 부속시설 — 수량 칸을 그린다. 0인 항목은 계산에 들어가지 않는다 */
 function renderAnnexList(r) {
   const q = (r && r.annex && typeof r.annex === "object") ? r.annex : {};
+  const t = (r && r.annexTimes && typeof r.annexTimes === "object") ? r.annexTimes : {};
   $("#annexList").innerHTML = (state.settings.annexItems || []).map(it =>
     '<div class="annex-row">' +
       '<span class="annex-name">' + esc(it.name) + '<span class="why">' + won(it.fee) + "원 / " + esc(it.unit) +
@@ -3433,8 +3478,18 @@ function renderAnnexList(r) {
           ? " · 수량을 넣으면 " + esc(it.baseName || (it.name + " 기본료")) + " " + won(it.base) + "원이 함께 붙습니다"
           : "") +
         (it.article ? " · " + esc(it.article) : "") + "</span></span>" +
-      '<input type="number" class="mono" min="0" step="1" data-annex="' + it.id + '" value="' +
-        (Number(q[it.id]) || "") + '" placeholder="0">' +
+      /* 「개」·「명」 은 수량과 횟수를 따로 적는다. 「1회」·「1일」 은 횟수 하나뿐이다 —
+         24개를 두 번 쓰면 두 배로 받아야 해서 담당자가 요청한 칸이다 */
+      (annexCounts(it.unit)
+        ? '<label class="annex-q"><span>수량</span>' +
+            '<input type="number" class="mono" min="0" step="1" data-annex="' + it.id + '" value="' +
+            (Number(q[it.id]) || "") + '" placeholder="0"></label>' +
+          '<label class="annex-q"><span>횟수</span>' +
+            '<input type="number" class="mono" min="1" step="1" data-annext="' + it.id + '" value="' +
+            (Number(t[it.id]) > 1 ? Number(t[it.id]) : "") + '" placeholder="1"></label>'
+        : '<label class="annex-q"><span>횟수</span>' +
+            '<input type="number" class="mono" min="0" step="1" data-annex="' + it.id + '" value="' +
+            (Number(q[it.id]) || "") + '" placeholder="0"></label>') +
     "</div>").join("");
 }
 function readAnnexQty() {
@@ -3442,6 +3497,16 @@ function readAnnexQty() {
   document.querySelectorAll("#annexList [data-annex]").forEach(el => {
     const n = Number(el.value) || 0;
     if (n > 0) out[el.dataset.annex] = n;
+  });
+  return Object.keys(out).length ? out : null;
+}
+/* 「개」·「명」 항목의 횟수. **1회는 담지 않는다** — 기본값이라 자료를 늘릴 이유가 없고,
+   예전 자료(횟수가 없던 때)와 값이 같아진다 */
+function readAnnexTimes() {
+  const out = {};
+  document.querySelectorAll("#annexList [data-annext]").forEach(el => {
+    const n = Number(el.value) || 0;
+    if (n > 1) out[el.dataset.annext] = n;
   });
   return Object.keys(out).length ? out : null;
 }
@@ -4426,6 +4491,16 @@ function settleWorkbook(d) {
   const st = settleStyles(wb);
   const formStyle = [];                    // 칸마다 원본 서식 번호 — 표시형식만 갈아끼울 때 쓴다
 
+  /* 숫자·수식 칸에는 **「칸에 맞춤」을 켠다.**
+     엑셀은 숫자가 칸보다 넓으면 글자 대신 `###` 로 덮어 버린다 —
+     글자와 달리 옆의 빈 칸으로 흘러넘치지 않기 때문이다.
+     감면을 「해당 없음」(0%)으로 두면 감면율 칸이 `20%` 에서 `100%` 로 한 자 늘고
+     금액도 다섯 배가 되어 실제로 그 일이 났다 (2026-09-11 담당자 제보).
+     「칸에 맞춤」은 글이 들어갈 때는 아무것도 바꾸지 않으므로 켜 두어 손해가 없다.
+     **줄바꿈 칸에는 켜지 않는다** — 엑셀이 둘을 같이 못 쓰고, 거기 걸린 칸은
+     행사명 거울(`C41`)처럼 글자라서 접혀야 한다 */
+  const numStyle = si => st.resolve(F.S[si], F.S[si].w ? {} : { s: 1 });
+
   // ① 원본 서식을 그대로 깐다
   F.C.forEach((line, r) => {
     const row = formStyle[r] = [];
@@ -4436,8 +4511,8 @@ function settleWorkbook(d) {
       row[c] = si;
       const cell = { s: st.ids[si] };
       if (m[2] === "=") cell.t = m[3];
-      else if (m[2] === "#") cell.n = Number(m[3]);
-      else if (m[2] === "@") cell.f = m[3];
+      else if (m[2] === "#") { cell.n = Number(m[3]); cell.s = numStyle(si); }
+      else if (m[2] === "@") { cell.f = m[3];        cell.s = numStyle(si); }
       xwPut(wb, r, c, cell);
     });
   });
@@ -4451,6 +4526,9 @@ function settleWorkbook(d) {
     return st.resolve(F.S[formStyle[rc[0]][rc[1]]], over);
   };
   const keep = d.keepRate;                 // 별표 6 의 「감면율」 칸은 실제로 받는 비율이다
+  // 코드가 넣는 숫자 칸도 같은 규칙을 따른다 (위 numStyle 주석 참고)
+  const atNum = (ref, n) => at(ref, { n: n, s: styAt(ref, { s: 1, w: 0 }) });
+  const atFml = (ref, f) => at(ref, { f: f, s: styAt(ref, { s: 1, w: 0 }) });
 
   /* 허가번호 칸(C1:G1) — 원본은 노란 바탕이지만 흰 바탕으로 낸다 (담당자 요청).
      손으로 적는 칸이라 바탕색으로 세울 이유가 없다. 공과금 칸의 노랑은 그대로 둔다 */
@@ -4463,24 +4541,24 @@ function settleWorkbook(d) {
   at("C3", { t: d.tenant });               // 대관자
 
   // ① 관람료 수입 — <A> 는 대장에서, <B> 는 손으로, <C> 는 감면율로 저절로 빠진다
-  at("C12", { n: d.admFee || 0 });
-  at("I12", { f: "ROUND((C12+H12)*" + (d.dcRate / 100) + ",0)" });
-  at("K12", { f: "(C12+H12)-I12" });
-  at("H14", { n: keep });                  // ② 입장료 감면율
-  at("I16", { n: keep });                  // ③ 중계방송료 감면율
-  at("I19", { n: keep });                  // ④ 상행위 감면율
+  atNum("C12", d.admFee || 0);
+  atFml("I12", "ROUND((C12+H12)*" + (d.dcRate / 100) + ",0)");
+  atFml("K12", "(C12+H12)-I12");
+  atNum("H14", keep);                      // ② 입장료 감면율
+  atNum("I16", keep);                      // ③ 중계방송료 감면율
+  atNum("I19", keep);                      // ④ 상행위 감면율
 
   /* ② 입장료 · ③ 중계방송료 · ④ 상행위(플래카드) — 서식에 제 칸이 있는 항목이다.
      ⑤ 부속시설에 섞지 않고 여기에 넣는다 (담당자 요청).
      계 칸은 서식의 수식이 스스로 곱한다 — ② K14=C14*F14*H14 · ③ K16=C16*F16*I16 ·
      ④ L19=H19*I19*J19. 그래서 단가와 수량만 넣으면 된다.
      안 쓴 항목은 단가·수량을 0 으로 두어 0원으로 찍힌다 */
-  at("C14", { n: d.entry.qty > 0 ? d.entry.unitFee : 0 });      // 입장료 단가
-  at("F14", { n: d.entry.qty });                                // 입장 인원
-  at("C16", { n: d.broadcast.qty > 0 ? d.broadcast.unitFee : 0 });
-  at("F16", { n: d.broadcast.qty });
-  at("H19", { n: d.placard.qty > 0 ? d.placard.unitFee : 0 });
-  at("J19", { n: d.placard.qty });
+  atNum("C14", d.entry.qty > 0 ? d.entry.unitFee : 0);          // 입장료 단가
+  atNum("F14", d.entry.qty);                                    // 입장 인원 × 횟수
+  atNum("C16", d.broadcast.qty > 0 ? d.broadcast.unitFee : 0);
+  atNum("F16", d.broadcast.qty);
+  atNum("H19", d.placard.qty > 0 ? d.placard.unitFee : 0);
+  atNum("J19", d.placard.qty);
   /* 서식에 「일반(입장인원x200원)」 으로 박혀 있는 딱지를 설정한 단가로 고쳐 넣는다
      (감면율 딱지와 같은 방식이다). 입장료 항목을 지웠으면 서식 글을 그대로 둔다 */
   if (d.entry.has) {
@@ -4501,17 +4579,17 @@ function settleWorkbook(d) {
      뒤 두 줄(탁자·의자)만 개수 칸을 쓴다 — 서식의 금액 수식이 그렇게 짜여 있다 */
   for (let i = 0; i < SETTLE_ANNEX_ROWS; i++) {
     const r = 20 + i, it = d.annex[i];
-    at("F" + r, { n: keep });
+    atNum("F" + r, keep);
     // 이름이 칸보다 길 수 있다. 잘리지 않게 글씨를 줄여 담는다
     at("B" + r, { t: it.label, s: styAt("B" + r, { s: 1 }) });
-    at("D" + r, { n: it.fee });
-    at("G" + r, { n: it.ea ? 1 : it.qty });
-    at("H" + r, { f: "D" + r + "*F" + r + "*G" + r + (it.ea ? "*E" + r : "") });
-    if (it.ea) at("E" + r, { n: it.qty, s: styAt("E" + r, { nf: 'General"개"' }) });
+    atNum("D" + r, it.fee);
+    atNum("G" + r, it.times);                     // 회수
+    atFml("H" + r, "D" + r + "*F" + r + "*G" + r + (it.ea ? "*E" + r : ""));
+    if (it.ea) at("E" + r, { n: it.count, s: styAt("E" + r, { nf: 'General"개"', s: 1, w: 0 }) });
   }
   // 공과금 — 전기료·수도료 (대장에 적은 실비 그대로. 감면을 타지 않는다)
-  at("L21", { n: d.power });
-  at("L25", { n: d.water });
+  atNum("L21", d.power);
+  atNum("L25", d.water);
 
   // 입금 계좌 (설정 화면 「정산서 입금 계좌」). 계좌번호가 길어도 잘리지 않게 담는다
   [["M30", d.useAcct], ["M31", d.utilAcct], ["M71", d.useAcct], ["M73", d.utilAcct]]
@@ -4543,14 +4621,14 @@ function settleWorkbook(d) {
   ["M20", "M56", "M59"].forEach(ref => at(ref, { s: styAt(ref, { sz: 10 }) }));
 
   // 제출용(2장) 은 1장을 수식으로 따라간다. 원본이 숫자로 박아 둔 칸만 맞춘다
-  at("I59", { n: keep });
-  for (let r = 60; r <= 66; r++) at("F" + r, { n: keep });
+  atNum("I59", keep);
+  for (let r = 60; r <= 66; r++) atNum("F" + r, keep);
   /* 1장에서 손으로 적는 칸(허가번호·전용사용료·허가일자)은 비어 있다.
      그대로 따라가면 2장에 0 이나 1899.12.30 이 찍히므로, 비었을 때는 비워 둔다 */
   [["C40", "C1"], ["C68", "C28"], ["I68", "I28"], ["C53", "C14"], ["F53", "F14"],
    ["C56", "C16"], ["H56", "F16"], ["H59", "H19"], ["J59", "J19"],
    ["K63", "K23"], ["L63", "L23"], ["K64", "K24"], ["L64", "L24"]]
-    .forEach(x => at(x[0], { f: 'IF(' + x[1] + '="","",' + x[1] + ")" }));
+    .forEach(x => atFml(x[0], 'IF(' + x[1] + '="","",' + x[1] + ")"));
   // 제출용 부속시설 이름도 잘리지 않게 줄여 담는다 (일곱 줄이 늘 차 있다)
   for (let i = 0; i < SETTLE_ANNEX_ROWS; i++)
     at("B" + (60 + i), { s: styAt("B" + (60 + i), { s: 1 }) });
@@ -4599,15 +4677,21 @@ function settleData(list) {
   const rates = uniq(live.map(r => String(Number(discountOf(r.discountId).rate) || 0))).map(Number);
   const dcRate = rates.length ? rates[0] : 0;
 
-  // 부속시설 — 항목별로 수량을 모은다 (별표 6)
-  const qty = {};
-  events.forEach(r => {
-    const a = (r.annex && typeof r.annex === "object") ? r.annex : {};
-    Object.keys(a).forEach(id => { qty[id] = (qty[id] || 0) + (Number(a[id]) || 0); });
-  });
+  /* 부속시설 — 항목별로 **수량과 횟수를** 모은다 (별표 6).
+     여러 건을 한 장으로 낼 때 횟수가 서로 같으면 수량만 더하고,
+     다르면 곱(수량×횟수)을 합쳐 1회로 본다 — 어느 쪽이든 금액이 어긋나지 않는다 */
+  const items = state.settings.annexItems || [];
+  const use = {};
+  events.forEach(r => items.forEach(it => {
+    const u = annexUse(r, it);
+    if (!u) return;
+    const cur = use[it.id];
+    if (!cur) { use[it.id] = { count: u.count, times: u.times }; return; }
+    if (cur.times === u.times) cur.count += u.count;
+    else { cur.count = cur.count * cur.times + u.count * u.times; cur.times = 1; }
+  }));
   /* 서식의 정해진 자리에 앉힌다 — 차례도 줄 수도 서식이 정한 그대로다.
      같은 항목이 두 자리에 앉지 않게 한 번 찾은 것은 `taken` 에 담아 둔다 */
-  const items = s.annexItems || [];
   const taken = new Set();
   const findItem = spec =>
     items.find(x => x.id === spec.id && !taken.has(x.id)) ||
@@ -4618,24 +4702,27 @@ function settleData(list) {
   SETTLE_OWN_ROWS.forEach(spec => {
     const it = findItem(spec);
     if (it) taken.add(it.id);
+    const u = it ? use[it.id] : null;
     own[spec.slot] = { has: !!it, unitFee: it ? Number(it.fee) || 0 : 0,
-                       qty: it ? Number(qty[it.id]) || 0 : 0 };
+                       // 서식에 수량 칸이 하나뿐이라 수량 × 횟수를 한 숫자로 넣는다
+                       qty: u ? u.count * u.times : 0 };
   });
 
   // ⑤ 부속시설 — 일곱 줄을 늘 같은 차례로 채운다. 안 쓴 줄은 0원이다
   const slots = SETTLE_ANNEX_SLOTS.map(spec => {
     const it = findItem(spec);
     if (it) taken.add(it.id);
-    const n = it ? Number(qty[it.id]) || 0 : 0;
-    if (!it || n <= 0) return { label: spec.label, fee: 0, qty: 0, ea: !!spec.ea };
-    // 마이크는 기본료와 개당을 합쳐 한 줄로 낸다 — 합친 금액을 단가 자리에, 회수는 1
-    if (spec.merge) return { label: spec.label, qty: 1, ea: false,
-                             fee: (Number(it.base) || 0) + (Number(it.fee) || 0) * n };
-    return { label: spec.label, fee: Number(it.fee) || 0, qty: n, ea: !!spec.ea };
+    const u = it ? use[it.id] : null;
+    if (!u) return { label: spec.label, fee: 0, count: 0, times: 0, ea: !!spec.ea };
+    /* 마이크는 기본료와 개당을 합쳐 한 줄로 낸다 — 합친 한 번분을 단가 자리에,
+       횟수는 그대로 회수 칸에 (서식의 금액 칸이 단가 × 감면율 × 회수 라서) */
+    if (spec.merge) return { label: spec.label, count: 1, times: u.times, ea: false,
+                             fee: (Number(it.base) || 0) + (Number(it.fee) || 0) * u.count };
+    return { label: spec.label, fee: Number(it.fee) || 0,
+             count: u.count, times: u.times, ea: !!spec.ea };
   });
   // 서식에 자리가 없는데 쓴 항목 (예: 조명타워) — 화면에 알린다
-  const over = items.filter(x => Number(qty[x.id]) > 0 && !taken.has(x.id))
-                    .map(x => ({ name: x.name }));
+  const over = items.filter(x => use[x.id] && !taken.has(x.id)).map(x => ({ name: x.name }));
 
   // 공과금 — 대장에 적은 실비를 그대로 옮긴다 (감면 없음)
   let power = 0, water = 0;
