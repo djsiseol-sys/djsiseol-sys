@@ -871,7 +871,9 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 
           <div class="field">
             <label>관람료 수입에 따른 사용료 <span class="hint" style="display:inline">제12조</span></label>
-            <div class="hint">등록창에 관람료 수입을 적었을 때만 계산에 더해집니다.</div>
+            <div class="hint">관람료를 받는 행사가 없어 <b>등록창에서 관람료 수입을 받지 않습니다</b> (담당자 결정).
+              여기 값은 정산서 ① 칸의 「사용료(체육경기 10%, …)」 딱지에 쓰이고,
+              예전에 관람료를 적어둔 자료가 있으면 그 계산에 쓰입니다.</div>
           </div>
           <div class="row3">
             <div class="field">
@@ -1059,15 +1061,6 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
           <label for="fDiscount">감면 유형</label>
           <select id="fDiscount"></select>
         </div>
-      </div>
-
-      <div class="field" id="admBox">
-        <label for="fAdmission">관람료 수입 (없으면 비워두세요)</label>
-        <input type="number" id="fAdmission" min="0" step="1000" class="mono" placeholder="원">
-        <label class="prep-toggle" style="margin-top:6px">
-          <input type="checkbox" id="fSchoolGame"><span>고등학교 이하의 경기 (20% 할인 · 제12조제3항)</span>
-        </label>
-        <span class="hint">관람료를 받는 행사만 적습니다. 수입액의 10%(체육경기) 또는 12.5%(프로·일반행사)가 사용료로 더해집니다 · 제12조제2항</span>
       </div>
 
       <div class="field">
@@ -1406,7 +1399,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-09-11.33";
+const APP_VERSION = "2026-09-11.34";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -1439,8 +1432,12 @@ const BYULPYO2 = {
 /* 별표 6 — 부속시설 사용료. 한밭종합운동장 계열 시설에 해당하는 항목만 담았다.
    전기료·수도료는 조례가 "실비"로 정해 금액이 없으므로 등록창에서 직접 넣는다. */
 const BYULPYO6 = [
-  { id: "a1",  name: "마이크시설·확성기 기본료", fee: 30000, unit: "1회", article: "별표 6" },
-  { id: "a2",  name: "마이크",                   fee:  5000, unit: "개",  article: "별표 6 · 마이크 개당" },
+  /* 마이크 — 별표 6 의 「마이크시설·확성기 기본료(1회)」 와 「마이크(개당)」 를
+     **한 항목으로 합쳤다** (2026-09-11 담당자 요청. 확성기는 쓰지 않는다).
+     수량만 넣으면 base(기본료) 1회분이 저절로 함께 붙는다 — 1개면 30,000 + 5,000 = 35,000원.
+     근거 조문에는 조례의 원래 이름을 그대로 남긴다 */
+  { id: "a2",  name: "마이크",                   fee:  5000, unit: "개",  article: "별표 6 · 마이크 개당",
+    base: 30000, baseName: "마이크 기본료", baseArticle: "별표 6 · 마이크시설·확성기 기본료 (1회)" },
   { id: "a3",  name: "전광판",                   fee: 60000, unit: "1회", article: "별표 6" },
   { id: "a4",  name: "집중조명",                 fee: 20000, unit: "1회", article: "별표 6" },
   { id: "a5",  name: "조명타워",                 fee: 40000, unit: "1회", article: "별표 6" },
@@ -1539,7 +1536,7 @@ function facSeed(id, name, color, prepAllowed) {
 }
 
 const DEFAULT_STATE = {
-  version: 5,
+  version: 6,
   settings: {
     rounding: 10,
 
@@ -1722,10 +1719,33 @@ function migrate(d) {
     st.earlyRate   = base.settings.earlyRate;
     st.overRate    = base.settings.overRate;
   }
+  /* 마이크시설·확성기 기본료(a1) 를 마이크(a2) 에 합쳤다 — 확성기를 쓰지 않아
+     담당자 요청으로 한 항목으로 묶었다. 이제 마이크 수량만 넣으면 기본료가 저절로 붙는다.
+     예전 자료의 a1 수량은 지우고, a1 을 썼는데 마이크가 0개면 1개로 본다 */
+  if (old < 6) {
+    const i1 = st.annexItems.findIndex(x => x.id === "a1");
+    const i2 = st.annexItems.findIndex(x => x.id === "a2");
+    if (i1 >= 0 && i2 >= 0) {
+      const a1 = st.annexItems[i1];
+      st.annexItems[i2] = Object.assign({}, st.annexItems[i2], {
+        name: "마이크",
+        base: Number(a1.fee) || 0,
+        baseName: "마이크 기본료",
+        baseArticle: a1.article || "별표 6 · 마이크시설·확성기 기본료 (1회)"
+      });
+      st.annexItems.splice(i1, 1);
+    }
+    res.forEach(r => {
+      const q = r.annex;
+      if (!q || typeof q !== "object" || !(Number(q.a1) > 0)) return;
+      delete q.a1;
+      q.a2 = Math.max(Number(q.a2) || 0, 1);
+    });
+  }
   delete st.minHours; delete st.nightStart; delete st.holidayRate; delete st.surchargeArticle;
 
   // 시설은 늘 충무 → 한밭 → 야구장 차례로 둔다
-  return { version: 5, settings: st, facilities: sortFacilities(facs), discounts: dcs, reservations: res };
+  return { version: 6, settings: st, facilities: sortFacilities(facs), discounts: dcs, reservations: res };
 }
 
 function readLocal() {
@@ -2467,6 +2487,17 @@ function calcFee(r) {
     (s.annexItems || []).forEach(it => {
       const n = Number(qty[it.id]) || 0;
       if (n <= 0) return;
+      /* 기본료가 붙는 항목 — 수량이 하나라도 있으면 1회분을 먼저 더한다.
+         마이크가 그렇다 (별표 6 의 「마이크시설·확성기 기본료」 를 합쳐 둔 것) */
+      const basefee = Number(it.base) || 0;
+      if (basefee > 0) {
+        out.lines.push({
+          label: "⑥ 부속시설 · " + (it.baseName || (it.name + " 기본료")) + " 1회",
+          why: won(basefee) + "원 × 1 · " + (it.baseArticle || it.article || A.annex),
+          amount: basefee
+        });
+        annexSum += basefee; annexOnly += basefee;
+      }
       const amt = (Number(it.fee) || 0) * n;
       out.lines.push({
         label: "⑥ 부속시설 · " + it.name + " " + n + (it.unit === "개" ? "개" : "회"),
@@ -3258,6 +3289,18 @@ function renderSettings() {
           '<option value="개"'  + (it.unit === "개"  ? " selected" : "") + ">개</option>" +
         "</select></div>" +
       "</div>" +
+      /* 기본료 — 수량이 하나라도 있으면 1회분이 저절로 붙는다 (마이크).
+         0 이면 붙지 않는다. 별표 6 의 「…기본료」 항목을 따로 세우지 않고 여기에 합쳐 둔다 */
+      '<div class="row21">' +
+        '<div class="field"><label>기본료(원)</label><input type="number" class="mono" data-k="base" value="' +
+          (Number(it.base) || 0) + '" placeholder="0"></div>' +
+        '<div class="field"><label>기본료 이름</label><input data-k="baseName" value="' + esc(it.baseName || "") +
+          '" placeholder="예: 마이크 기본료"></div>' +
+      "</div>" +
+      (Number(it.base) > 0
+        ? '<div class="hint">수량을 넣으면 ' + esc(it.baseName || (it.name + " 기본료")) + " " +
+          won(it.base) + "원이 1회분 함께 붙습니다. 산정 내역과 정산서에도 줄이 따로 섭니다.</div>"
+        : '<div class="hint">기본료를 0 으로 두면 붙지 않습니다.</div>') +
       '<div class="item-actions"><button type="button" class="btn btn-danger btn-sm" data-delannex="' + it.id + '">삭제</button></div>' +
     "</div>").join("");
 
@@ -3305,8 +3348,6 @@ function openModal(id, presetDate) {
   $("#fOverride").value = r && r.feeOverride != null ? r.feeOverride : "";
   $("#fKind").value = r ? (r.kind || "행사") : "행사";
   $("#fUseType").value = r ? (r.useType || "체육경기") : "체육경기";
-  $("#fAdmission").value = r && r.admission ? r.admission : "";
-  $("#fSchoolGame").checked = !!(r && r.schoolGame);
   $("#fPower").value = r && r.power ? r.power : "";
   $("#fWater").value = r && r.water ? r.water : "";
   renderAnnexList(r);
@@ -3342,8 +3383,10 @@ function formToRes() {
     headcount: $("#fHead").value ? Number($("#fHead").value) : null,
     purpose: $("#fPurpose").value.trim(),
     useType: $("#fUseType").value,
-    admission: $("#fAdmission").value === "" ? null : Number($("#fAdmission").value),
-    schoolGame: $("#fSchoolGame").checked,
+    /* 관람료 수입(제12조)은 등록창에서 받지 않는다 — 관람료를 받는 행사가 없어
+       담당자 요청으로 뺐다. 예전 자료에 적혀 있던 값은 그대로 물려준다 */
+    admission: prev && prev.admission != null ? prev.admission : null,
+    schoolGame: prev ? !!prev.schoolGame : false,
     annex: readAnnexQty(),
     power: $("#fPower").value === "" ? null : Number($("#fPower").value),
     water: $("#fWater").value === "" ? null : Number($("#fWater").value),
@@ -3358,6 +3401,10 @@ function renderAnnexList(r) {
   $("#annexList").innerHTML = (state.settings.annexItems || []).map(it =>
     '<div class="annex-row">' +
       '<span class="annex-name">' + esc(it.name) + '<span class="why">' + won(it.fee) + "원 / " + esc(it.unit) +
+        // 기본료가 붙는 항목(마이크)은 수량만 넣어도 기본료가 함께 더해진다는 것을 알린다
+        (Number(it.base) > 0
+          ? " · 수량을 넣으면 " + esc(it.baseName || (it.name + " 기본료")) + " " + won(it.base) + "원이 함께 붙습니다"
+          : "") +
         (it.article ? " · " + esc(it.article) : "") + "</span></span>" +
       '<input type="number" class="mono" min="0" step="1" data-annex="' + it.id + '" value="' +
         (Number(q[it.id]) || "") + '" placeholder="0">' +
@@ -3404,7 +3451,6 @@ function updateKindUI() {
   $("#kindHint").textContent = allowed ? "" : (fac ? fac.name + "은 준비시간 없음" : "");
 
   const isEvent = kindSel.value === "행사";
-  $("#admBox").hidden = !isEvent;
   $("#annexBox").hidden = !isEvent;
   $("#useTypeHint").textContent = $("#fUseType").value === "체육경기"
     ? "국가·지방자치단체 및 대한체육회·장애인체육회 산하단체가 주관하는 경기"
@@ -4406,6 +4452,24 @@ function settleWorkbook(d) {
   ["L28", "L29", "M32", "L68", "L69", "M75"].forEach(ref =>
     at(ref, { s: styAt(ref, { s: 1, w: 0 }) }));
 
+  /* ── 칸보다 긴 글 손보기 ───────────────────────────────
+     칸 폭·병합은 원본 그대로 두고, **글이 칸을 넘치는 자리만** 고친다.
+     엑셀 규칙 때문에 한 가지 방법으로 다 되지 않는다:
+       · 「칸에 맞춤」(s) 은 **줄바꿈(w) 칸에는 듣지 않는다** — 둘을 같이 쓸 수 없다
+       · 옆 칸이 비어 글이 흘러넘치는 자리에 「칸에 맞춤」을 켜면 **오히려 제 칸 폭으로**
+         줄여 버린다 (넘쳐 흐르던 글이 도리어 깨알만 해진다)
+     그래서 세 가지로 나눴다. 값은 서식의 열 너비·줄 높이에서 재어 넣은 것이다 —
+     **눈대중으로 고치지 않는다.** 서식이 바뀌면 다시 잰다 */
+  // ㉮ 옆 칸이 막혀 잘리던 원본 문구 — 「칸에 맞춤」으로 다 보이게 한다
+  ["M12", "M16", "M51", "M55"].forEach(ref => at(ref, { s: styAt(ref, { s: 1 }) }));
+  // ㉯ 대장에서 채우는 칸 — 길게 적어도 잘리지 않게 미리 켜 둔다 (짧으면 그대로 보인다)
+  ["I1", "C3", "I36", "I40", "C42"].forEach(ref => at(ref, { s: styAt(ref, { s: 1 }) }));
+  /* ㉰ 「칸에 맞춤」을 쓸 수 없는 칸은 글씨만 한 호 줄인다.
+     J70 은 옆의 빈 칸으로 흘러넘겨야 다 보이는 줄이고(칸에 맞춤을 켜면 제 칸에 갇힌다),
+     M20·M56·M59 는 줄바꿈 칸인데 줄 높이가 한 줄만큼 모자랐다 */
+  at("J70", { s: styAt("J70", { sz: 9.5 }) });
+  ["M20", "M56", "M59"].forEach(ref => at(ref, { s: styAt(ref, { sz: 10 }) }));
+
   // 제출용(2장) 은 1장을 수식으로 따라간다. 원본이 숫자로 박아 둔 칸만 맞춘다
   at("I59", { n: keep });
   for (let r = 60; r <= 66; r++) at("F" + r, { n: keep });
@@ -4471,9 +4535,16 @@ function settleData(list) {
     const a = (r.annex && typeof r.annex === "object") ? r.annex : {};
     Object.keys(a).forEach(id => { qty[id] = (qty[id] || 0) + (Number(a[id]) || 0); });
   });
-  const annex = (s.annexItems || [])
-    .filter(it => Number(qty[it.id]) > 0)
-    .map(it => ({ name: it.name, fee: Number(it.fee) || 0, unit: it.unit, qty: Number(qty[it.id]) }));
+  /* 기본료가 붙는 항목(마이크)은 서식에서도 「기본료 1회」 줄을 따로 세운다 —
+     서식의 금액 칸이 「단가 × 감면율 × 회수」 수식이라 한 줄에 담을 수 없다 */
+  const annex = [];
+  (s.annexItems || []).forEach(it => {
+    const n = Number(qty[it.id]) || 0;
+    if (n <= 0) return;
+    const bf = Number(it.base) || 0;
+    if (bf > 0) annex.push({ name: it.baseName || (it.name + " 기본료"), fee: bf, unit: "1회", qty: 1 });
+    annex.push({ name: it.name, fee: Number(it.fee) || 0, unit: it.unit, qty: n });
+  });
   /* 서식의 일곱 줄에 앉힌다. 원본은 앞 다섯 줄을 「회」 로 세는 항목에,
      뒤 두 줄(탁자·의자 자리)을 「개」 로 세는 항목에 쓰도록 짜여 있다.
      그 자리에 맞춰 넣어야 개수 칸의 표시형식과 제출용 쪽 수식이 어긋나지 않는다 */
@@ -5059,7 +5130,7 @@ function init() {
     }
   });
   ["#fDate", "#fStartH", "#fStartM", "#fEndH", "#fEndM", "#fFac", "#fDiscount", "#fOverride", "#fKind",
-   "#fUseType", "#fAdmission", "#fSchoolGame", "#fPower", "#fWater"].forEach(sel =>
+   "#fUseType", "#fPower", "#fWater"].forEach(sel =>
     $(sel).addEventListener("input", () => { updateKindUI(); updateFeePreview(); }));
   $("#annexList").addEventListener("input", () => updateFeePreview());
 
@@ -5102,7 +5173,10 @@ function init() {
     const facBox = t.closest("[data-fid]"), dcBox = t.closest("[data-did]"), anBox = t.closest("[data-aid]");
     if (anBox && t.dataset.k) {
       const it = (state.settings.annexItems || []).find(x => x.id === anBox.dataset.aid);
-      if (it) { it[t.dataset.k] = t.dataset.k === "fee" ? Number(t.value) : t.value; save(); renderAll(); }
+      // 여기서 renderSettings() 를 부르지 않는다 — 적는 중에 입력칸이 새로 그려져 커서를 잃는다.
+      // 기본료 안내 글은 설정 화면을 다시 열 때 맞춰진다
+      if (it) { it[t.dataset.k] = ["fee", "base"].includes(t.dataset.k) ? Number(t.value) : t.value;
+               save(); renderAll(); }
       return;
     }
     if (facBox && t.dataset.k) {
