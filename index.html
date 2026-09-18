@@ -903,14 +903,13 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
           </div>
           <div id="annexItemList" class="setgrid"></div>
           <button type="button" class="btn btn-sm" id="addAnnex" style="align-self:flex-start">+ 부속시설 항목 추가</button>
-          <label class="prep-toggle" style="margin-top:4px">
-            <input type="checkbox" id="setDiscountAnnex">
-            <span>부속시설에도 감면 적용</span>
-          </label>
-          <div class="hint">제11조제1항이 부속시설 사용료도 “사용료”에 넣고 있어 제13조 감면 대상입니다.
-            기본으로 켜져 있습니다.<br>
+          <div class="hint" style="margin-top:4px">
+            <b>부속시설 사용료에는 감면이 늘 적용됩니다.</b>
+            제11조제1항이 부속시설 사용료도 “사용료”에 넣고 있어 제13조 감면 대상입니다.<br>
             <b>전기료·수도료(실비)에는 감면을 적용하지 않습니다.</b> 이미 할인이 반영된 금액으로
-            청구가 와서 원가를 알 수 없기 때문입니다 — 적은 금액이 그대로 더해집니다.</div>
+            청구가 와서 원가를 알 수 없기 때문입니다 — 적은 금액이 그대로 더해집니다.<br>
+            둘 다 <b>켜고 끄는 칸이 없습니다</b> — 예전에 있던 「부속시설·전기·수도에도 감면 적용」
+            체크를 끄면 부속시설까지 감면에서 빠져서, 담당자 요청으로 없앴습니다 (2026-09-18).</div>
 
           <div class="hr"></div>
 
@@ -1400,7 +1399,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-09-11.37";
+const APP_VERSION = "2026-09-18.38";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -1591,7 +1590,7 @@ function facSeed(id, name, color, prepAllowed) {
 }
 
 const DEFAULT_STATE = {
-  version: 8,
+  version: 9,
   settings: {
     rounding: 10,
 
@@ -1621,8 +1620,6 @@ const DEFAULT_STATE = {
     /* 별표 6 — 부속시설 사용료 */
     // 차례는 ANNEX_ORDER 가 정한다 (설정·등록창·정산서가 같은 차례를 쓴다)
     annexItems: sortAnnexItems(structuredClone(BYULPYO6)),
-    discountAnnex: true,   // 부속시설(별표 6)에도 감면을 적용할지.
-                           //   전기료·수도료(실비)는 이 값과 무관하게 언제나 감면 없음
 
     holidays: [],          // 손으로 넣은 공휴일 (대체공휴일·임시공휴일)
     holidayOff: [],        // 자동 공휴일 중 손으로 뺀 날
@@ -1759,9 +1756,11 @@ function migrate(d) {
   // 공휴일은 2040년까지 자동으로 잡히므로, 예전에 손으로 적어둔 것 중
   // 자동과 겹치는 날은 지운다. 대체공휴일처럼 자동에 없는 날만 남긴다
   st.holidays = st.holidays.filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x) && !autoHolidayName(x));
-  // 제11조제1항이 부속시설 사용료도 "사용료"에 넣고 있어 제13조 감면 대상이다.
-  // 처음에는 실비 성격을 걱정해 꺼두었으나, 담당자 확인으로 켜는 것으로 정했다
-  if (old < 3) st.discountAnnex = true;
+  /* 부속시설 감면을 켜고 끄던 `discountAnnex` 를 없앴다 (2026-09-18 담당자 요청).
+     그 체크의 옛 이름이 「부속시설·전기·수도에도 감면 적용」 이어서, 전기·수도를
+     감면에서 빼려고 끄면 부속시설까지 함께 빠졌다. 실제로 그렇게 꺼져 있었다.
+     **남아 있는 값을 지운다** — 안 지우면 다음에 되살릴 때 그 값이 또 따라온다 */
+  delete st.discountAnnex;
   // 준비시간도 그 날 그 시간대의 전용사용료를 따른다 (담당자 확인).
   // 손으로 고친 요율은 건드리지 않고, 예전 기본값 50 만 100 으로 올린다
   if (old < 4) {
@@ -1814,7 +1813,7 @@ function migrate(d) {
   delete st.minHours; delete st.nightStart; delete st.holidayRate; delete st.surchargeArticle;
 
   // 시설은 늘 충무 → 한밭 → 야구장 차례로 둔다
-  return { version: 8, settings: st, facilities: sortFacilities(facs), discounts: dcs, reservations: res };
+  return { version: 9, settings: st, facilities: sortFacilities(facs), discounts: dcs, reservations: res };
 }
 
 function readLocal() {
@@ -2600,20 +2599,23 @@ function calcFee(r) {
 
   // ⑨ 감면
   const dc = discountOf(r.discountId);
-  const dcAnnex = !!s.discountAnnex;   // 부속시설(⑥)에도 감면을 적용할지
-  /* 전기료·수도료(⑦⑧)에는 감면을 적용하지 않는다 — 담당자 확인(2026-09-11).
-     한전·수도사업소에서 이미 할인이 반영된 금액으로 청구가 오기 때문에
-     원가를 알 수 없고, 여기서 또 깎으면 실제로 낸 돈보다 적게 받게 된다.
-     `discountAnnex` 는 부속시설(별표 6 항목)에만 걸린다 */
+  /* **감면 대상은 ①~⑤ 와 ⑥ 부속시설이다. ⑦ 전기료·⑧ 수도료만 빠진다.**
+     전기·수도는 한전·수도사업소에서 이미 할인이 반영된 금액으로 청구가 와서
+     원가를 알 수 없고, 여기서 또 깎으면 실제로 낸 돈보다 적게 받게 된다
+     (2026-09-11 담당자 결정).
+     **켜고 끄는 설정을 두지 않는다** (2026-09-18 담당자 요청) —
+     예전에 있던 `discountAnnex` 체크의 이름이 「부속시설·전기·수도에도 감면 적용」 이어서,
+     전기·수도를 빼려고 그 체크를 끄면 **부속시설까지 감면에서 빠졌다.**
+     실제로 그 일이 났다. 이 구분을 값으로 되돌리지 않는다 */
   let cut = 0;
   if (Number(dc.rate) > 0) {
-    const dcBase = sum + (dcAnnex ? annexOnly : 0);
+    const dcBase = sum + annexOnly;      // 부속시설은 포함, 전기·수도(utilSum)는 제외
     cut = dcBase * Number(dc.rate) / 100;
     out.lines.push({
       label: "⑨ 감면 · " + dc.name + (String(dc.name).includes(dc.rate + "%") ? "" : " " + dc.rate + "%"),
       why: (dc.article || A.discount) + (Number(dc.rate) === 100 ? " · 전부 면제" : " · 사용료의 " + dc.rate + "% 감경") +
-           (annexOnly > 0 ? (dcAnnex ? " · 부속시설 포함" : " · 부속시설은 제외") : "") +
-           (utilSum > 0 ? " · 전기료·수도료(실비)는 감면 없음" : ""),
+           (annexOnly > 0 ? " · 부속시설 포함" : "") +
+           (utilSum > 0 ? " · 전기료·수도료(실비)만 감면 없음" : ""),
       amount: -cut
     });
   }
@@ -2627,7 +2629,7 @@ function calcFee(r) {
   /* 목록(수익집계용)에서 따로 떼어 보는 금액.
      세 조각을 더하면 언제나 합계와 같아지도록, 부속시설·공과금을 먼저 절사하고
      전용사용료를 나머지로 둔다 */
-  const dcOn = (Number(dc.rate) > 0 && dcAnnex) ? (1 - Number(dc.rate) / 100) : 1;
+  const dcOn = 1 - Math.min(100, Math.max(0, Number(dc.rate) || 0)) / 100;
   const partAnnex = floorUnit(annexOnly * dcOn);
   // 공과금은 감면을 타지 않는다 (위 ⑨ 주석 참고). 넣은 금액이 그대로 나간다
   const partUtil  = floorUnit(utilSum);
@@ -3345,7 +3347,6 @@ function renderSettings() {
     "</div>";
   }).join("");
 
-  $("#setDiscountAnnex").checked = !!s.discountAnnex;
   $("#annexItemList").innerHTML = (s.annexItems || []).map(it =>
     '<div class="item" data-aid="' + it.id + '">' +
       '<div class="row21">' +
@@ -5382,7 +5383,6 @@ function init() {
     const hKey = /^(set(?:Sum|Win)(?:Early|Day|Night))[HM]$/.exec(t.id);
     if (t.id === "setPrepSurcharge") { state.settings.prepSurcharge = t.checked; save(); renderAll(); return; }
     if (t.id === "setSundayHoliday") { state.settings.sundayAsHoliday = t.checked; save(); renderAll(); return; }
-    if (t.id === "setDiscountAnnex") { state.settings.discountAnnex = t.checked; save(); renderAll(); return; }
     if (t.id === "setSurchargeMode") { state.settings.surchargeMode = t.value; save(); renderAll(); return; }
     if (hKey && hmap[hKey[1]]) {
       const [season, key] = hmap[hKey[1]];
