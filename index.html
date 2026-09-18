@@ -1402,7 +1402,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-09-18.39";
+const APP_VERSION = "2026-09-18.40";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -2809,8 +2809,12 @@ function renderCalendar() {
   $("#calTitle").textContent = y + "년 " + m + "월";
   const mr = monthReservations(y, m).filter(r => r.status !== "취소");
   const nEv = mr.filter(r => r.kind !== "준비").length, nPr = mr.length - nEv;
-  const sum = mr.reduce((a, r) => a + feeOf(r), 0);
-  $("#calSubtitle").textContent = "행사 " + nEv + "건" + (nPr ? " · 준비 " + nPr + "건" : "") + " · 이용료 " + won(sum) + "원";
+  /* 로그인하지 않은 사람에게는 월간 이용료를 **만들어 넣지 않는다** (감추는 것이 아니다).
+     `renderSummary`·`renderList` 와 같은 규칙이다 — 위 「역할」 절 참고.
+     금액을 합산하는 일 자체를 하지 않으므로 개발자도구로도 보이지 않는다 */
+  const money = currentRole() !== "viewer";
+  $("#calSubtitle").textContent = "행사 " + nEv + "건" + (nPr ? " · 준비 " + nPr + "건" : "") +
+    (money ? " · 이용료 " + won(mr.reduce((a, r) => a + feeOf(r), 0)) + "원" : "");
   $("#calOrgNote").textContent = state.settings.orgNote || "";   // 인쇄할 때만 보인다
 
   // 달력 화면에는 행사만 띄운다. 준비는 날짜를 누르면 우측에서 함께 보인다
@@ -3747,7 +3751,11 @@ function fitPrintPages() {
 
 /* 날짜별 상세 인쇄판을 만든다 */
 function buildPrintDetail(dates) {
-  const cols = colsOf(view.listMode === "income" ? "income" : "view")
+  /* 로그인하지 않으면 **금액이 없는 조회용으로만 찍는다** — 화면 목록과 같은 규칙이다.
+     `view.listMode` 에 `income` 이 남아 있어도 (앞사람이 고른 채로 로그아웃하면 남는다)
+     금액 열이 종이로 새어 나가지 않게 여기서 한 번 더 막는다 */
+  const money = currentRole() !== "viewer";
+  const cols = colsOf(money && view.listMode === "income" ? "income" : "view")
     .filter(k => k !== "date" && k !== "dow" && k !== "memo");
   // 날마다 표가 따로라 그냥 두면 열 폭이 제각각이 된다. 폭을 정해 한 장처럼 맞춘다
   const wOf = k => k === "time" ? 12 : k === "fac" ? 12 : k === "kind" ? 6 : k === "head" ? 6 :
@@ -3763,7 +3771,7 @@ function buildPrintDetail(dates) {
     const dt = parseYmd(d), w = dt.getDay(), hn = holidayName(d);
     const dowCls = hn || w === 0 ? "pd-sun" : (w === 6 ? "pd-sat" : "");
     const live = items.filter(r => r.status !== "취소");
-    const tot = live.reduce((a, r) => a + feeOf(r), 0);
+    const tot = money ? live.reduce((a, r) => a + feeOf(r), 0) : 0;
     const rows = items.map(row => {
       const r = row, x = listRow(r);
       const tds = cols.map(k => {
@@ -3780,7 +3788,7 @@ function buildPrintDetail(dates) {
     return '<section class="pd-day">' +
       "<h3><span class=\"" + dowCls + '">' + (dt.getMonth() + 1) + "월 " + dt.getDate() + "일 (" + DOW[w] + ")</span>" +
       (hn ? '<span class="pd-sun">' + esc(hn) + "</span>" : "") +
-      "<small>" + items.length + "건 · 이용료 " + won(tot) + "원</small></h3>" +
+      "<small>" + items.length + "건" + (money ? " · 이용료 " + won(tot) + "원" : "") + "</small></h3>" +
       (items.length ? '<table style="table-layout:fixed">' + group + head + rows + "</table>" : '<p class="pd-empty">예약 없음</p>') +
       "</section>";
   }).join("");
