@@ -385,10 +385,24 @@ td.dow-sun{color:var(--sun);font-weight:600}
 /* AI 도우미 — 주고받은 말을 위아래로 쌓는다. 답은 esc() 를 거쳐 글자로만 넣는다 */
 .ai-log{display:flex;flex-direction:column;gap:10px;min-height:160px}
 .ai-msg{max-width:88%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;
-  font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere}
+  font-size:13px;line-height:1.7;word-break:keep-all;overflow-wrap:anywhere}
+/* 표가 든 답은 폭을 다 쓴다 — 표가 좁은 말풍선에 갇히면 읽을 수가 없다 */
+.ai-msg.has-tbl{max-width:100%;align-self:stretch}
 .ai-msg.me{align-self:flex-end;background:var(--surface);border-color:var(--line-strong)}
 .ai-msg.err{border-color:var(--alert);color:var(--alert)}
-.ai-msg .who{display:block;font-size:10.5px;color:var(--faint);margin-bottom:3px}
+.ai-msg .who{display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--faint);margin-bottom:3px}
+.ai-xls{margin-left:auto;font-size:11px;padding:2px 8px}
+.ai-p{white-space:pre-wrap}
+.ai-p+.ai-p{margin-top:6px}
+/* 답에 든 표 — 화면 표와 같은 테두리·머리글을 쓴다. 좁으면 가로로 굴린다 */
+.ai-tblwrap{overflow-x:auto;margin:8px 0}
+.ai-tbl{border-collapse:collapse;font-size:12px}
+.ai-tbl th,.ai-tbl td{border:1px solid var(--line);padding:5px 9px;text-align:left;vertical-align:top}
+/* 날짜·시각처럼 띄어쓰기 없는 칸은 저절로 한 줄로 남고, 긴 행사명만 낱말 단위로 접힌다.
+   전부 nowrap 으로 두면 표가 창을 넘겨 오른쪽이 잘린다 */
+.ai-tbl td{white-space:normal;word-break:keep-all}
+.ai-tbl th{white-space:nowrap}
+.ai-tbl th{background:var(--surface);font-weight:600}
 .ai-opts{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;font-size:12px}
 .ai-opts>label{color:var(--ink-2)}
 .ai-opts select{font:inherit}
@@ -1326,7 +1340,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
      그건 calcFee() 가 하고, 정확한 금액은 「요금 계산」 탭에서 본다.
      키는 브라우저에 없다. Supabase Edge Function 이 중간에서 부른다 -->
 <div class="backdrop" id="aiBox" hidden>
-  <div class="modal" style="max-width:660px">
+  <div class="modal" style="max-width:880px">
     <div class="modal-head">
       <h2>AI 도우미</h2>
       <button type="button" class="btn btn-quiet btn-sm" id="aiClose">닫기 ✕</button>
@@ -1540,7 +1554,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-09-21.43";
+const APP_VERSION = "2026-09-21.44";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -3642,13 +3656,73 @@ function aiFeeSeed(r) {
   };
 }
 
+/* AI 가 마크다운 표로 답하면 **진짜 표로 그린다.** 글자로 두면 읽기 어렵다.
+   표 구조는 우리가 만들고 **칸 내용은 전부 `esc()` 를 거친다** —
+   업체가 무엇을 돌려줘도 그대로 그려지지 않는다 (`하지 말 것` 의 그 규칙을 지킨다) */
+function aiBlocks(text) {
+  const lines = String(text == null ? "" : text).split("\n");
+  const cells = s => {
+    let t = s.trim();
+    if (t.startsWith("|")) t = t.slice(1);
+    if (t.endsWith("|")) t = t.slice(0, -1);
+    return t.split("|").map(x => x.trim());
+  };
+  // `|---|---:|` 처럼 머리글 바로 밑에 오는 줄이 표라는 표시다
+  const isSep = s => s.includes("|") && s.includes("-") &&
+    cells(s).every(x => /^:?-+:?$/.test(x));
+
+  const out = [];
+  let buf = [];
+  const flush = () => { if (buf.length) { out.push({ type: "text", lines: buf }); buf = []; } };
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].includes("|") && i + 1 < lines.length && isSep(lines[i + 1])) {
+      const head = cells(lines[i]);
+      const align = cells(lines[i + 1]).map(s =>
+        /^:.*:$/.test(s) ? "center" : /:$/.test(s) ? "right" : "");
+      const rows = [];
+      let j = i + 2;
+      while (j < lines.length && lines[j].trim() && lines[j].includes("|")) { rows.push(cells(lines[j])); j++; }
+      flush();
+      out.push({ type: "table", head: head, align: align, rows: rows });
+      i = j - 1;
+    } else buf.push(lines[i]);
+  }
+  flush();
+  return out;
+}
+/* `**굵게**` 만 살린다. 링크·그림은 살리지 않는다 — 살릴 이유가 없고 위험만 는다 */
+function aiInline(s) { return esc(s).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>"); }
+
+function aiHtml(text) {
+  return aiBlocks(text).map(b => {
+    if (b.type === "text") {
+      const t = b.lines.join("\n").replace(/^\n+|\n+$/g, "");
+      return t ? '<div class="ai-p">' + aiInline(t) + "</div>" : "";
+    }
+    const al = n => b.align[n] ? ' style="text-align:' + b.align[n] + '"' : "";
+    return '<div class="ai-tblwrap"><table class="ai-tbl"><thead><tr>' +
+      b.head.map((h, n) => "<th" + al(n) + ">" + aiInline(h) + "</th>").join("") +
+      "</tr></thead><tbody>" +
+      b.rows.map(r => "<tr>" + r.map((c, n) => "<td" + al(n) + ">" + aiInline(c) + "</td>").join("") + "</tr>").join("") +
+      "</tbody></table></div>";
+  }).join("");
+}
+
 function aiRender() {
   const log = $("#aiLog");
   log.innerHTML = AI.msgs.length
-    ? AI.msgs.map(m =>
-        '<div class="ai-msg ' + (m.role === "user" ? "me" : "") + (m.err ? " err" : "") + '">' +
-        '<span class="who">' + (m.role === "user" ? "나" : "AI 도우미") + "</span>" +
-        esc(m.text) + "</div>").join("")
+    ? AI.msgs.map((m, i) => {
+        const me = m.role === "user";
+        // 표가 든 답에만 엑셀 단추를 붙인다. **그 답 하나만** 내려받는다
+        const hasTbl = !me && !m.err && aiBlocks(m.text).some(b => b.type === "table");
+        return '<div class="ai-msg' + (me ? " me" : "") + (m.err ? " err" : "") +
+          (hasTbl ? " has-tbl" : "") + '">' +
+          '<span class="who">' + (me ? "나" : "AI 도우미") +
+          (hasTbl ? '<button type="button" class="btn btn-sm ai-xls" data-aixls="' + i +
+            '" title="이 답의 표만 엑셀로 내려받습니다">⤓ 엑셀</button>' : "") +
+          "</span>" +
+          (me ? aiInline(m.text) : aiHtml(m.text)) + "</div>";
+      }).join("")
     : '<p class="hint" style="margin:0">아래 칸에 물어보거나, 위의 예시를 눌러 보세요.</p>';
   $("#aiTips").innerHTML = AI_TIPS.map(t =>
     '<button type="button" class="btn btn-sm" data-aitip="' + esc(t) + '">' + esc(t) + "</button>").join("");
@@ -3686,6 +3760,82 @@ async function aiAsk(q, seed) {
     AI.msgs.push({ role: "assistant", text: e.message, err: true });
   }
   AI.busy = false; aiRender();
+}
+
+/* 답 하나에 든 표를 진짜 `.xlsx` 로 낸다 (`⤓ 엑셀`).
+   **그 답만** 낸다 — 창 전체를 한꺼번에 내지 않는다 (담당자 요청).
+   목록 내보내기가 쓰는 `xwNew`·`xwStyle`·`xwPut`·`xwXlsx` 를 그대로 쓴다. 라이브러리는 없다 */
+function aiExportXlsx(i) {
+  const m = AI.msgs[i];
+  if (!m) return;
+  const tabs = aiBlocks(m.text).filter(b => b.type === "table");
+  if (!tabs.length) { toast("이 답에는 표가 없습니다"); return; }
+  const q = (i > 0 && AI.msgs[i - 1].role === "user") ? AI.msgs[i - 1].text : "";
+
+  /* 「202,500」·「202,500원」 처럼 숫자로만 된 칸은 **숫자로** 넣는다 —
+     글자로 넣으면 엑셀에서 합계를 못 내고 초록 세모가 붙는다.
+     「300명」·「07:00–18:00」 같이 단위가 붙은 것은 글자 그대로 둔다 */
+  const numOf = s => {
+    const t = String(s == null ? "" : s).trim().replace(/\s/g, "");
+    if (!/^-?[\d,]*\d[\d,]*원?$/.test(t)) return null;
+    const n = Number(t.replace(/[,원]/g, ""));
+    return isFinite(n) ? n : null;
+  };
+
+  const FSZ = 14, WMUL = FSZ / 11, GR = "FF999999";
+  const wb = xwNew("AI 답변");
+  const S = o => xwStyle(wb, Object.assign({ fn: "맑은 고딕", sz: FSZ }, o));
+  const box = c => ({ t: "thin|" + c, b: "thin|" + c, l: "thin|" + c, r: "thin|" + c });
+  const sTitle = S({ sz: FSZ + 4, b: 1, h: "left", v: "center" });
+  const sQ     = S({ sz: FSZ, c: "FF555555", h: "left", v: "center", w: 1 });
+  const sHead  = S({ b: 1, h: "center", v: "center", bd: box(GR), fl: { p: "solid", fg: "DDDDDD" } });
+  const sCell  = S({ v: "center", bd: box(GR) });
+  const sNum   = S({ v: "center", h: "right", bd: box(GR), nf: "#,##0" });
+
+  const nCol = Math.max.apply(null, tabs.map(t =>
+    Math.max(t.head.length, ...t.rows.map(r => r.length))));
+  const width = new Array(nCol).fill(0);
+  const plain = s => String(s == null ? "" : s).replace(/\*\*/g, "");
+
+  xwPut(wb, 0, 0, { t: "AI 도우미 답변", s: sTitle });
+  wb.merges.push([0, 0, 1, nCol]);
+  wb.rowH[0] = Math.round((FSZ + 4) * 1.6);
+  let r = 1;
+  if (q) {
+    xwPut(wb, r, 0, { t: "질문: " + q, s: sQ });
+    wb.merges.push([r, 0, 1, nCol]);
+    wb.rowH[r] = Math.round(FSZ * 1.7);
+    r++;
+  }
+  r++;   // 한 줄 띄운다
+
+  tabs.forEach(t => {
+    t.head.forEach((h, c) => {
+      xwPut(wb, r, c, { t: plain(h), s: sHead });
+      width[c] = Math.max(width[c], textWidth(plain(h)));
+    });
+    wb.rowH[r] = Math.round(FSZ * 1.7);
+    r++;
+    t.rows.forEach(row => {
+      for (let c = 0; c < nCol; c++) {
+        const v = plain(row[c]);
+        const n = numOf(v);
+        xwPut(wb, r, c, n == null ? { t: v, s: sCell } : { n: n, s: sNum });
+        width[c] = Math.max(width[c], textWidth(v));
+      }
+      r++;
+    });
+    r++;   // 표 사이를 한 줄 띄운다
+  });
+
+  wb.cols = width.map(w => Math.min(80, Math.round((w + 3) * WMUL * 10) / 10));
+  // **wb.page 를 반드시 둔다** — 안 두면 정산서 쪽 기본값(세로·86%·가운데)이 딸려온다
+  wb.page = { orient: "landscape", fitW: 1 };
+
+  const name = "AI답변_" + (plain(q).replace(/[^0-9A-Za-z가-힣]+/g, "").slice(0, 20) || "표");
+  downloadBytes(name + ".xlsx", xwXlsx(wb),
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  toast("엑셀로 내려받았습니다");
 }
 
 function openAi() {
@@ -5649,6 +5799,11 @@ function init() {
   // 범위·메모를 바꾸면 무엇을 보내는지 바로 다시 적는다
   $("#aiScope").addEventListener("change", aiDataNote);
   $("#aiMemo").addEventListener("change", aiDataNote);
+  // 답마다 붙는 `⤓ 엑셀` — 누른 그 답의 표만 낸다
+  $("#aiLog").addEventListener("click", e => {
+    const b = e.target.closest("[data-aixls]");
+    if (b) aiExportXlsx(Number(b.dataset.aixls));
+  });
   // 줄바꿈은 Shift+Enter, 보내기는 Enter
   $("#aiQ").addEventListener("keydown", e => {
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); aiAsk($("#aiQ").value); }
