@@ -278,10 +278,12 @@ td.t{font-family:"IBM Plex Mono",monospace;white-space:nowrap}
 .filters{display:flex;gap:8px;padding:11px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center}
 .filters input[type=search],.filters select{padding:5px 9px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
 .filters input[type=search]{min-width:190px}
-.filters .seg{display:flex;border:1px solid var(--line-strong);border-radius:var(--r);overflow:hidden}
-.filters .seg button{background:var(--surface);border:0;padding:5px 12px;font-size:13px;color:var(--muted)}
-.filters .seg button+button{border-left:1px solid var(--line-strong)}
-.filters .seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent-ink);font-weight:500}
+/* `.filters` 안에서만 걸려 있어서 `.setbar` 에 든 세그먼트(설정 탭·분석 탭)는
+   스타일이 빠져 있었다 — 다크 모드에서 흰 상자로 보였다. 선택자를 넓혀 셋 다 같게 한다 */
+.seg{display:flex;border:1px solid var(--line-strong);border-radius:var(--r);overflow:hidden}
+.seg button{background:var(--surface);border:0;padding:5px 12px;font-size:13px;color:var(--muted)}
+.seg button+button{border-left:1px solid var(--line-strong)}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent-ink);font-weight:500}
 /* 준비 건은 목록에서 노란 테두리로 강조한다 (인쇄·엑셀에서도 같게 나온다) */
 /* 준비 건은 테두리로만 구분한다. 바탕은 다른 줄과 같다 */
 tbody tr.is-prep td{border-top:2px solid var(--prep-line);border-bottom:2px solid var(--prep-line)}
@@ -403,6 +405,42 @@ td.dow-sun{color:var(--sun);font-weight:600}
 .ai-tbl td{white-space:normal;word-break:keep-all}
 .ai-tbl th{white-space:nowrap}
 .ai-tbl th{background:var(--surface);font-weight:600}
+/* 분석 — 시설마다 그래프를 따로 둔다. 색은 달력·목록과 같은 시설 구분색 그대로다
+   (`data-fc` 가 --fc-ink 를 정한다). **새 색을 만들지 않았다** */
+.st-kpi{display:flex;gap:10px;flex-wrap:wrap}
+.st-kpi>div{flex:1 1 160px;border:1px solid var(--line);border-radius:10px;padding:11px 13px;background:var(--surface)}
+.st-kpi .k{display:block;font-size:11px;color:var(--ink-2)}
+.st-kpi .v{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;
+  font-size:22px;font-weight:600;letter-spacing:-.4px}
+.st-kpi .u{font-size:12px;color:var(--ink-2);margin-left:3px}
+.st-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.st-card{border:1px solid var(--line);border-radius:10px;padding:10px 12px 6px;background:var(--surface)}
+.st-card h3{margin:0 0 2px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:6px}
+.st-card h3 i{width:9px;height:9px;border-radius:50%;background:var(--fc-ink);flex:none}
+.st-card .sum{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;
+  font-size:11.5px;color:var(--ink-2);margin:0 0 4px}
+.st-card svg{display:block;width:100%;height:auto;touch-action:none}
+.st-card .gl{stroke:var(--line);stroke-width:1;vector-effect:non-scaling-stroke}
+.st-card .ln{fill:none;stroke:var(--fc-ink);stroke-width:2;stroke-linejoin:round;
+  stroke-linecap:round;vector-effect:non-scaling-stroke}
+.st-card .ar{fill:var(--fc-ink);fill-opacity:.1}
+.st-card .dt{fill:var(--fc-ink);stroke:var(--surface);stroke-width:2}
+.st-card .ax{fill:var(--faint);font-size:9.5px;font-family:"IBM Plex Mono",monospace}
+.st-card .vl{fill:var(--ink);font-size:10px;font-weight:600;font-family:"IBM Plex Mono",monospace;
+  /* 끝값 딱지가 선·면 위에 겹쳐 앉는다. 바탕색 테두리를 둘러 글자가 묻히지 않게 한다
+     (점 `.dt` 에 두른 것과 같은 방식이다) */
+  paint-order:stroke;stroke:var(--surface);stroke-width:3;stroke-linejoin:round}
+.st-card .cx{stroke:var(--line-strong);stroke-width:1;vector-effect:non-scaling-stroke}
+/* 어느 그래프에 올려도 그 달의 세 시설 값이 함께 뜬다 — 그래프를 나눠서 잃은 비교를 여기서 돌려준다 */
+.st-tip{position:fixed;z-index:60;pointer-events:none;background:var(--surface);
+  border:1px solid var(--line-strong);border-radius:8px;box-shadow:var(--shadow);
+  padding:8px 10px;font-size:12px;min-width:150px}
+.st-tip b{display:block;font-size:11px;color:var(--ink-2);font-weight:600;margin-bottom:4px}
+.st-tip .r{display:flex;align-items:center;gap:6px;justify-content:space-between;line-height:1.7}
+.st-tip .r i{width:12px;height:2px;border-radius:1px;background:var(--fc-ink);flex:none}
+.st-tip .r span{color:var(--ink-2);flex:1;white-space:nowrap}
+.st-tip .r em{font-style:normal;font-weight:600;font-family:"IBM Plex Mono",monospace;
+  font-variant-numeric:tabular-nums}
 .ai-opts{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;font-size:12px}
 .ai-opts>label{color:var(--ink-2)}
 .ai-opts select{font:inherit}
@@ -453,7 +491,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;border:1px solid var(
    금액 자체는 그리지도 않는다 (renderRail·renderSummary·renderList 참고).
    **⚙ 설정 창은 잠그지 않는다** — 잠그면 로그인할 방법이 없어진다 */
 body.viewer .tabs [data-pane="fees"],body.viewer .tabs [data-pane="settings"],
-body.viewer .tabs [data-pane="quote"],
+body.viewer .tabs [data-pane="quote"],body.viewer .tabs [data-pane="stats"],
 body.viewer #newBtn,body.viewer #saveNow,body.viewer #settleBtn,body.viewer #listSettle,
 body.viewer #aiBtn,body.viewer [data-explain],
 body.viewer #railDone,body.viewer #railHoliday,body.viewer #utilSeg,
@@ -617,6 +655,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
       <button type="button" role="tab" data-pane="calendar" aria-selected="true">달력</button>
       <button type="button" role="tab" data-pane="list" aria-selected="false">목록</button>
       <button type="button" role="tab" data-pane="quote" aria-selected="false">요금 계산</button>
+      <button type="button" role="tab" data-pane="stats" aria-selected="false">분석</button>
       <button type="button" role="tab" data-pane="fees" aria-selected="false">요금 관리</button>
       <button type="button" role="tab" data-pane="settings" aria-selected="false">시설 · 요금 기준</button>
     </nav>
@@ -810,6 +849,42 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
       </div>
       <div class="sec-body" style="border-top:1px solid var(--line)" id="qResult"></div>
     </div>
+  </section>
+
+  <!-- ================= 분석 =================
+       시설별 대관 횟수·수익금·인원의 달별 추이.
+       **시설마다 그래프를 따로 둔다** — 세 시설 색(주황·파랑·초록)을 한 그래프에 겹치면
+       적록색약에서 주황과 초록이 구분되지 않는다. 그래프를 나누면 색이 구분 역할을
+       하지 않아도 되고, 어느 그래프에 올려도 세 시설 값이 함께 뜬다 -->
+  <section class="pane" id="pane-stats">
+    <div class="card">
+      <div class="filters">
+        <select id="stPeriod">
+          <option value="year">올해</option>
+          <option value="12">최근 12개월</option>
+          <option value="all">전체 기간</option>
+        </select>
+        <select id="stKind">
+          <option value="all">행사 + 준비</option>
+          <option value="행사">행사만</option>
+          <option value="준비">준비만</option>
+        </select>
+        <span class="savestate" id="stRange" style="margin-left:auto"></span>
+      </div>
+      <div class="sec-body" id="stKpi"></div>
+      <div class="setbar" style="padding:0 14px 12px">
+        <div class="seg" id="stSeg" role="group" aria-label="볼 지표">
+          <button type="button" data-sm="count" aria-pressed="true">대관 횟수</button>
+          <button type="button" data-sm="money" aria-pressed="false">수익금</button>
+          <button type="button" data-sm="head"  aria-pressed="false">인원</button>
+        </div>
+      </div>
+      <div class="sec-body" id="stCharts" style="border-top:1px solid var(--line)"></div>
+      <div class="table-wrap"><table><thead id="stHead"></thead><tbody id="stBody"></tbody>
+        <tfoot id="stFoot"></tfoot></table></div>
+      <p class="hint" style="margin:0;padding:10px 14px;border-top:1px solid var(--line)" id="stNote"></p>
+    </div>
+    <div class="st-tip" id="stTip" hidden></div>
   </section>
 
   <section class="pane" id="pane-fees">
@@ -1554,7 +1629,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-09-21.44";
+const APP_VERSION = "2026-09-21.46";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -3485,6 +3560,210 @@ function fillQuoteSelects() {
     (d.rate && !String(d.name).includes(d.rate + "%") ? " (" + d.rate + "%)" : "") + "</option>").join("");
   if (keepFac && state.facilities.some(f => f.id === keepFac)) $("#qFac").value = keepFac;
   if (keepDc && state.discounts.some(d => d.id === keepDc)) $("#qDiscount").value = keepDc;
+}
+
+/* =========================================================
+   7-E. 분석 — 시설별 추이
+   ========================================================= */
+/* 대관 횟수 · 수익금 · 인원의 달별 추이를 시설별로 본다.
+
+   **시설마다 그래프를 따로 둔다.** 세 시설 색(주황·파랑·초록)을 한 그래프에 겹치면
+   적록색약에서 주황과 초록이 구분되지 않는다 — 색을 바꾸면 달력 칩과 어긋나므로,
+   그래프를 나눠 **색이 구분 역할을 하지 않아도 되게** 했다.
+   대신 어느 그래프에 마우스를 올려도 **그 달의 세 시설 값이 함께** 뜬다.
+   **세 그래프의 세로 눈금은 같다** — 안 그러면 높이를 견줄 수 없다.
+
+   **수익금은 전기료·수도료를 뺀 금액이다** (담당자 요청) —
+   `feeParts()` 의 `use`(전용사용료) + `annex`(부속시설). 공과금은 실비라 수익이 아니다 */
+/* 그래프 판의 크기·여백. **두 곳에 따로 적지 않는다** —
+   `stChart`(그리기)와 `stHover`(어느 달인지 찾기)가 어긋나면 크로스헤어가 밀린다 */
+const ST_GEO = { W: 320, H: 168, L: 46, R: 15, T: 12, B: 22 };
+const ST_METRICS = {
+  count: { name: "대관 횟수", unit: "건", fmt: v => won(v) },
+  money: { name: "수익금",   unit: "원", fmt: v => won(v) },
+  head:  { name: "인원",     unit: "명", fmt: v => won(v) }
+};
+
+function statsData() {
+  const per = $("#stPeriod") ? $("#stPeriod").value : "year";
+  const kind = $("#stKind") ? $("#stKind").value : "all";
+  let list = state.reservations.filter(r => r.status !== "취소" && r.date);
+  if (kind !== "all") list = list.filter(r => r.kind === kind);
+
+  // 달 목록을 먼저 정한다. 빈 달도 0 으로 채운다 — 빠뜨리면 추이가 거짓말이 된다
+  const cur = view.year + "-" + pad(view.month);
+  let from, to;
+  if (per === "year") { from = view.year + "-01"; to = view.year + "-12"; }
+  else if (per === "12") {
+    let y = view.year, m = view.month - 11;
+    while (m < 1) { m += 12; y--; }
+    from = y + "-" + pad(m); to = cur;
+  } else {
+    const ms = list.map(r => r.date.slice(0, 7)).sort();
+    from = ms[0] || cur; to = ms[ms.length - 1] || cur;
+  }
+  const months = [];
+  for (let y = +from.slice(0, 4), m = +from.slice(5); y + "-" + pad(m) <= to; ) {
+    months.push(y + "-" + pad(m));
+    if (++m > 12) { m = 1; y++; }
+    if (months.length > 240) break;        // 안전장치
+  }
+
+  const at = {};
+  months.forEach(ym => {
+    at[ym] = {};
+    state.facilities.forEach(f => { at[ym][f.id] = { count: 0, money: 0, head: 0 }; });
+  });
+  let used = 0;
+  list.forEach(r => {
+    const ym = r.date.slice(0, 7), cell = at[ym] && at[ym][r.facilityId];
+    if (!cell) return;
+    const fp = feeParts(r);
+    cell.count += 1;
+    cell.money += fp.use + fp.annex;        // 전기료·수도료는 뺀다
+    cell.head  += Number(r.headcount) || 0;
+    used++;
+  });
+  return { months: months, at: at, rows: used, from: from, to: to };
+}
+
+function stSeries(d, fid, key) { return d.months.map(ym => d.at[ym][fid][key]); }
+
+function niceMax(v) {
+  if (!(v > 0)) return 1;
+  const e = Math.pow(10, Math.floor(Math.log10(v))), n = v / e;
+  return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * e;
+}
+const stLabel = ym => (+ym.slice(5)) + "월";
+
+/* 그래프 한 판. viewBox 로 그려서 폭에 맞춰 늘어나되,
+   선 굵기는 `vector-effect` 로 2px 를 지킨다 (지침의 굵기 규격) */
+function stChart(d, fac, key, max) {
+  const W = ST_GEO.W, H = ST_GEO.H, L = ST_GEO.L, R = ST_GEO.R, T = ST_GEO.T, B = ST_GEO.B;
+  const pw = W - L - R, ph = H - T - B;
+  const vals = stSeries(d, fac.id, key);
+  const n = vals.length;
+  const x = i => n === 1 ? L + pw / 2 : L + pw * i / (n - 1);
+  const y = v => T + ph - ph * (max ? v / max : 0);
+  const m = ST_METRICS[key];
+
+  // 가로 눈금 넷. 실선 hairline 으로 흐리게 — 눈금이 자료보다 도드라지면 안 된다
+  let g = "";
+  for (let k = 0; k <= 4; k++) {
+    const v = max * k / 4, yy = y(v);
+    g += '<line class="gl" x1="' + L + '" y1="' + yy + '" x2="' + (W - R) + '" y2="' + yy + '"/>' +
+         '<text class="ax" x="' + (L - 6) + '" y="' + (yy + 3.5) + '" text-anchor="end">' +
+         esc(won(Math.round(v))) + "</text>";
+  }
+  /* 달 이름은 겹치지 않게 솎아 낸다. 마지막 달은 반드시 보여주되,
+     바로 앞 것과 붙으면 **앞의 것을 뺀다** — 안 그러면 `11월 12월` 이 겹쳐 찍힌다 */
+  const step = Math.max(1, Math.ceil(n / 6));
+  const idx = [];
+  for (let i = 0; i < n; i += step) idx.push(i);
+  if (idx[idx.length - 1] !== n - 1) {
+    if (x(n - 1) - x(idx[idx.length - 1]) < 30) idx.pop();
+    idx.push(n - 1);
+  }
+  const xs = idx.map(i =>
+    '<text class="ax" x="' + x(i) + '" y="' + (H - 6) + '" text-anchor="middle">' +
+    esc(stLabel(d.months[i])) + "</text>").join("");
+
+  const pts = vals.map((v, i) => x(i) + "," + y(v));
+  const line = '<path class="ln" d="M' + pts.join("L") + '"/>';
+  const area = '<path class="ar" d="M' + x(0) + "," + y(0) + "L" + pts.join("L") +
+    "L" + x(n - 1) + "," + y(0) + 'Z"/>';
+  // 점은 지름 8px 이상이고 바탕색 테두리를 둘러 선과 겹쳐도 보이게 한다
+  const dots = vals.map((v, i) => '<circle class="dt" cx="' + x(i) + '" cy="' + y(v) + '" r="4"/>').join("");
+  // 값은 끝점에만 적는다 — 점마다 숫자를 붙이면 읽히지 않는다
+  const last = vals[n - 1];
+  const vl = '<text class="vl" x="' + (W - R) + '" y="' + Math.max(T + 9, y(last) - 8) +
+    '" text-anchor="end">' + esc(m.fmt(last)) + "</text>";
+
+  const total = vals.reduce((a, v) => a + v, 0);
+  return '<div class="st-card" data-fc="' + esc(fac.color || "none") + '" data-sf="' + esc(fac.id) + '">' +
+    "<h3><i></i>" + esc(fac.name) + "</h3>" +
+    '<p class="sum">' + esc(m.name) + " 합계 " + esc(m.fmt(total)) + esc(m.unit) + "</p>" +
+    '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' +
+      esc(fac.name + " " + m.name + " 추이") + '">' +
+      g + xs + area + line + dots + vl +
+      '<line class="cx" x1="0" y1="' + T + '" x2="0" y2="' + (T + ph) + '" style="display:none"/>' +
+      '<rect x="' + L + '" y="' + T + '" width="' + pw + '" height="' + ph + '" fill="transparent"/>' +
+    "</svg></div>";
+}
+
+function renderStats() {
+  /* 로그인하지 않은 사람에게는 **그리지 않는다** — 수익금이 나오는 화면이다 */
+  if (currentRole() === "viewer") {
+    ["#stKpi", "#stCharts", "#stHead", "#stBody", "#stFoot"].forEach(x => { if ($(x)) $(x).innerHTML = ""; });
+    if ($("#stNote")) $("#stNote").textContent = "분석은 로그인해야 볼 수 있습니다 (⚙ 설정)";
+    if ($("#stRange")) $("#stRange").textContent = "";
+    return;
+  }
+  const d = statsData();
+  const key = view.statMetric || "count";
+  $$("#stSeg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.sm === key)));
+  const m = ST_METRICS[key];
+
+  // 요약은 세 지표를 한꺼번에 보여준다 (그래프는 한 번에 하나씩 보기 때문에)
+  $("#stKpi").innerHTML = '<div class="st-kpi">' + Object.keys(ST_METRICS).map(k => {
+    const t = d.months.reduce((a, ym) =>
+      a + state.facilities.reduce((b, f) => b + d.at[ym][f.id][k], 0), 0);
+    return '<div><span class="k">' + esc(ST_METRICS[k].name) + '</span><span class="v">' +
+      esc(ST_METRICS[k].fmt(t)) + '</span><span class="u">' + esc(ST_METRICS[k].unit) + "</span></div>";
+  }).join("") + "</div>";
+
+  // **세 시설의 세로 눈금을 같게 맞춘다** — 안 그러면 그래프끼리 높이를 견줄 수 없다
+  let peak = 0;
+  state.facilities.forEach(f => stSeries(d, f.id, key).forEach(v => { peak = Math.max(peak, v); }));
+  const max = niceMax(peak);
+  $("#stCharts").innerHTML = '<div class="st-grid">' +
+    state.facilities.map(f => stChart(d, f, key, max)).join("") + "</div>";
+
+  // 표 — 마우스를 올리지 않아도 모든 값에 닿을 수 있어야 한다
+  $("#stHead").innerHTML = "<tr><th>월</th>" +
+    state.facilities.map(f => "<th>" + esc(f.name) + "</th>").join("") + "<th>합계</th></tr>";
+  $("#stBody").innerHTML = d.months.map(ym => {
+    const vs = state.facilities.map(f => d.at[ym][f.id][key]);
+    return "<tr><td>" + esc(ym) + "</td>" +
+      vs.map(v => '<td class="num">' + (v ? esc(m.fmt(v)) : "") + "</td>").join("") +
+      '<td class="num">' + esc(m.fmt(vs.reduce((a, v) => a + v, 0))) + "</td></tr>";
+  }).join("");
+  const tot = state.facilities.map(f => stSeries(d, f.id, key).reduce((a, v) => a + v, 0));
+  $("#stFoot").innerHTML = "<tr><td>합계</td>" +
+    tot.map(v => '<td class="num">' + esc(m.fmt(v)) + "</td>").join("") +
+    '<td class="num">' + esc(m.fmt(tot.reduce((a, v) => a + v, 0))) + "</td></tr>";
+
+  $("#stRange").textContent = d.months.length + "개월 · 예약 " + d.rows + "건";
+  $("#stNote").textContent = "수익금은 전용사용료와 부속시설 사용료를 더한 금액입니다. " +
+    "전기료·수도료는 실비로 받는 것이라 빼고 셉니다. 취소된 건은 세지 않습니다.";
+}
+
+/* 어느 그래프에 올려도 그 달의 **세 시설 값이 함께** 뜬다 */
+function stHover(e) {
+  const card = e.target.closest(".st-card");
+  const tip = $("#stTip");
+  if (!card) { if (tip) { tip.hidden = true; } $$("#stCharts .cx").forEach(l => { l.style.display = "none"; }); return; }
+  const d = statsData(), key = view.statMetric || "count", m = ST_METRICS[key];
+  const n = d.months.length; if (!n) return;
+  const svg = card.querySelector("svg"), box = svg.getBoundingClientRect();
+  const W = ST_GEO.W, L = ST_GEO.L, R = ST_GEO.R, T = ST_GEO.T;
+  const vx = (e.clientX - box.left) / box.width * W;          // 화면 좌표 → viewBox 좌표
+  const i = n === 1 ? 0 : Math.max(0, Math.min(n - 1,
+    Math.round((vx - L) / ((W - L - R) / (n - 1)))));
+  const px = n === 1 ? L + (W - L - R) / 2 : L + (W - L - R) * i / (n - 1);
+  $$("#stCharts .cx").forEach(l => { l.style.display = "none"; });
+  const cx = svg.querySelector(".cx");
+  if (cx) { cx.setAttribute("x1", px); cx.setAttribute("x2", px); cx.style.display = ""; }
+
+  const ym = d.months[i];
+  tip.innerHTML = "<b>" + esc(ym.slice(0, 4) + "년 " + stLabel(ym) + " · " + m.name) + "</b>" +
+    state.facilities.map(f =>
+      '<div class="r" data-fc="' + esc(f.color || "none") + '"><i></i><span>' + esc(f.name) +
+      "</span><em>" + esc(m.fmt(d.at[ym][f.id][key])) + esc(m.unit) + "</em></div>").join("");
+  tip.hidden = false;
+  const tb = tip.getBoundingClientRect();
+  tip.style.left = Math.max(8, Math.min(window.innerWidth - tb.width - 8, e.clientX + 14)) + "px";
+  tip.style.top  = Math.max(8, Math.min(window.innerHeight - tb.height - 8, e.clientY + 14)) + "px";
 }
 
 /* =========================================================
@@ -5486,6 +5765,7 @@ function renderAll() {
   renderList();
   renderFees();
   renderQuote();
+  renderStats();
   updateSettleBtns();
 }
 
@@ -5701,7 +5981,7 @@ function applyViewerLabels() {
    11. 이벤트
    ========================================================= */
 /* 로그인하지 않으면 열 수 없는 탭. 금액이 나오는 곳은 전부 여기에 적는다 */
-const LOGIN_PANES = ["fees", "settings", "quote"];
+const LOGIN_PANES = ["fees", "settings", "quote", "stats"];
 function setPane(p) {
   // 로그인하지 않으면 요금 관리·요금 기준·요금 계산 탭은 열 수 없다
   if (currentRole() === "viewer" && LOGIN_PANES.includes(p)) p = "calendar";
@@ -5712,6 +5992,7 @@ function setPane(p) {
   if (p === "list") renderList();
   if (p === "fees") renderFees();
   if (p === "quote") renderQuote();
+  if (p === "stats") renderStats();
 }
 function shiftMonth(d) {
   let m = view.month + d, y = view.year;
@@ -5787,6 +6068,22 @@ function init() {
   $$(".tabs button").forEach(b => b.addEventListener("click", () => setPane(b.dataset.pane)));
   // 요금 계산 — 무엇을 바꾸든 바로 다시 계산한다. **저장하지 않는다**
   $("#qForm").addEventListener("change", renderQuote);
+
+  // 분석 — 기간·구분을 바꾸거나 지표를 바꾸면 다시 그린다
+  $("#stPeriod").addEventListener("change", renderStats);
+  $("#stKind").addEventListener("change", renderStats);
+  $("#stSeg").addEventListener("click", e => {
+    const b = e.target.closest("[data-sm]");
+    if (!b) return;
+    view.statMetric = b.dataset.sm;
+    renderStats();
+  });
+  // 그래프 위를 훑으면 그 달의 세 시설 값이 함께 뜬다
+  $("#stCharts").addEventListener("pointermove", stHover);
+  $("#stCharts").addEventListener("pointerleave", () => {
+    $("#stTip").hidden = true;
+    $$("#stCharts .cx").forEach(l => { l.style.display = "none"; });
+  });
 
   // AI 도우미 — 주고받은 말은 자료에 남기지 않는다 (창을 닫으면 사라진다)
   $("#aiBtn").addEventListener("click", openAi);
