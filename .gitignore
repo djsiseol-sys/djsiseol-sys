@@ -1,0 +1,6 @@
+# AI 키가 실수로 올라가는 것을 막는다. **이 줄들을 지우지 않는다.**
+.env
+.env.*
+supabase/.env
+supabase/.env.*
+supabase/.temp/
