@@ -382,6 +382,16 @@ td.dow-sun{color:var(--sun);font-weight:600}
 .qsum .note{color:var(--ink-2);font-size:12px}
 .qsum .warn{color:var(--alert);font-size:12px;font-weight:600}
 #qResult .fee-why{margin-top:12px}
+/* AI 도우미 — 주고받은 말을 위아래로 쌓는다. 답은 esc() 를 거쳐 글자로만 넣는다 */
+.ai-log{display:flex;flex-direction:column;gap:10px;min-height:160px}
+.ai-msg{max-width:88%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;
+  font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere}
+.ai-msg.me{align-self:flex-end;background:var(--surface);border-color:var(--line-strong)}
+.ai-msg.err{border-color:var(--alert);color:var(--alert)}
+.ai-msg .who{display:block;font-size:10.5px;color:var(--faint);margin-bottom:3px}
+.ai-tips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.ai-ask{display:flex;gap:8px;align-items:stretch;width:100%}
+.ai-ask textarea{flex:1;min-height:58px;resize:vertical;font:inherit}
 .notice{font-size:12px;padding:8px 10px;border-radius:var(--r);background:var(--alert-soft);color:var(--alert);border:1px solid var(--alert)}
 
 .rob{font-size:10px;letter-spacing:.06em;padding:2px 8px;border-radius:999px;border:1px solid var(--line-strong);color:var(--muted)}
@@ -426,6 +436,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;border:1px solid var(
 body.viewer .tabs [data-pane="fees"],body.viewer .tabs [data-pane="settings"],
 body.viewer .tabs [data-pane="quote"],
 body.viewer #newBtn,body.viewer #saveNow,body.viewer #settleBtn,body.viewer #listSettle,
+body.viewer #aiBtn,body.viewer [data-explain],
 body.viewer #railDone,body.viewer #railHoliday,body.viewer #utilSeg,
 body.viewer .selchk,body.viewer .selcol,
 body.viewer .item-actions [data-edit],body.viewer .item-actions [data-copy],
@@ -596,6 +607,8 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
       <span class="rob" id="roleBadge" hidden>요금 담당</span>
       <span class="savestate" id="saveState">—</span>
       <button type="button" class="btn btn-sm savenow" id="saveNow" title="지금 저장 (Ctrl+S) · 예약은 등록·수정 즉시 저장됩니다">저장</button>
+      <!-- 중계기가 살아 있을 때만 보인다 (aiSync). 로그인하지 않으면 아예 안 뜬다 -->
+      <button type="button" class="btn btn-sm" id="aiBtn" title="조례·요금 기준을 묻습니다" hidden>AI 도우미</button>
       <button type="button" class="btn btn-sm" id="settingsBtn" title="설정 · 로그인">⚙ 설정</button>
       <button type="button" class="btn btn-sm" id="themeBtn" title="화면 모드 전환">◐</button>
       <button type="button" class="btn btn-primary btn-sm" id="newBtn">+ 예약 등록</button>
@@ -1303,6 +1316,37 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
           서버에도 바로 반영되고, 이 브라우저에 남아 있던 복구 대기분도 함께 지웁니다.
           <b>되돌릴 수 없으니 먼저 JSON 으로 내보내 두세요.</b></p>
       </template>
+<!-- ================= AI 도우미 =================
+     조례와 지금 요금 기준을 보고 답한다. 금액은 스스로 계산하지 않는다 —
+     그건 calcFee() 가 하고, 정확한 금액은 「요금 계산」 탭에서 본다.
+     키는 브라우저에 없다. Supabase Edge Function 이 중간에서 부른다 -->
+<div class="backdrop" id="aiBox" hidden>
+  <div class="modal" style="max-width:660px">
+    <div class="modal-head">
+      <h2>AI 도우미</h2>
+      <button type="button" class="btn btn-quiet btn-sm" id="aiClose">닫기 ✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- .field 는 세로 flex 라 안에 든 <b> 가 줄마다 끊긴다. hint 만 쓴다 -->
+      <p class="hint" style="margin:0 0 12px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface)">
+        조례와 <b>지금 설정된 요금 기준</b>을 보고 답합니다.
+        <b>금액을 직접 계산하지 않습니다</b> — 정확한 금액은 윗줄 <b>요금 계산</b> 탭에서 봅니다.<br>
+        예약의 <b>신청 단체·이용 목적·메모는 보내지 않습니다.</b> 주고받은 말은 저장되지 않습니다.
+      </p>
+      <div class="ai-tips" id="aiTips"></div>
+      <div class="ai-log" id="aiLog"></div>
+    </div>
+    <div class="modal-foot" style="flex-direction:column;align-items:stretch;gap:8px">
+      <div class="ai-ask">
+        <textarea id="aiQ" rows="2" maxlength="2000"
+          placeholder="예) 학교 수업으로 쓰면 감면이 얼마나 되나요?"></textarea>
+        <button type="button" class="btn btn-primary" id="aiSend">보내기</button>
+      </div>
+      <span class="hint" id="aiNote"></span>
+    </div>
+  </div>
+</div>
+
 <div class="backdrop" id="settingsBox" hidden>
   <div class="modal" style="max-width:640px">
     <div class="modal-head">
@@ -1478,7 +1522,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-09-21.41";
+const APP_VERSION = "2026-09-21.42";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -3006,6 +3050,9 @@ function renderRail() {
             '<input type="checkbox" data-settle="' + r.id + '"' + (settleSel.has(r.id) ? " checked" : "") + '>' +
             "<span>정산서</span></label>" +
           '<button type="button" class="btn btn-sm" data-detail="' + r.id + '">산정 상세</button>' +
+          // 산정 내역을 쉬운 말로 풀어 달라고 AI 에게 묻는다. 보내는 것은 이미 계산된
+          // 금액과 근거 조문뿐이고, 단체명·목적·메모는 보내지 않는다
+          '<button type="button" class="btn btn-sm" data-explain="' + r.id + '" hidden>쉬운 말로 설명</button>' +
           '<button type="button" class="btn btn-sm" data-edit="' + r.id + '">수정</button>' +
           '<button type="button" class="btn btn-sm" data-copy="' + r.id + '">복제</button>' +
         "</div>"
@@ -3406,6 +3453,157 @@ function fillQuoteSelects() {
     (d.rate && !String(d.name).includes(d.rate + "%") ? " (" + d.rate + "%)" : "") + "</option>").join("");
   if (keepFac && state.facilities.some(f => f.id === keepFac)) $("#qFac").value = keepFac;
   if (keepDc && state.discounts.some(d => d.id === keepDc)) $("#qDiscount").value = keepDc;
+}
+
+/* =========================================================
+   7-D. AI 도우미 — 조례·요금 기준 물어보기
+   ========================================================= */
+/* **키는 브라우저에 없다.** Supabase Edge Function `ask` 가 중간에서 업체를 부르고,
+   키는 그쪽 Secrets 에만 있다 (`AI설치안내.md`).
+
+   지키는 것 세 가지 — 이 규칙을 빼지 않는다:
+   ① **AI 에게 금액을 계산시키지 않는다.** 계산은 calcFee() 가 한다.
+      AI 에게는 이미 나온 숫자와 근거 조문을 주고 풀어 쓰게만 한다
+   ② **개인정보를 보내지 않는다.** 신청 단체·이용 목적·메모는 넘기지 않는다
+   ③ **로그인한 사람만 쓴다.** 화면에서 감추는 데 그치지 않고
+      Edge Function 의 `verify_jwt` 가 서버에서 막는다
+   답은 자료에 남기지 않는다 — 창을 닫으면 사라진다 */
+const AI = { ready: null, busy: false, msgs: [] };
+let AI_PROBED;   // 마지막으로 확인해 본 토큰. 로그인 상태가 바뀔 때만 다시 확인한다
+const AI_TIPS = [
+  "토요일 야간에는 왜 요금이 올라가나요?",
+  "학교 수업으로 쓰면 감면이 얼마인가요?",
+  "체육경기와 체육경기 외는 어떻게 가르나요?",
+  "준비시간 요금은 어떻게 매기나요?"
+];
+
+async function aiCall(payload) {
+  const cfg = serverCfg();
+  if (!cfg) throw new Error("서버가 설정돼 있지 않습니다");
+  if (!SERVER.token) throw new Error("로그인해야 씁니다 (⚙ 설정)");
+  const res = await fetch(cfg.url + "/functions/v1/ask", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: cfg.anonKey, Authorization: "Bearer " + SERVER.token },
+    body: JSON.stringify(payload)
+  });
+  let d = {};
+  try { d = await res.json(); } catch (e) {}
+  if (!res.ok) throw new Error(d.error || "중계기가 " + res.status + " 로 답했습니다");
+  return d;
+}
+
+/* 중계기가 살아 있는지 한 번 물어본다. 안 되면 단추를 아예 띄우지 않는다 —
+   **AI 가 꺼져 있어도 대장은 그대로 돈다** */
+function aiSync() {
+  const t = SERVER.token || "";
+  if (AI_PROBED === t) return;
+  AI_PROBED = t;
+  AI.ready = null; applyAiBtn();
+  if (!t || currentRole() === "viewer" || !serverCfg()) { AI.ready = false; applyAiBtn(); return; }
+  aiCall({ mode: "ping" }).then(() => { AI.ready = true; }, () => { AI.ready = false; }).then(applyAiBtn);
+}
+function applyAiBtn() {
+  const on = AI.ready === true && currentRole() !== "viewer";
+  const b = $("#aiBtn"); if (b) b.hidden = !on;
+  $$("[data-explain]").forEach(x => { x.hidden = !on; });
+  if (!on) $("#aiBox").hidden = true;
+}
+
+/* AI 에게 넘기는 요금 기준. **설정 화면에 있는 값 그대로다** —
+   여기서 따로 계산하거나 요약하지 않는다 */
+function aiRateContext() {
+  const s = state.settings;
+  return {
+    조례: "대전광역시 체육시설 관리운영 조례 (조례 제6358호)",
+    시설: state.facilities.map(f => ({
+      이름: f.name,
+      "기본 전용사용료(체육경기·1회)": f.feeSports,
+      "기본 전용사용료(체육경기 외·1회)": f.feeOther,
+      정원: f.capacity, 근거: f.article,
+      "1회 기준 시간": Number(f.sessionHours) || "제한 없음",
+      준비시간: (f.prep && f.prep.allowed)
+        ? (f.prep.mode === "free" ? "무료"
+          : f.prep.mode === "percent" ? "기본액의 " + f.prep.percent + "%"
+          : "시간당 " + f.prep.fee + "원")
+        : "받지 않는 시설"
+    })),
+    "감면(제13조)": state.discounts.map(d => ({ 이름: d.name, "감면율%": d.rate, 근거: d.article })),
+    "시간대(별표 1의2)": s.hours,
+    "가산·감산(별표 2 비고)": {
+      "토·공휴일 가산%": s.weekendRate, "야간 가산%": s.nightRate,
+      "조기 감산%": s.earlyRate, "초과 1시간당 가산%": s.overRate,
+      "일요일도 공휴일로 봄": !!s.sundayAsHoliday,
+      계산방식: s.surchargeMode === "add"
+        ? "기본액의 %를 더한다 (조례 문언)"
+        : "당일 주간 전용사용료에 곱한다 (기존 실무)",
+      "여러 시간대에 걸치면": "걸치는 시간대마다 1회분을 매겨 합산한다 (제10조제2항)"
+    },
+    "부속시설(별표 6)": (s.annexItems || []).map(a =>
+      ({ 이름: a.name, 금액: a.fee, 단위: a.unit, 기본료: Number(a.base) || 0, 근거: a.article })),
+    "감면 대상": "전용사용료·가산·초과·관람료수입사용료 와 부속시설까지. 전기료·수도료(실비)는 감면 없음",
+    "절사 단위(원)": s.rounding
+  };
+}
+
+/* 한 건의 산정 내역. **금액과 근거 조문만 넘긴다** —
+   신청 단체·이용 목적·메모는 넣지 않는다 (개인정보가 새어 들어갈 자리다) */
+function aiFeeSeed(r) {
+  const f = calcFee(r), fac = facilityOf(r.facilityId);
+  return {
+    시설: fac ? fac.name : "", 날짜: r.date, 시각: r.start + "–" + r.end,
+    "건 구분": r.kind, "이용 구분": r.useType, 요약: f.note,
+    내역: f.lines.map(l => ({ 항목: l.label, 근거: l.why, 금액: Math.round(l.amount) })),
+    합계: f.total
+  };
+}
+
+function aiRender() {
+  const log = $("#aiLog");
+  log.innerHTML = AI.msgs.length
+    ? AI.msgs.map(m =>
+        '<div class="ai-msg ' + (m.role === "user" ? "me" : "") + (m.err ? " err" : "") + '">' +
+        '<span class="who">' + (m.role === "user" ? "나" : "AI 도우미") + "</span>" +
+        esc(m.text) + "</div>").join("")
+    : '<p class="hint" style="margin:0">아래 칸에 물어보거나, 위의 예시를 눌러 보세요.</p>';
+  $("#aiTips").innerHTML = AI_TIPS.map(t =>
+    '<button type="button" class="btn btn-sm" data-aitip="' + esc(t) + '">' + esc(t) + "</button>").join("");
+  $("#aiNote").textContent = AI.busy ? "생각하는 중…" : "";
+  $("#aiSend").disabled = AI.busy;
+  log.scrollTop = log.scrollHeight;
+}
+
+async function aiAsk(q, seed) {
+  q = String(q || "").trim();
+  if (!q || AI.busy) return;
+  AI.msgs.push({ role: "user", text: q });
+  AI.busy = true; $("#aiQ").value = ""; aiRender();
+  try {
+    const ctx = { 요금기준: aiRateContext() };
+    if (seed) ctx["이 예약의 산정 내역"] = seed;
+    const d = await aiCall({
+      question: q, context: ctx,
+      history: AI.msgs.slice(0, -1).map(m => ({ role: m.role, text: m.text }))
+    });
+    AI.msgs.push({ role: "assistant", text: d.text });
+  } catch (e) {
+    AI.msgs.push({ role: "assistant", text: e.message, err: true });
+  }
+  AI.busy = false; aiRender();
+}
+
+function openAi() {
+  if (currentRole() === "viewer") { toast("로그인해야 씁니다 (⚙ 설정)"); return; }
+  $("#aiBox").hidden = false;
+  aiRender();
+  $("#aiQ").focus();
+}
+/* 우측 상세의 `쉬운 말로 설명` — 그 건의 산정 내역을 들고 창을 연다 */
+function aiExplain(id) {
+  const r = state.reservations.find(x => x.id === id);
+  if (!r) return;
+  openAi();
+  AI.msgs = [];
+  aiAsk("이 건의 금액이 왜 이렇게 나왔는지 쉬운 말로 설명해 주세요. 근거 조문도 함께 알려 주세요.", aiFeeSeed(r));
 }
 
 /* =========================================================
@@ -5076,6 +5274,10 @@ function applyRole() {
   // 주소·키는 담당자만 손댄다. 로그인 칸은 누구에게나 열어 둔다
   const cfgRow = $("#srvCfgRow");
   if (cfgRow) cfgRow.hidden = !admin;
+
+  // 로그인 상태가 바뀌었을 때만 AI 중계기를 다시 확인한다 (평소에는 아무것도 안 한다)
+  aiSync();
+  applyAiBtn();
 }
 
 /* 설정창을 연다.
@@ -5338,6 +5540,19 @@ function init() {
   $$(".tabs button").forEach(b => b.addEventListener("click", () => setPane(b.dataset.pane)));
   // 요금 계산 — 무엇을 바꾸든 바로 다시 계산한다. **저장하지 않는다**
   $("#qForm").addEventListener("change", renderQuote);
+
+  // AI 도우미 — 주고받은 말은 자료에 남기지 않는다 (창을 닫으면 사라진다)
+  $("#aiBtn").addEventListener("click", openAi);
+  $("#aiClose").addEventListener("click", () => { $("#aiBox").hidden = true; });
+  $("#aiSend").addEventListener("click", () => aiAsk($("#aiQ").value));
+  $("#aiTips").addEventListener("click", e => {
+    const t = e.target.closest("[data-aitip]");
+    if (t) aiAsk(t.dataset.aitip);
+  });
+  // 줄바꿈은 Shift+Enter, 보내기는 Enter
+  $("#aiQ").addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); aiAsk($("#aiQ").value); }
+  });
   $("#prevMonth").addEventListener("click", () => shiftMonth(-1));
   $("#nextMonth").addEventListener("click", () => shiftMonth(1));
   $("#todayBtn").addEventListener("click", () => {
@@ -5390,6 +5605,8 @@ function init() {
       if (box) { box.hidden = !box.hidden; dt.textContent = box.hidden ? "산정 상세" : "접기"; }
       return;
     }
+    const ex = e.target.closest("[data-explain]");
+    if (ex) { aiExplain(ex.dataset.explain); return; }
     const ed = e.target.closest("#railBody [data-edit], #listBody [data-edit]");
     if (ed) { openModal(ed.dataset.edit); return; }
     const cp = e.target.closest("[data-copy]");
@@ -5493,6 +5710,7 @@ function init() {
   document.addEventListener("keydown", e => {
     if (e.key === "Escape" && !$("#copyBox").hidden) { $("#copyBox").hidden = true; return; }
     if (e.key === "Escape" && !$("#printBox").hidden) { $("#printBox").hidden = true; return; }
+    if (e.key === "Escape" && !$("#aiBox").hidden) { $("#aiBox").hidden = true; return; }
     if (e.key === "Escape" && !$("#settingsBox").hidden) { $("#settingsBox").hidden = true; return; }
     if (e.key === "Escape" && !$("#modal").hidden) closeModal();
     if ($("#modal").hidden && !/input|select|textarea/i.test(document.activeElement.tagName)) {
