@@ -389,6 +389,11 @@ td.dow-sun{color:var(--sun);font-weight:600}
 .ai-msg.me{align-self:flex-end;background:var(--surface);border-color:var(--line-strong)}
 .ai-msg.err{border-color:var(--alert);color:var(--alert)}
 .ai-msg .who{display:block;font-size:10.5px;color:var(--faint);margin-bottom:3px}
+.ai-opts{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;font-size:12px}
+.ai-opts>label{color:var(--ink-2)}
+.ai-opts select{font:inherit}
+.ai-chk{display:flex;align-items:center;gap:5px;cursor:pointer}
+.ai-opts .hint{margin-left:auto;text-align:right}
 .ai-tips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
 .ai-ask{display:flex;gap:8px;align-items:stretch;width:100%}
 .ai-ask textarea{flex:1;min-height:58px;resize:vertical;font:inherit}
@@ -1331,8 +1336,21 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
       <p class="hint" style="margin:0 0 12px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface)">
         조례와 <b>지금 설정된 요금 기준</b>을 보고 답합니다.
         <b>금액을 직접 계산하지 않습니다</b> — 정확한 금액은 윗줄 <b>요금 계산</b> 탭에서 봅니다.<br>
-        예약의 <b>신청 단체·이용 목적·메모는 보내지 않습니다.</b> 주고받은 말은 저장되지 않습니다.
+        <b>대장에 적힌 예약 내역</b>(날짜·시설·단체·목적·금액·입금)을 함께 보고 답합니다 —
+        로그인한 담당자만 쓰는 창이라 금액까지 넣습니다.<br>
+        <b>메모는 기본으로 보내지 않습니다</b>(연락처가 적히는 칸입니다).
+        어느 칸이든 전화번호·주민번호 형태는 지우고 보냅니다. 주고받은 말은 저장되지 않습니다.
       </p>
+      <div class="ai-opts">
+        <label for="aiScope">자료 범위</label>
+        <select id="aiScope">
+          <option value="all">전체 기간</option>
+          <option value="year">올해</option>
+          <option value="month">이 달</option>
+        </select>
+        <label class="ai-chk"><input type="checkbox" id="aiMemo"><span>메모도 보내기</span></label>
+        <span class="hint" id="aiDataNote"></span>
+      </div>
       <div class="ai-tips" id="aiTips"></div>
       <div class="ai-log" id="aiLog"></div>
     </div>
@@ -1522,7 +1540,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-09-21.42";
+const APP_VERSION = "2026-09-21.43";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -3471,10 +3489,11 @@ function fillQuoteSelects() {
 const AI = { ready: null, busy: false, msgs: [] };
 let AI_PROBED;   // 마지막으로 확인해 본 토큰. 로그인 상태가 바뀔 때만 다시 확인한다
 const AI_TIPS = [
+  "10월 태권도협회 대관 내역 알려줘",
+  "이번 달 충무체육관 예약 목록 보여줘",
+  "아직 입금 안 된 건 뭐가 있나요?",
   "토요일 야간에는 왜 요금이 올라가나요?",
-  "학교 수업으로 쓰면 감면이 얼마인가요?",
-  "체육경기와 체육경기 외는 어떻게 가르나요?",
-  "준비시간 요금은 어떻게 매기나요?"
+  "학교 수업으로 쓰면 감면이 얼마인가요?"
 ];
 
 async function aiCall(payload) {
@@ -3507,6 +3526,72 @@ function applyAiBtn() {
   const b = $("#aiBtn"); if (b) b.hidden = !on;
   $$("[data-explain]").forEach(x => { x.hidden = !on; });
   if (!on) $("#aiBox").hidden = true;
+}
+
+/* 자유입력 칸에 전화번호·주민번호가 적혀 있으면 **보내기 전에 지운다.**
+   단체명에 든 사람 이름까지는 막을 수 없지만(「홍길동배드민턴교실」), 번호는 여기서 걸린다.
+   주민번호를 먼저 지운다 — 전화번호 패턴이 그 일부를 먼저 물어가지 않게 */
+const AI_RRN   = /\d{6}[-. ]?[1-4]\d{6}/g;
+const AI_PHONE = /0\d{1,2}[-. ]?\d{3,4}[-. ]?\d{4}/g;
+function aiSafe(s) {
+  return String(s == null ? "" : s).replace(AI_RRN, "[주민번호 지움]").replace(AI_PHONE, "[연락처 지움]");
+}
+
+/* 대장에 적힌 예약 내역. **로그인한 담당자만 쓰는 창이라 금액까지 넣는다**
+   (2026-09-21 담당자 요청 — 「10월 태권도협회」 같은 질문에 답하게).
+
+   줄마다 키를 되풀이하지 않게 **「열 + 줄」** 로 넣는다. 같은 내용이 훨씬 짧아진다.
+   **메모는 기본으로 넣지 않는다** — 담당자가 창에서 켜야 들어간다 (개인정보가 적히는 칸이다).
+   월별 합계를 미리 더해서 함께 넣는다 — **AI 가 산수를 하지 않아도 되게** 하려는 것이다 */
+const AI_ROW_CAP = 500;
+function aiResContext(scope, withMemo) {
+  const all = state.reservations.filter(r => r.status !== "취소").slice().sort(byDateTime);
+  const ym = view.year + "-" + pad(view.month), yr = String(view.year);
+  let rows = scope === "month" ? all.filter(r => r.date.startsWith(ym))
+           : scope === "year"  ? all.filter(r => r.date.startsWith(yr))
+           : all;
+  let note = "";
+  if (rows.length > AI_ROW_CAP) {
+    // 너무 많으면 지금 보고 있는 달 언저리만 보낸다. **자른 사실을 함께 적는다**
+    const at = rows.findIndex(r => r.date >= ym + "-01");
+    const from = Math.max(0, (at < 0 ? rows.length : at) - Math.floor(AI_ROW_CAP / 3));
+    rows = rows.slice(from, from + AI_ROW_CAP);
+    note = "건수가 많아 " + AI_ROW_CAP + "건만 보냈습니다";
+  }
+
+  const cols = ["날짜", "요일", "시각", "시설", "구분", "신청단체", "목적", "인원",
+                "감면", "이용료", "부속시설", "공과금", "합계", "입금"];
+  if (withMemo) cols.push("메모");
+
+  const months = {};
+  const line = r => {
+    const fp = feeParts(r), fac = facilityOf(r.facilityId), dc = discountOf(r.discountId);
+    const hol = holidayName(r.date);
+    const m = months[r.date.slice(0, 7)] ||
+      (months[r.date.slice(0, 7)] = { 건수: 0, 이용료: 0, 부속시설: 0, 공과금: 0, 합계: 0 });
+    m.건수++; m.이용료 += fp.use; m.부속시설 += fp.annex; m.공과금 += fp.util; m.합계 += fp.total;
+    const out = [
+      r.date, DOW[parseYmd(r.date).getDay()] + (hol ? "·" + hol : ""),
+      r.start + "–" + r.end,
+      fac ? fac.name : "", r.kind,
+      aiSafe(r.applicant), aiSafe(r.purpose), Number(r.headcount) || 0,
+      dc.name, fp.use, fp.annex, fp.util, fp.total,
+      fullyPaid(r) ? "완료" : (paidAmount(r) ? "일부" : "미입금")
+    ];
+    if (withMemo) out.push(aiSafe(r.memo));
+    return out;
+  };
+  const 줄 = rows.map(line);
+
+  return {
+    범위: rows.length ? rows[0].date + " ~ " + rows[rows.length - 1].date : "(없음)",
+    건수: rows.length,
+    "이 범위 밖은 보내지 않았습니다": true,
+    참고: note || undefined,
+    메모포함: !!withMemo,
+    열: cols, 줄: 줄,
+    "월별 합계(이미 더해 둔 값)": Object.keys(months).sort().map(m => Object.assign({ 월: m }, months[m]))
+  };
 }
 
 /* AI 에게 넘기는 요금 기준. **설정 화면에 있는 값 그대로다** —
@@ -3569,7 +3654,17 @@ function aiRender() {
     '<button type="button" class="btn btn-sm" data-aitip="' + esc(t) + '">' + esc(t) + "</button>").join("");
   $("#aiNote").textContent = AI.busy ? "생각하는 중…" : "";
   $("#aiSend").disabled = AI.busy;
+  aiDataNote();
   log.scrollTop = log.scrollHeight;
+}
+
+/* 무엇을 보내는지 창에 적어 둔다 — 보이지 않게 나가는 자료가 없어야 한다 */
+function aiDataNote() {
+  const d = aiResContext($("#aiScope").value, $("#aiMemo").checked);
+  $("#aiDataNote").textContent =
+    "예약 " + d.건수 + "건 (" + d.범위 + ") · 금액 포함" +
+    ($("#aiMemo").checked ? " · 메모 포함" : " · 메모 제외") +
+    (d.참고 ? " · " + d.참고 : "");
 }
 
 async function aiAsk(q, seed) {
@@ -3579,6 +3674,8 @@ async function aiAsk(q, seed) {
   AI.busy = true; $("#aiQ").value = ""; aiRender();
   try {
     const ctx = { 요금기준: aiRateContext() };
+    // 대장에 적힌 예약 내역도 함께 보낸다 (범위·메모 포함 여부는 창에서 고른다)
+    ctx.예약내역 = aiResContext($("#aiScope").value, $("#aiMemo").checked);
     if (seed) ctx["이 예약의 산정 내역"] = seed;
     const d = await aiCall({
       question: q, context: ctx,
@@ -5549,6 +5646,9 @@ function init() {
     const t = e.target.closest("[data-aitip]");
     if (t) aiAsk(t.dataset.aitip);
   });
+  // 범위·메모를 바꾸면 무엇을 보내는지 바로 다시 적는다
+  $("#aiScope").addEventListener("change", aiDataNote);
+  $("#aiMemo").addEventListener("change", aiDataNote);
   // 줄바꿈은 Shift+Enter, 보내기는 Enter
   $("#aiQ").addEventListener("keydown", e => {
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); aiAsk($("#aiQ").value); }
