@@ -26,6 +26,11 @@
      준비 건은 노란 테두리. 세 테마 블록에 모두 정의한다 */
   --sat:#20558C; --sun:#B03A3A;
   --prep-line:#C8961A; --prep-soft:#FCF5E2;
+  /* 자료표 — IBM Carbon Design System 의 Data table 층(layer) 값을 이 팔레트로 옮긴 것.
+     Carbon 흰 테마: 줄 `$layer-01` #f4f4f4 · 머리글과 얼룩 `$layer-accent-01` #e0e0e0 ·
+     올린 줄 `$layer-hover-01` #e8e8e8 · 칸 나눔선 `$border-subtle-01` = 얼룩과 같은 값.
+     **색이 아니라 명도 차이를 그대로 옮겼다** — 세 테마 블록에 모두 정의한다 */
+  --tbl-row:#F5F6F7; --tbl-accent:#E0E4E7; --tbl-hover:#E8EBED;
   --shadow:0 1px 2px rgba(20,23,26,.05),0 8px 24px -12px rgba(20,23,26,.18);
   --r:6px;
 }
@@ -42,6 +47,8 @@
     --fc-green-soft:#1A2A1E;  --fc-green-line:#2D4935;  --fc-green-ink:#9BC8A5;
     --sat:#8FB6E0; --sun:#E39191;
     --prep-line:#C79A2A; --prep-soft:#2B2617;
+    /* Carbon Gray 100: 줄 #262626 · 얼룩 #393939 · 올린 줄 #333333 — 어두운 쪽은 얼룩이 더 **밝다** */
+    --tbl-row:#1E2327; --tbl-accent:#2E353B; --tbl-hover:#282F34;
     --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px -14px rgba(0,0,0,.7);
   }
 }
@@ -57,6 +64,7 @@
   --fc-green-soft:#1A2A1E;  --fc-green-line:#2D4935;  --fc-green-ink:#9BC8A5;
   --sat:#8FB6E0; --sun:#E39191;
   --prep-line:#C79A2A; --prep-soft:#2B2617;
+  --tbl-row:#1E2327; --tbl-accent:#2E353B; --tbl-hover:#282F34;
   --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px -14px rgba(0,0,0,.7);
 }
 *{box-sizing:border-box}
@@ -441,26 +449,61 @@ td.dow-sun{color:var(--sun);font-weight:600}
 .st-tip .r span{color:var(--ink-2);flex:1;white-space:nowrap}
 .st-tip .r em{font-style:normal;font-weight:600;font-family:"IBM Plex Mono",monospace;
   font-variant-numeric:tabular-nums}
-/* 분석 표 — 격자 대신 여백과 굵기로 읽는다 (2026-09-21 담당자 요청: 「애플 스타일」).
-   세로줄을 긋지 않고 가로 실선 하나만 흐리게 두며, 숫자는 자릿수를 맞춰 크게 세운다.
-   **새 색을 만들지 않는다** — 기존 토큰을 여백·굵기만 다르게 쓴다 */
-.st-wrap{border:1px solid var(--line);border-radius:12px;overflow:hidden;
-  background:var(--surface);margin:0 14px 14px}
-.st-wrap table{font-size:13.5px}
-.st-wrap th{background:transparent;font-size:11px;letter-spacing:.04em;color:var(--faint);
-  font-weight:600;padding:13px 14px 9px;border-bottom:1px solid var(--line-strong)}
-.st-wrap td{padding:11px 14px;border-bottom:1px solid var(--line)}
-.st-wrap tbody tr:last-child td{border-bottom:0}
-/* 막대(아래)를 지우지 않게 background-color 만 바꾼다 */
-.st-wrap tbody tr:hover{background-color:var(--surface-2)}
-.st-wrap td.ym{color:var(--ink-2);font-weight:500;white-space:nowrap}
-.st-wrap td.num{font-size:14px;letter-spacing:-.01em}
-.st-wrap td.zero{color:var(--faint)}
-/* 칸 뒤에 아주 옅은 막대를 깔아 큰 달이 먼저 눈에 들어오게 한다.
-   글자를 가리지 않게 시설 구분색의 가장 옅은 벌(--fc-soft)만 쓴다 */
-.st-wrap td.bar{background-image:linear-gradient(to left,var(--fc-soft) var(--p,0%),transparent 0)}
-.st-wrap tfoot td{background:transparent;border-top:1px solid var(--line-strong);border-bottom:0;
-  font-weight:600;padding:12px 14px}
+/* 자료표 (`.tbl`) — **IBM Carbon Design System 의 Data table 을 그대로 따랐다.**
+   내가 눈대중으로 짠 표가 「점선처럼 보이고 어지럽다」 는 지적을 받아 (2026-09-22 담당자),
+   직접 디자인하지 않고 공개된 규격을 옮겼다. Carbon 을 고른 까닭은
+   **이 대장이 이미 IBM Plex 글꼴을 쓰고 있어서** 글자와 표가 같은 집안이기 때문이다.
+
+   규격 (Carbon Data table · size **lg** · zebra 켬):
+   | 무엇 | 값 |
+   |---|---|
+   | 줄 높이 | 48px (lg) |
+   | 좌우 여백 | 16px (`$spacing-05`) |
+   | 열 머리글 | 14px SemiBold 600 (`$heading-compact-01`) |
+   | 줄 글자 | 14px Regular 400 (`$body-compact-01`) |
+   | 머리글 바탕 | `$layer-accent` |
+   | 줄 바탕 | `$layer` |
+   | 얼룩 줄 | `$layer-accent` |
+   | 올린 줄 | `$layer-hover` |
+   | 칸 나눔선 | `$border-subtle` (얼룩과 같은 값) |
+
+   **세로줄이 없다** — Carbon 은 가로 나눔선만 긋는다.
+   **얼룩(zebra)을 켠 것은 표가 넓어서다.** 달 이름에서 시설 칸까지 눈이 건너가야 하는데,
+   가는 선 하나로는 줄이 끊어져 보였다. 이것이 「어지럽다」 의 실제 원인이었다.
+
+   바꾼 곳은 둘뿐이고 까닭이 있다 —
+   ① 숫자 칸만 IBM Plex Mono (자릿수를 맞춰 세로로 읽으려는 이 대장의 규칙),
+   ② Carbon 의 회색을 이 팔레트의 색조로 옮긴 것 (명도 차이는 그대로).
+   **칸 뒤에 깔던 옅은 막대는 뺐다** — Carbon 에 없는 것이고, 그게 어지럽던 다른 한 축이다 */
+.tbl{border:1px solid var(--tbl-accent);border-radius:4px;overflow:hidden;background:var(--tbl-row)}
+.tbl table{font-size:14px;border-collapse:collapse;width:100%}
+.tbl th{
+  height:48px;padding:0 16px;background:var(--tbl-accent);color:var(--ink);
+  font-size:14px;font-weight:600;line-height:18px;letter-spacing:0;
+  text-align:left;white-space:nowrap;border-bottom:1px solid var(--tbl-accent);position:static}
+.tbl td{
+  height:48px;padding:0 16px;color:var(--ink);
+  font-size:14px;font-weight:400;line-height:18px}
+.tbl tbody tr{background:var(--tbl-row)}
+/* 얼룩 — 표가 넓어 줄을 눈으로 좇기 어려울 때 Carbon 이 쓰는 방식 그대로.
+   **줄무늬가 짝수 줄에 붙는다** (`nth-child(even)`). 첫 줄이 머리글과 같은 색이 되지 않게
+   하려는 것이고, Carbon 의 `--zebra` 규칙이 그렇게 돼 있다.
+
+   그리고 **얼룩을 켜면 나눔선을 긋지 않는다** — Carbon 은 이때 칸 테두리를
+   그 줄의 바탕과 같은 색으로 둔다. 줄을 가르는 일은 줄무늬가 하고, 선은 거들지 않는다.
+   내가 그었던 가는 선이 「점선처럼 보인다」 던 것이 바로 이 자리다 */
+.tbl tbody td{border-block:1px solid var(--tbl-row)}
+.tbl tbody tr:nth-child(even){background:var(--tbl-accent)}
+.tbl tbody tr:nth-child(even) td{border-block-color:var(--tbl-accent)}
+.tbl tbody tr:hover{background:var(--tbl-hover)}
+.tbl tbody tr:hover td{border-block-color:var(--tbl-hover)}
+/* 숫자는 오른쪽에 붙이고 자릿수를 맞춘다 (이 대장의 규칙 — Carbon 은 글꼴을 가리지 않는다) */
+.tbl th.num,.tbl td.num{text-align:right;font-family:"IBM Plex Mono",monospace;
+  font-variant-numeric:tabular-nums}
+.tbl td.zero{color:var(--faint)}
+.tbl tfoot td{background:var(--tbl-accent);font-weight:600;border-bottom:0;
+  border-top:1px solid var(--line-strong)}
+
 /* 「한눈에」 — 세 시설을 한 판에 겹쳐 본다.
    색만으로는 적록색약에서 주황·초록이 갈리지 않으므로 **선 모양·점 모양·끝 이름**을
    함께 입힌다. 색은 거들 뿐이고 셋 중 어느 하나만 봐도 구분된다 */
@@ -947,7 +990,8 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
         </div>
       </div>
       <div class="sec-body" id="stCharts" style="border-top:1px solid var(--line)"></div>
-      <div class="st-wrap"><table><thead id="stHead"></thead><tbody id="stBody"></tbody>
+      <div class="tbl" style="margin:0 14px 14px"><table>
+        <thead id="stHead"></thead><tbody id="stBody"></tbody>
         <tfoot id="stFoot"></tfoot></table></div>
       <p class="hint" style="margin:0;padding:10px 14px;border-top:1px solid var(--line)" id="stNote"></p>
     </div>
@@ -1775,7 +1819,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-09-21.47";
+const APP_VERSION = "2026-09-22.48";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -3971,21 +4015,20 @@ function renderStats() {
     (one ? stCombo(d, key, sc) : state.facilities.map(f => stChart(d, f, key, sc)).join("")) + "</div>";
 
   /* 표 — 마우스를 올리지 않아도 모든 값에 닿을 수 있어야 한다.
-     격자를 긋지 않고 여백·굵기로 읽고(`.st-wrap`), 칸 뒤에 옅은 막대를 깔아
-     큰 달이 먼저 눈에 들어오게 한다. 막대 길이는 **그 지표의 최고값** 기준이다 */
+     생김새는 **Carbon Data table** 규격을 그대로 쓴다 (`.tbl`) — 위 CSS 주석 참고.
+     칸 뒤에 깔던 옅은 막대는 뺐다 */
   $("#stHead").innerHTML = '<tr><th>월</th>' +
     state.facilities.map(f => '<th class="num">' + esc(f.name) + "</th>").join("") +
     '<th class="num">합계</th></tr>';
   $("#stBody").innerHTML = d.months.map(ym => {
     const vs = state.facilities.map(f => d.at[ym][f.id][key]);
-    return '<tr><td class="ym">' + esc(stYm(ym)) + "</td>" +
-      vs.map((v, i) => '<td class="num bar' + (v ? "" : " zero") + '" data-fc="' +
-        esc(state.facilities[i].color || "none") + '" style="--p:' +
-        (peak ? Math.round(v / peak * 100) : 0) + '%">' + esc(v ? m.fmt(v) : "–") + "</td>").join("") +
+    return "<tr><td>" + esc(stYm(ym)) + "</td>" +
+      vs.map(v => '<td class="num' + (v ? "" : " zero") + '">' +
+        esc(v ? m.fmt(v) : "–") + "</td>").join("") +
       '<td class="num">' + esc(m.fmt(vs.reduce((a, v) => a + v, 0))) + "</td></tr>";
   }).join("");
   const tot = state.facilities.map(f => stSeries(d, f.id, key).reduce((a, v) => a + v, 0));
-  $("#stFoot").innerHTML = '<tr><td class="ym">합계</td>' +
+  $("#stFoot").innerHTML = "<tr><td>합계</td>" +
     tot.map(v => '<td class="num">' + esc(m.fmt(v)) + "</td>").join("") +
     '<td class="num">' + esc(m.fmt(tot.reduce((a, v) => a + v, 0))) + "</td></tr>";
 
