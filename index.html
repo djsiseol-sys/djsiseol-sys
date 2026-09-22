@@ -1754,8 +1754,9 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
         <div class="field">
           <label for="impFee">엑셀에 적힌 금액</label>
           <select id="impFee">
-            <option value="calc">쓰지 않음 — 조례대로 다시 계산합니다 (권장)</option>
-            <option value="override">직접 입력 금액으로 넣습니다 (엑셀 금액을 그대로 씁니다)</option>
+            <option value="plus">엑셀 금액을 그대로 씁니다 + 전기·수도를 더합니다 (권장)</option>
+            <option value="total">엑셀 금액을 그대로 씁니다 — 이미 공과금까지 든 합계입니다</option>
+            <option value="calc">쓰지 않고 조례대로 다시 계산합니다</option>
           </select>
           <span class="hint" id="impFeeNote"></span>
         </div>
@@ -1843,7 +1844,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-09-22.52";
+const APP_VERSION = "2026-09-22.53";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -6541,9 +6542,18 @@ function impRowRes(row, year) {
     memo: aiSafe(String(g("memo") || "").trim()),
     paid: false, paidPower: false, paidWater: false, feeOverride: null
   };
+  /* **엑셀 금액은 이미 다 계산된 값이다** (2026-09-22 담당자 결정).
+     전용사용료는 시간대에 따라 갈리는데 예전 대장에 **시각이 적혀 있지 않고 금액만** 있다.
+     그래서 조례로 다시 계산하면 엉뚱한 값이 나온다 — 적힌 금액을 그대로 쓴다.
+     `feeOverride` 로 들어가므로 **감면이 다시 붙지 않는다** (`feeOf`·`feeParts` 가 계산값을 통째로 대체).
+
+     `feeOverride` 는 **총액** 자리다. 우리 대장은 전기료·수도료를 열로 따로 받으므로,
+     엑셀 금액이 이용료만이면 여기에 더해야 한다 — 안 더하면 공과금이 통째로 사라진다.
+     엑셀 금액이 이미 공과금까지 든 합계면 `total` 을 고른다 */
   const xlFee = IMP.map.fee != null ? impNum(g("fee")) : null;
-  if (xlFee != null && xlFee > 0 && $("#impFee") && $("#impFee").value === "override")
-    res.feeOverride = xlFee;
+  const feeMode = $("#impFee") ? $("#impFee").value : "calc";
+  if (xlFee != null && xlFee > 0 && feeMode !== "calc")
+    res.feeOverride = feeMode === "plus" ? xlFee + res.power + res.water : xlFee;
 
   return { res: res, why: why, ok: !!date && !!fid, xlFee: xlFee };
 }
@@ -6620,7 +6630,7 @@ function impRenderPrev() {
   const dup = rows.filter(r => r.dup).length;
   const bad = rows.filter(r => !r.ok).length;
 
-  const cols = ["줄", "날짜", "시간", "시설", "구분", "신청 단체", "목적", "인원", "감면", "확인"];
+  const cols = ["줄", "날짜", "시간", "시설", "구분", "신청 단체", "목적", "인원", "감면", "들어갈 금액", "확인"];
   const facName = id => (state.facilities.find(f => f.id === id) || {}).name || "";
   const dcName = id => (state.discounts.find(d => d.id === id) || {}).name || "";
   $("#impPrev").innerHTML = "<table><thead><tr>" + cols.map(c => "<th>" + esc(c) + "</th>").join("") +
@@ -6636,6 +6646,11 @@ function impRenderPrev() {
         "<td>" + esc(x.purpose) + "</td>" +
         '<td class="num">' + (x.headcount || "") + "</td>" +
         "<td>" + esc(dcName(x.discountId)) + "</td>" +
+        /* **무엇이 들어가는지 미리 보여 준다.** 「엑셀 금액을 쓰겠다」 고 골라 놓고도
+           정말 그 값이 들어가는지 알 길이 없었다 (2026-09-22 담당자 제보).
+           직접 입력이면 조례 계산을 쓰지 않았다는 표시를 함께 단다 */
+        '<td class="num">' + won(feeOf(x)) +
+          (x.feeOverride != null ? '<span class="why">엑셀 금액 · 감면 다시 안 붙음</span>' : "") + "</td>" +
         '<td class="imp-why">' + esc(r.why.join(" · ")) + "</td></tr>";
     }).join("") + "</tbody></table>" +
     (rows.length > 200 ? '<p class="hint" style="padding:6px 8px;margin:0">앞 200줄만 보여줍니다. 가져올 때는 전부 들어갑니다.</p>' : "");
@@ -6649,9 +6664,13 @@ function impRenderPrev() {
     const f = calcFee(Object.assign({}, r.res, { feeOverride: null }));
     if (Math.abs(f.total - r.xlFee) >= 1) diff++;
   });
+  const feeMode = $("#impFee") ? $("#impFee").value : "calc";
   $("#impFeeNote").innerHTML = cmp
-    ? "엑셀 금액이 적힌 " + cmp + "건 가운데 <b>" + diff + "건</b>이 조례 계산과 다릅니다." +
-      (diff ? " 예전 기준이거나 적어 둔 값이 다를 수 있습니다 — 차이를 보고 정하세요." : " 값이 모두 맞습니다.")
+    ? "엑셀 금액이 적힌 " + cmp + "건 가운데 <b>" + diff + "건</b>이 조례 계산과 다릅니다. " +
+      (feeMode === "calc"
+        ? "지금은 <b>조례대로 다시 계산</b>해서 넣습니다 — 시각이 안 적힌 자료면 값이 어긋날 수 있습니다."
+        : "지금은 <b>엑셀 금액을 그대로</b> 넣습니다 (직접 입력 금액). <b>감면이 다시 붙지 않습니다.</b>" +
+          (feeMode === "plus" ? " 전기료·수도료는 따로 더합니다." : " 엑셀 금액에 공과금까지 든 것으로 봅니다."))
     : "엑셀 금액 열을 고르면 조례 계산과 견줘 보여 드립니다.";
 
   $("#impSum").innerHTML =
@@ -6715,6 +6734,9 @@ function impUseSheet(i) {
     '<option value="' + k + '"' + (k === IMP.head ? " selected" : "") + ">" + (k + 1) + "번째 줄 — " +
     esc(r.filter(c => String(c).trim()).slice(0, 4).join(" · ").slice(0, 40) || "(빈 줄)") + "</option>").join("");
   IMP.map = impGuessAll();
+  /* 금액 열이 잡혔으면 **그 금액을 쓰는 쪽을 기본**으로 둔다 (2026-09-22 담당자 결정).
+     시각이 없는 예전 대장이라 조례로 다시 계산하면 값이 어긋난다 */
+  if ($("#impFee")) $("#impFee").value = IMP.map.fee != null ? "plus" : "calc";
   /* 시트 이름에 연도가 있으면 기준 연도로 삼는다 (`2019년 대관대장` 처럼 적는 일이 많다) */
   const y = String((IMP.sheets[i] || {}).name || "").match(/(20\d{2})/);
   if (y) $("#impYear").value = +y[1];
@@ -7672,13 +7694,27 @@ function init() {
     try { await navigator.clipboard.writeText(ta.value); toast("복사했습니다"); }
     catch (e) { toast("Ctrl+C 를 눌러 복사하세요"); }
   });
+  /* 불러온 자료를 **바로 서버에 올린다.**
+     `save()` 만 부르면 2분 뒤에나 올라가서, 그 전에 새로고침하면
+     서버에 남아 있던 옛 자료가 다시 내려온다 — 되돌리려고 JSON 을 불러왔는데
+     엑셀로 올린 건이 그대로 있던 까닭이 이것이다 (2026-09-22 담당자 제보).
+     보관해 둔 변경분(`clearPending`)도 함께 지운다. 안 지우면 다음에 열 때
+     복구 안내로 되살아난다 — 예약 지우기가 이미 같은 이유로 그렇게 한다 */
+  function applyLoaded(d, what) {
+    state = migrate(d);
+    clearPending();
+    fillSelects(); renderSettings(); renderAll();
+    save(); saveNow(true);
+    toast(what + " — 예약 " + state.reservations.length + "건. 서버에도 올렸습니다");
+  }
+
   function doImportPaste() {
     const raw = prompt("내보낸 JSON 내용을 붙여넣으세요");
     if (!raw) return;
     try {
       const d = JSON.parse(raw);
       if (!confirm("현재 자료를 붙여넣은 내용으로 대체합니다. 계속할까요?")) return;
-      state = migrate(d); save(); fillSelects(); renderSettings(); renderAll(); toast("불러왔습니다");
+      applyLoaded(d, "붙여넣은 내용으로 되돌렸습니다");
     } catch (err) { toast("내용을 읽지 못했습니다"); }
   }
   function doImportJson() { $("#fileInput").click(); }
@@ -7689,7 +7725,7 @@ function init() {
       try {
         const d = JSON.parse(fr.result);
         if (!confirm("현재 데이터를 불러온 파일로 대체합니다. 계속할까요?")) return;
-        state = migrate(d); save(); fillSelects(); renderSettings(); renderAll(); toast("불러왔습니다");
+        applyLoaded(d, "불러온 파일로 되돌렸습니다");
       } catch (err) { toast("파일을 읽지 못했습니다"); }
     };
     fr.readAsText(file);
