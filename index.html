@@ -21,6 +21,13 @@
   --fc-orange-soft:#FAEDDF; --fc-orange-line:#DFBE99; --fc-orange-ink:#7A4A16;
   --fc-blue-soft:#E5EDF6;   --fc-blue-line:#AFC7DE;   --fc-blue-ink:#1F4A73;
   --fc-green-soft:#E4F0E5;  --fc-green-line:#ADCBB3;  --fc-green-ink:#285631;
+  /* 분석 그래프의 **선 색**. 달력 칩에 쓰는 `--fc-ink` 는 글자용이라 어둡고 흐려서,
+     세 선을 한 판에 겹치면 적록색약에서 주황과 초록이 갈리지 않았다 (검사값 ΔE 3.3).
+     같은 주황·파랑·초록이되 **검사를 통과하는 값**으로 따로 잡았다 —
+     모든 짝 통과, 가장 어려운 주황↔초록이 ΔE 8.2 (protan).
+     **눈대중으로 고치지 않는다** — dataviz 검사기(`validate_palette.js`)로 다시 잰다 */
+  --fc-orange-chart:#CF6A0A; --fc-blue-chart:#1D6FD0; --fc-green-chart:#0E7A58;
+  --fc-none-chart:#5A6570;
 
   /* 요일·준비 표시색. 담당자 요청으로 추가했다 — 토요일 파랑, 일요일·공휴일 빨강,
      준비 건은 노란 테두리. 세 테마 블록에 모두 정의한다 */
@@ -45,6 +52,9 @@
     --fc-orange-soft:#2C2318; --fc-orange-line:#5A422A; --fc-orange-ink:#DFB78A;
     --fc-blue-soft:#1A2733;   --fc-blue-line:#2E4557;   --fc-blue-ink:#9DC3E3;
     --fc-green-soft:#1A2A1E;  --fc-green-line:#2D4935;  --fc-green-ink:#9BC8A5;
+    /* 어두운 쪽도 같은 검사를 통과한 값이다 (주황↔초록 ΔE 8.1 protan) */
+    --fc-orange-chart:#C87C2A; --fc-blue-chart:#4E93DB; --fc-green-chart:#199771;
+    --fc-none-chart:#8B959D;
     --sat:#8FB6E0; --sun:#E39191;
     --prep-line:#C79A2A; --prep-soft:#2B2617;
     /* Carbon Gray 100: 줄 #262626 · 얼룩 #393939 · 올린 줄 #333333 — 어두운 쪽은 얼룩이 더 **밝다** */
@@ -62,6 +72,8 @@
   --fc-orange-soft:#2C2318; --fc-orange-line:#5A422A; --fc-orange-ink:#DFB78A;
   --fc-blue-soft:#1A2733;   --fc-blue-line:#2E4557;   --fc-blue-ink:#9DC3E3;
   --fc-green-soft:#1A2A1E;  --fc-green-line:#2D4935;  --fc-green-ink:#9BC8A5;
+  --fc-orange-chart:#C87C2A; --fc-blue-chart:#4E93DB; --fc-green-chart:#199771;
+  --fc-none-chart:#8B959D;
   --sat:#8FB6E0; --sun:#E39191;
   --prep-line:#C79A2A; --prep-soft:#2B2617;
   --tbl-row:#1E2327; --tbl-accent:#2E353B; --tbl-hover:#282F34;
@@ -220,10 +232,10 @@ main{max-width:1440px;margin:0 auto;padding:18px 20px 60px}
 .chip.conflict{border-color:var(--alert);box-shadow:inset 3px 0 0 var(--alert)}
 
 /* 시설 색 — data-fc 로 고른다 */
-[data-fc]{--fc-soft:var(--fc-none-soft);--fc-line:var(--fc-none-line);--fc-ink:var(--fc-none-ink)}
-[data-fc="orange"]{--fc-soft:var(--fc-orange-soft);--fc-line:var(--fc-orange-line);--fc-ink:var(--fc-orange-ink)}
-[data-fc="blue"]{--fc-soft:var(--fc-blue-soft);--fc-line:var(--fc-blue-line);--fc-ink:var(--fc-blue-ink)}
-[data-fc="green"]{--fc-soft:var(--fc-green-soft);--fc-line:var(--fc-green-line);--fc-ink:var(--fc-green-ink)}
+[data-fc]{--fc-soft:var(--fc-none-soft);--fc-line:var(--fc-none-line);--fc-ink:var(--fc-none-ink);--fc-chart:var(--fc-none-chart)}
+[data-fc="orange"]{--fc-soft:var(--fc-orange-soft);--fc-line:var(--fc-orange-line);--fc-ink:var(--fc-orange-ink);--fc-chart:var(--fc-orange-chart)}
+[data-fc="blue"]{--fc-soft:var(--fc-blue-soft);--fc-line:var(--fc-blue-line);--fc-ink:var(--fc-blue-ink);--fc-chart:var(--fc-blue-chart)}
+[data-fc="green"]{--fc-soft:var(--fc-green-soft);--fc-line:var(--fc-green-line);--fc-ink:var(--fc-green-ink);--fc-chart:var(--fc-green-chart)}
 .chip-more{font-size:11px;color:var(--muted);background:none;border:0;padding:2px 4px;text-align:left}
 
 /* ---------- side rail ---------- */
@@ -424,15 +436,15 @@ td.dow-sun{color:var(--sun);font-weight:600}
 .st-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
 .st-card{border:1px solid var(--line);border-radius:10px;padding:10px 12px 6px;background:var(--surface)}
 .st-card h3{margin:0 0 2px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:6px}
-.st-card h3 i{width:9px;height:9px;border-radius:50%;background:var(--fc-ink);flex:none}
+.st-card h3 i{width:9px;height:9px;border-radius:50%;background:var(--fc-chart);flex:none}
 .st-card .sum{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;
   font-size:11.5px;color:var(--ink-2);margin:0 0 4px}
 .st-card svg{display:block;width:100%;height:auto;touch-action:none}
 .st-card .gl{stroke:var(--line);stroke-width:1;vector-effect:non-scaling-stroke}
-.st-card .ln{fill:none;stroke:var(--fc-ink);stroke-width:2;stroke-linejoin:round;
+.st-card .ln{fill:none;stroke:var(--fc-chart);stroke-width:2;stroke-linejoin:round;
   stroke-linecap:round;vector-effect:non-scaling-stroke}
-.st-card .ar{fill:var(--fc-ink);fill-opacity:.1}
-.st-card .dt{fill:var(--fc-ink);stroke:var(--surface);stroke-width:2}
+.st-card .ar{fill:var(--fc-chart);fill-opacity:.1}
+.st-card .dt{fill:var(--fc-chart);stroke:var(--surface);stroke-width:2}
 .st-card .ax{fill:var(--faint);font-size:9.5px;font-family:"IBM Plex Mono",monospace}
 .st-card .vl{fill:var(--ink);font-size:10px;font-weight:600;font-family:"IBM Plex Mono",monospace;
   /* 끝값 딱지가 선·면 위에 겹쳐 앉는다. 바탕색 테두리를 둘러 글자가 묻히지 않게 한다
@@ -445,7 +457,7 @@ td.dow-sun{color:var(--sun);font-weight:600}
   padding:8px 10px;font-size:12px;min-width:150px}
 .st-tip b{display:block;font-size:11px;color:var(--ink-2);font-weight:600;margin-bottom:4px}
 .st-tip .r{display:flex;align-items:center;gap:6px;justify-content:space-between;line-height:1.7}
-.st-tip .r i{width:12px;height:2px;border-radius:1px;background:var(--fc-ink);flex:none}
+.st-tip .r i{width:12px;height:3px;border-radius:2px;background:var(--fc-chart);flex:none}
 .st-tip .r span{color:var(--ink-2);flex:1;white-space:nowrap}
 .st-tip .r em{font-style:normal;font-weight:600;font-family:"IBM Plex Mono",monospace;
   font-variant-numeric:tabular-nums}
@@ -505,22 +517,26 @@ td.dow-sun{color:var(--sun);font-weight:600}
   border-top:1px solid var(--line-strong)}
 
 /* 「한눈에」 — 세 시설을 한 판에 겹쳐 본다.
-   색만으로는 적록색약에서 주황·초록이 갈리지 않으므로 **선 모양·점 모양·끝 이름**을
-   함께 입힌다. 색은 거들 뿐이고 셋 중 어느 하나만 봐도 구분된다 */
+
+   **선은 모두 실선이고 색으로만 가른다** (2026-09-22 담당자 요청).
+   줄마다 점선 무늬와 점 모양을 달리 했더니 「잘 안 보이고 어지럽다」 는 지적을 받아
+   무늬를 다 걷어냈다. 그 대신 **선 색을 검사를 통과하는 값으로 바꿨다** (`--fc-chart`) —
+   색만으로도 적록색약에서 갈린다 (모든 짝 통과 · 주황↔초록 ΔE 8.2 protan).
+   선 끝의 시설 이름은 그대로 두었다 — 이름이 곧 딱지라, 색을 못 봐도 어느 선인지 알 수 있다 */
 .st-card.wide{grid-column:1/-1}
-.st-card .se .ln{stroke:var(--fc-ink);stroke-dasharray:var(--dash,none)}
+.st-card .se .ln{stroke:var(--fc-chart)}
+/* 점은 셋 다 같은 동그라미다. 모양으로 가르지 않는다 */
+.st-card .se .mk{fill:var(--fc-chart);stroke:var(--surface);stroke-width:1.5}
+.st-card .se .el{fill:var(--fc-chart);font-size:9.5px;font-weight:600;
+  font-family:"IBM Plex Sans KR",sans-serif;
+  paint-order:stroke;stroke:var(--surface);stroke-width:3;stroke-linejoin:round}
 /* 「한눈에」 판은 viewBox 가 넓어(720) 같은 값이 시설별 판(320)보다 크게 그려진다.
    화면에서 비슷한 크기로 보이도록 0.7 배쯤 줄여 둔다 */
 .st-card.wide .ax{font-size:6.4px}
 .st-card.wide .se .el{font-size:6.8px;stroke-width:2.4}
-
-.st-card .se .mk{fill:var(--fc-ink);stroke:var(--surface);stroke-width:2}
-.st-card .se .el{fill:var(--fc-ink);font-size:9.5px;font-weight:600;
-  font-family:"IBM Plex Sans KR",sans-serif;
-  paint-order:stroke;stroke:var(--surface);stroke-width:3;stroke-linejoin:round}
-.st-legend{display:flex;flex-wrap:wrap;gap:14px;margin:2px 0 6px;font-size:11.5px;color:var(--ink-2)}
-.st-legend span{display:flex;align-items:center;gap:5px}
-.st-legend svg{width:26px;height:10px;display:block}
+.st-legend{display:flex;flex-wrap:wrap;gap:16px;margin:2px 0 8px;font-size:11.5px;color:var(--ink-2)}
+.st-legend span{display:flex;align-items:center;gap:6px}
+.st-legend i{width:14px;height:3px;border-radius:2px;background:var(--fc-chart);flex:none}
 /* 엑셀 가져오기 — 어떤 양식이 와도 「열 맞추기」로 받아낸다 */
 .imp-drop{border:2px dashed var(--line-strong);border-radius:10px;padding:22px 16px;text-align:center;
   background:var(--surface-2);cursor:pointer}
@@ -1819,7 +1835,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-09-22.48";
+const APP_VERSION = "2026-09-22.49";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -3893,28 +3909,22 @@ function stChart(d, fac, key, sc) {
     "</svg></div>";
 }
 
-/* 「한눈에」 — 세 시설을 한 판에 겹쳐 본다 (2026-09-21 담당자 요청).
+/* 「한눈에」 — 세 시설을 한 판에 겹쳐 본다.
 
-   **색만으로 구분하지 않는다.** 시설 구분색(주황·파랑·초록)은 적록색약에서
-   주황과 초록이 갈리지 않는다 (검사값 ΔE 3.6). 색을 바꾸면 달력 칩·목록과 어긋나므로,
-   대신 **선 모양(실선·긴 점선·짧은 점선) · 점 모양(●■▲) · 선 끝의 시설 이름**을 함께 입혔다.
-   셋 중 어느 하나만 봐도 구분되고, 색은 거들 뿐이다 — **이 세 가지를 빼지 않는다** */
-const ST_SHAPES = [
-  { dash: "none",  mark: "circle" },
-  { dash: "7 3",   mark: "square" },
-  { dash: "2 3",   mark: "tri" }
-];
+   **색으로만 가른다** (2026-09-22 담당자 요청). 처음에는 적록색약을 걱정해
+   선 모양(실선·긴 점선·짧은 점선)과 점 모양(●■▲)을 달리 입혔는데,
+   **「줄마다 점선이 있어 잘 안 보이고 어지럽다」** 는 지적을 받았다. 무늬를 다 걷어냈다.
+
+   그래도 색약 문제를 그냥 두지는 않았다 — **선 색을 바꿔서 풀었다.**
+   달력 칩에 쓰는 `--fc-ink` 는 글자용이라 어둡고 흐려서 주황↔초록이 ΔE 3.3 (protan) 이었는데,
+   같은 주황·파랑·초록이되 검사를 통과하는 값(`--fc-chart`)을 따로 잡아
+   **모든 짝을 통과시켰다** (주황↔초록 ΔE 8.2 protan · 보통 시야 20.2).
+   6~8 구간은 딱지 같은 보조 표시가 있어야 하므로 **선 끝의 시설 이름은 그대로 둔다.**
+
+   - **점선·점 모양을 되살리지 않는다** (담당자가 어지럽다고 한 자리다)
+   - **선 끝 이름을 빼지 않는다** (색을 못 보는 사람에게 남는 유일한 단서다)
+   - **색은 눈대중으로 고치지 않는다** — dataviz 검사기로 다시 잰다 */
 const ST_GEO_ONE = { W: 720, H: 300, L: 62, R: 78, T: 14, B: 26 };
-
-/* 점 하나. 모양이 곧 시설 표시라 크기(지름 8px 이상)를 셋 다 맞춘다 */
-function stMark(shape, x, y, k) {
-  const s = k || 1;                       // 「한눈에」 판은 viewBox 가 넓어 조금 줄인다
-  if (shape === "square") return '<rect class="mk" x="' + (x - 3.4 * s) + '" y="' + (y - 3.4 * s) +
-    '" width="' + (6.8 * s) + '" height="' + (6.8 * s) + '" rx="1"/>';
-  if (shape === "tri") return '<path class="mk" d="M' + x + "," + (y - 4.2 * s) + "L" + (x + 4 * s) + "," + (y + 3 * s) +
-    "L" + (x - 4 * s) + "," + (y + 3 * s) + 'Z"/>';
-  return '<circle class="mk" cx="' + x + '" cy="' + y + '" r="' + (3.8 * s) + '"/>';
-}
 
 function stCombo(d, key, sc) {
   const max = sc.max;
@@ -3956,24 +3966,19 @@ function stCombo(d, key, sc) {
       at[o.i] = Math.max(T + 6, Math.min(T + ph + 6, prev));
     });
 
+  /* 선은 전부 실선이고 점은 전부 같은 동그라미다 — **색으로만 가른다** */
   const series = state.facilities.map((f, i) => {
-    const sh = ST_SHAPES[i % ST_SHAPES.length];
     const vals = stSeries(d, f.id, key);
     const pts = vals.map((v, j) => x(j) + "," + y(v));
-    return '<g class="se" data-fc="' + esc(f.color || "none") + '" style="--dash:' + sh.dash + '">' +
+    return '<g class="se" data-fc="' + esc(f.color || "none") + '">' +
       '<path class="ln" d="M' + pts.join("L") + '"/>' +
-      vals.map((v, j) => stMark(sh.mark, x(j), y(v), 0.72)).join("") +
+      vals.map((v, j) => '<circle class="mk" cx="' + x(j) + '" cy="' + y(v) + '" r="2.6"/>').join("") +
       '<text class="el" x="' + (W - R + 7) + '" y="' + (at[i] + 3.5) + '">' + esc(f.name) + "</text>" +
       "</g>";
   }).join("");
 
-  const legend = '<div class="st-legend">' + state.facilities.map((f, i) => {
-    const sh = ST_SHAPES[i % ST_SHAPES.length];
-    return '<span data-fc="' + esc(f.color || "none") + '"><svg viewBox="0 0 26 10" aria-hidden="true">' +
-      '<g class="se" style="--dash:' + sh.dash + '">' +
-      '<path class="ln" style="stroke-width:2" d="M1,5L25,5"/>' + stMark(sh.mark, 13, 5) + "</g></svg>" +
-      esc(f.name) + "</span>";
-  }).join("") + "</div>";
+  const legend = '<div class="st-legend">' + state.facilities.map(f =>
+    '<span data-fc="' + esc(f.color || "none") + '"><i></i>' + esc(f.name) + "</span>").join("") + "</div>";
 
   return '<div class="st-card wide" data-geo="' + [W, L, R, T, ph].join(",") + '">' +
     "<h3>" + esc(m.name) + " — 세 시설 견주어 보기</h3>" + legend +
