@@ -359,6 +359,14 @@ td.dow-sun{color:var(--sun);font-weight:600}
 /* ---------- modal ---------- */
 .backdrop{position:fixed;inset:0;background:rgba(15,18,20,.45);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;z-index:60;overflow:auto}
 .backdrop[hidden]{display:none}
+/* 엑셀 가져오기 (9-E) — 줄 수 맞춰 보기 */
+.imp-sum{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)}
+.imp-sum .bad{color:var(--alert);font-weight:600}
+.imp-sum .ok{color:var(--accent);font-weight:600}
+.imp-h{margin:14px 0 6px;font-size:13px}
+.imp-h.bad{color:var(--alert)}
+.imp-list{margin:0;padding-left:18px;max-height:180px;overflow:auto;font-size:12.5px;line-height:1.7}
+.imp-tbl{font-size:12.5px}
 .modal{background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);width:100%;max-width:620px}
 .modal-head{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
 .modal-head h2{margin:0;font-size:15px;font-weight:600}
@@ -1402,6 +1410,8 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
         <label for="fOverride">이용료 직접 입력 (비워두면 조례대로 자동 산정)</label>
         <input type="number" id="fOverride" min="0" step="10" class="mono" placeholder="원">
         <span class="hint">산정 금액과 그 근거 조문은 달력에서 날짜를 누른 뒤 ‘산정 상세’, 또는 목록의 수익집계용에서 봅니다</span>
+        <span class="hint" id="fLedgerNote" hidden style="color:var(--accent)">엑셀 가져오기로 들어온 <b>옛 대장 금액</b> 건입니다.
+          고쳐 저장해도 엑셀에 적힌 금액(부속시설 포함)을 그대로 씁니다. 다른 금액을 쓰려면 위 칸에 적으세요.</span>
       </div>
     </div>
     <div class="modal-foot">
@@ -1426,6 +1436,41 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
     <div class="modal-foot">
       <span class="spacer"></span>
       <button type="button" class="btn btn-primary" id="copyDo">전체 복사</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 엑셀 가져오기 (9-E) =================
+     2026-08 까지 엑셀로 적던 대장을 올린다. **정해진 양식**(「양식 받기」)으로 맞춘 파일만 받는다.
+     확인을 누르기 전에는 state 를 건드리지 않는다 — 미리보기는 계산만 한다 -->
+<div class="backdrop" id="impBox" hidden>
+  <div class="modal" style="max-width:880px">
+    <div class="modal-head">
+      <h2>엑셀로 예약 가져오기</h2>
+      <button type="button" class="btn btn-quiet btn-sm" id="impClose">닫기 ✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="hint" style="margin:0 0 10px;line-height:1.7">
+        <b>「양식 받기」</b> 로 받은 모양의 <b>.xlsx</b> 파일을 올립니다. 머리글(날짜·시설…)이 있는 줄 아래를 모두 읽습니다.
+        시트가 여럿이면 머리글이 있는 시트를 모두 읽습니다.<br>
+        · 금액은 <b>엑셀에 적힌 그대로</b> 들어갑니다 (조례로 다시 계산하지 않고, 감면도 다시 붙지 않습니다).
+        부속시설은 세부 항목 없이 금액만 들어갑니다.<br>
+        · <b>면제</b> 칸에 표시한 건은 금액 없이 일정만 들어갑니다.<br>
+        · 시각을 비워 두면 09:00~18:00 으로 들어가고, 옛 자료끼리는 시간 중복 경고를 띄우지 않습니다.<br>
+        · 연락처·성명 같은 개인정보 열은 읽지 않고, 어느 칸이든 전화번호 모양은 지웁니다.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button type="button" class="btn btn-sm" id="impTemplate">양식 받기</button>
+        <button type="button" class="btn btn-sm btn-primary" id="impPick">파일 고르기…</button>
+        <span class="hint mono" id="impFileName"></span>
+        <input type="file" id="impFile" accept=".xlsx" hidden>
+      </div>
+      <div id="impResult" style="margin-top:14px"></div>
+    </div>
+    <div class="modal-foot">
+      <span class="hint" id="impFootNote"></span>
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="impCancel">취소</button>
+      <button type="button" class="btn btn-primary" id="impApply" disabled>가져오기</button>
     </div>
   </div>
 </div>
@@ -1518,7 +1563,10 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
           <button type="button" class="btn btn-sm" id="exportJson">JSON 내보내기</button>
           <button type="button" class="btn btn-sm" id="importJson">JSON 불러오기</button>
           <button type="button" class="btn btn-sm" id="importPaste" hidden>JSON 붙여넣기</button>
+          <button type="button" class="btn btn-sm" id="openImport">엑셀로 예약 가져오기</button>
         </div>
+        <p class="hint" style="margin:6px 0 0;line-height:1.6">‘엑셀로 예약 가져오기’ 는 예전 엑셀 대장을 정해진 양식으로 올립니다.
+          가져오기 전에 JSON 으로 내보내 두면 잘못 올렸을 때 되돌릴 수 있습니다.</p>
         <p class="hint" style="margin:6px 0 0;line-height:1.6">대장 전체를 파일로 받아 두거나 되돌립니다.
           달마다 한 번씩 내려받아 보관하면 사고가 나도 되살릴 수 있습니다.</p>
         <div class="hr"></div>
@@ -1749,7 +1797,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-09-22.55";
+const APP_VERSION = "2026-09-23.56";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -2730,6 +2778,7 @@ function calcFee(r) {
   const fac = facilityOf(r.facilityId);
   const out = { total: 0, lines: [], hours: 0, pending: false };
   if (!fac) { out.lines.push({ label: "시설 정보 없음", why: "시설을 먼저 고르세요", amount: 0 }); return out; }
+  if (r.ledger && typeof r.ledger === "object") return calcLedgerFee(r, out);
 
   const sM = toMin(r.start), eM = toMin(r.end);
   const useMin = Math.max(0, eM - sM);
@@ -2996,6 +3045,44 @@ function calcFee(r) {
   };
   return out;
 }
+/* 옛 대장 금액 (`r.ledger`) — 엑셀 가져오기로 들어온 2026-08 까지의 건.
+   예전 대장에는 **시각도 부속시설 세부도 없고 금액만** 적혀 있다. 시각을 모르는 채
+   조례로 다시 계산하면 엉뚱한 값이 나오므로, **엑셀에 적힌 금액을 그대로 쓴다**
+   (2026-09-23 담당자 요청). 감면은 이미 반영된 금액이라 다시 깎지 않는다.
+   「면제」 로 적힌 건은 금액을 아예 두지 않는다 — 일정만 남는다.
+   그래도 **줄마다 왜 이 금액인지를 적는다** (이 도구의 존재 이유다) */
+function calcLedgerFee(r, out) {
+  const L = r.ledger;
+  const unit = Math.max(1, Number(state.settings.rounding) || 1);
+  const floorUnit = v => Math.max(0, Math.floor(v / unit + 1e-9) * unit);
+  out.hours = Math.max(0, toMin(r.end) - toMin(r.start)) / 60;
+  out.bands = bandsOf(r);
+  out.ledger = true;
+  if (L.exempt) {
+    out.exempt = true;
+    out.note = "옛 대장";
+    out.lines.push({ label: "면제 — 금액 없음",
+      why: "2026-08 이전 엑셀 대장에 「면제」 로 적힌 건 · 이용료·부속시설·전기·수도를 받지 않았다 · 일정만 옮김",
+      amount: 0 });
+    out.annex = 0;
+    out.parts = { use: 0, annex: 0, util: 0, power: 0, water: 0 };
+    return out;
+  }
+  const use = floorUnit(Number(L.use) || 0), annex = floorUnit(Number(L.annex) || 0);
+  const pw = floorUnit(Number(r.power) || 0), wt = floorUnit(Number(r.water) || 0);
+  const WHY = "2026-08 이전 엑셀 대장에 적힌 금액 그대로 · 시각이 적혀 있지 않아 조례로 다시 계산하지 않음";
+  out.lines.push({ label: "① 전용사용료 (옛 대장 금액)", why: WHY + " · 감면이 있었다면 이미 반영된 금액", amount: use });
+  if (annex > 0) out.lines.push({ label: "⑥ 부속시설 (옛 대장 금액)",
+    why: "세부 항목 없이 엑셀 대장의 부속시설 금액만 옮김 · 별표 6", amount: annex });
+  if (pw > 0) out.lines.push({ label: "⑦ 전기료 (실비)", why: "엑셀 대장에 적힌 실비 · 별표 6", amount: pw });
+  if (wt > 0) out.lines.push({ label: "⑧ 수도료 (실비)", why: "엑셀 대장에 적힌 실비 · 별표 6", amount: wt });
+  out.note = "옛 대장 금액";
+  out.annex = annex + pw + wt;
+  out.total = use + annex + pw + wt;
+  out.parts = { use: use, annex: annex, util: pw + wt, power: pw, water: wt };
+  return out;
+}
+
 /* 이용료를 전용사용료 · 부속시설 · 공과금(전기+수도) 으로 나눠 돌려준다.
    직접 입력한 금액이 있으면 그것이 합계가 되고, 나머지를 전용사용료로 본다 */
 function feeParts(r) {
@@ -3269,7 +3356,8 @@ function renderRail() {
         (money && fp.util ? "<span>공과금 " + won(fp.util) + "원</span>" : "") +
       "</div>" +
       (money
-        ? '<div class="item-fee">' + won(fp.total) + "원" + (r.feeOverride !== "" && r.feeOverride != null ? " (직접 입력)" : "") +
+        ? '<div class="item-fee">' + (fc.exempt && fp.total === 0 ? "면제" : won(fp.total) + "원") +
+          (r.feeOverride !== "" && r.feeOverride != null ? " (직접 입력)" : "") +
           (fc.note ? ' <span class="item-fac">' + esc(fc.note) + "</span>" : "") + "</div>"
         : "") +
       // 메모는 일정 바로 밑에 강조해서 붙인다 — 여기부터 보는 직원이 많다
@@ -4563,6 +4651,7 @@ function openModal(id, presetDate) {
   $("#fDiscount").value = r ? r.discountId : (state.discounts[0] ? state.discounts[0].id : "");
   $("#fMemo").value = r ? (r.memo || "") : "";
   $("#fOverride").value = r && r.feeOverride != null ? r.feeOverride : "";
+  $("#fLedgerNote").hidden = !(r && r.ledger);
   $("#fKind").value = r ? (r.kind || "행사") : "행사";
   $("#fUseType").value = r ? (r.useType || "체육경기") : "체육경기";
   $("#fPower").value = r && r.power ? r.power : "";
@@ -4610,7 +4699,10 @@ function formToRes() {
     water: $("#fWater").value === "" ? null : Number($("#fWater").value),
     discountId: $("#fDiscount").value,
     memo: $("#fMemo").value.trim(),
-    feeOverride: $("#fOverride").value === "" ? null : Number($("#fOverride").value)
+    feeOverride: $("#fOverride").value === "" ? null : Number($("#fOverride").value),
+    /* 엑셀로 들어온 옛 대장 금액은 고쳐도 그대로 물려준다 (`paid` 와 같은 방식).
+       안 물려주면 시각이 없는 건이 조례 계산으로 바뀌어 금액이 달라진다 */
+    ledger: prev && prev.ledger ? prev.ledger : null
   };
 }
 /* 별표 6 부속시설 — 수량 칸을 그린다. 0인 항목은 계산에 들어가지 않는다 */
@@ -6003,6 +6095,469 @@ function updateSettleBtns() {
 }
 
 /* =========================================================
+   9-E. 엑셀 가져오기 — 2026-08 까지의 옛 대장을 올린다
+   ---------------------------------------------------------
+   **정해진 양식만 받는다** (`IMP_COLS` · 「양식 받기」). 예전 대장은 해마다 모양이
+   달라서, 담당자의 원본 파일을 이 양식으로 먼저 옮긴 뒤 올린다 (2026-09-23 담당자 요청).
+
+   지키는 것 — 이 다섯을 빼지 않는다.
+   1. **연락처·성명 열은 읽지 않는다** (`IMP_BLOCK`). 무엇을 뺐는지 화면에 적는다
+   2. **어느 칸이든 전화번호·주민번호 모양은 `aiSafe()` 로 지우고 담는다**
+   3. **금액은 엑셀에 적힌 그대로 쓴다** — `r.ledger` 에 담고 `calcLedgerFee()` 가 쓴다.
+      부속시설은 세부 없이 금액만, 「면제」 는 금액 없이 일정만 들어간다
+   4. **빠진 줄이 없는지 맞춰 보인다** — 읽은 줄 = 들어갈 줄 + 이미 있는 줄 + 못 읽은 줄.
+      못 읽은 줄은 시트·줄 번호·이유를 하나하나 적는다. 조용히 버리는 줄이 없어야 한다
+   5. **확인을 누르기 전에는 `state` 를 건드리지 않는다.** 누르면 `save(); saveNow(true);` 짝으로
+      바로 올린다 — `saveNow()` 만 부르면 조용히 저장되지 않는다 (2026-09-22 에 겪었다)
+   ========================================================= */
+const IMP_COLS = [
+  { k: "date",      label: "날짜",      names: ["날짜", "일자", "사용일"], req: true,  w: 12, ex: "2026-08-01" },
+  { k: "start",     label: "시작",      names: ["시작", "시작시각", "시작시간"],        w: 7,  ex: "09:00" },
+  { k: "end",       label: "종료",      names: ["종료", "종료시각", "종료시간"],        w: 7,  ex: "18:00" },
+  { k: "fac",       label: "시설",      names: ["시설", "장소"], req: true,             w: 12, ex: "충무체육관" },
+  { k: "kind",      label: "건 구분",   names: ["건구분"],                               w: 8,  ex: "행사 / 준비" },
+  { k: "useType",   label: "이용 구분", names: ["이용구분", "사용구분"],                 w: 11, ex: "체육경기 / 체육경기 외" },
+  { k: "applicant", label: "신청 단체", names: ["신청단체", "단체", "대관자"],           w: 20, ex: "대전광역시태권도협회" },
+  { k: "purpose",   label: "이용 목적", names: ["이용목적", "목적", "행사명"],           w: 28, ex: "도지사기 태권도대회" },
+  { k: "head",      label: "인원",      names: ["인원", "인원수"],                       w: 7,  ex: "300" },
+  { k: "discount",  label: "감면",      names: ["감면", "감면유형"],                     w: 10, ex: "해당 없음 / 80% / 50% / 전부 면제" },
+  { k: "exempt",    label: "면제",      names: ["면제"],                                 w: 6,  ex: "면제 (금액 없이 일정만)" },
+  { k: "use",       label: "이용료",    names: ["이용료", "전용사용료", "사용료"],       w: 11, ex: "90000" },
+  { k: "annex",     label: "부속시설",  names: ["부속시설", "부속시설사용료"],           w: 11, ex: "35000" },
+  { k: "power",     label: "전기료",    names: ["전기료", "전기"],                       w: 11, ex: "86580" },
+  { k: "water",     label: "수도료",    names: ["수도료", "수도"],                       w: 11, ex: "20880" },
+  { k: "paid",      label: "입금",      names: ["입금", "입금완료"],                     w: 6,  ex: "O" },
+  { k: "memo",      label: "메모",      names: ["메모", "비고"],                         w: 24, ex: "" }
+];
+/* **이 낱말이 든 열은 읽지 않는다.** 개인정보를 담지 않는 구조를 지킨다 */
+const IMP_BLOCK = ["연락처", "전화", "휴대", "핸드폰", "성명", "이름", "담당자", "주소", "생년", "주민", "이메일", "메일"];
+const impNorm = v => String(v == null ? "" : v).replace(/[\s()[\]{}<>.,·・\-_/\\]/g, "").toLowerCase();
+let IMP = null;   // 미리보기 결과. 확인을 누르기 전에는 여기에만 있다
+
+/* ---------- 파일 읽기 (.xlsx = ZIP + XML, 라이브러리 없음) ---------- */
+const zU16 = (b, o) => b[o] | b[o + 1] << 8;
+const zU32 = (b, o) => (b[o] | b[o + 1] << 8 | b[o + 2] << 16 | b[o + 3] << 24) >>> 0;
+async function inflateRaw(u8) {
+  if (typeof DecompressionStream !== "function")
+    throw new Error("이 브라우저는 엑셀 압축을 풀지 못합니다. Edge 나 Chrome 으로 열어 주세요.");
+  const st = new Blob([u8]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  return new Uint8Array(await new Response(st).arrayBuffer());
+}
+/* ZIP 을 푼다. 내보내기 쪽 `zipStore` 의 반대 방향이다 */
+async function unzip(buf) {
+  const b = new Uint8Array(buf);
+  let e = -1;
+  for (let i = b.length - 22; i >= 0 && i > b.length - 66000; i--)
+    if (zU32(b, i) === 0x06054b50) { e = i; break; }
+  if (e < 0) throw new Error("엑셀 파일이 아닙니다. 예전 형식(.xls)이라면 엑셀에서 .xlsx 로 저장해 주세요.");
+  const cnt = zU16(b, e + 10), dir = zU32(b, e + 16), out = {};
+  let p = dir;
+  for (let k = 0; k < cnt; k++) {
+    if (zU32(b, p) !== 0x02014b50) break;
+    const meth = zU16(b, p + 10), csz = zU32(b, p + 20);
+    const nl = zU16(b, p + 28), el = zU16(b, p + 30), cl = zU16(b, p + 32), off = zU32(b, p + 42);
+    const name = new TextDecoder().decode(b.subarray(p + 46, p + 46 + nl));
+    const lnl = zU16(b, off + 26), lel = zU16(b, off + 28), from = off + 30 + lnl + lel;
+    const raw = b.subarray(from, from + csz);
+    out[name] = meth === 0 ? raw : await inflateRaw(raw);
+    p += 46 + nl + el + cl;
+  }
+  return out;
+}
+const xDoc = u8 => new DOMParser().parseFromString(new TextDecoder().decode(u8), "application/xml");
+/* 엑셀 날짜는 1899-12-30 부터 센 일련번호다. 25569 일이 1970-01-01 이다 */
+const xlDate = v => new Date(Math.round((v - 25569) * 86400000)).toISOString().slice(0, 10);
+function xlTime(v) {
+  let mm = Math.round((v - Math.floor(v)) * 1440);
+  mm = ((mm % 1440) + 1440) % 1440;
+  return pad(Math.floor(mm / 60)) + ":" + pad(mm % 60);
+}
+/* 어떤 서식이 날짜인지 `styles.xml` 에서 추려 둔다. 안 보면 날짜가 `46260` 으로 들어온다 */
+function xlDateStyles(doc) {
+  const set = new Set(), fmt = {};
+  if (!doc) return set;
+  doc.querySelectorAll("numFmts>numFmt").forEach(n => {
+    fmt[n.getAttribute("numFmtId")] = n.getAttribute("formatCode") || "";
+  });
+  const isDate = id => {
+    const n = +id;
+    if ((n >= 14 && n <= 22) || (n >= 45 && n <= 47)) return true;
+    const c = (fmt[id] || "").replace(/\[[^\]]*\]/g, "").replace(/"[^"]*"/g, "");
+    return /[yhs]|dd?|mm?/.test(c) && /[ymdhs]/i.test(c);
+  };
+  const xfs = doc.querySelector("cellXfs");
+  if (xfs) Array.from(xfs.children).forEach((xf, i) => {
+    if (isDate(xf.getAttribute("numFmtId") || "0")) set.add(i);
+  });
+  return set;
+}
+/* 한 시트를 2차원 배열로. 값은 글자 또는 숫자, 날짜 서식이면 `YYYY-MM-DD` 글자다 */
+function xlSheetRows(doc, shared, dstyles) {
+  const rows = [];
+  doc.querySelectorAll("sheetData>row").forEach(r => {
+    const ri = (+r.getAttribute("r") || rows.length + 1) - 1;
+    const line = rows[ri] || (rows[ri] = []);
+    r.querySelectorAll("c").forEach(c => {
+      const ref = c.getAttribute("r") || "";
+      let ci = 0;
+      for (const ch of ref) {
+        const u = ch.charCodeAt(0);
+        if (u >= 65 && u <= 90) ci = ci * 26 + (u - 64); else break;
+      }
+      ci = Math.max(0, ci - 1);
+      const t = c.getAttribute("t"), v = c.querySelector("v"), is = c.querySelector("is");
+      let out = "";
+      if (t === "s") out = shared[+(v ? v.textContent : 0)] || "";
+      else if (t === "inlineStr") out = is ? is.textContent : "";
+      else if (t === "b") out = (v && v.textContent === "1") ? "예" : "";
+      else if (v) {
+        const raw = v.textContent;
+        const num = Number(raw);
+        if (t === "str" || t === "e" || !isFinite(num) || raw === "") out = raw;
+        else if (dstyles.has(+(c.getAttribute("s") || 0)))
+          out = num < 1 ? xlTime(num) : xlDate(num);
+        else out = num;
+      }
+      line[ci] = out;
+    });
+    for (let i = 0; i < line.length; i++) if (line[i] === undefined) line[i] = "";
+  });
+  for (let i = 0; i < rows.length; i++) if (!rows[i]) rows[i] = [];
+  return rows;
+}
+async function readXlsx(buf) {
+  const z = await unzip(buf);
+  const pick = n => z[n] || z[n.replace(/^xl\//, "")] || null;
+  const wb = pick("xl/workbook.xml");
+  if (!wb) throw new Error("엑셀 파일 안에서 시트를 찾지 못했습니다.");
+  const wbDoc = xDoc(wb);
+  const relDoc = pick("xl/_rels/workbook.xml.rels") ? xDoc(pick("xl/_rels/workbook.xml.rels")) : null;
+  const rel = {};
+  if (relDoc) relDoc.querySelectorAll("Relationship").forEach(r => {
+    rel[r.getAttribute("Id")] = r.getAttribute("Target").replace(/^\/?(xl\/)?/, "");
+  });
+  const ssDoc = pick("xl/sharedStrings.xml") ? xDoc(pick("xl/sharedStrings.xml")) : null;
+  const shared = ssDoc ? Array.from(ssDoc.querySelectorAll("sst>si")).map(si =>
+    Array.from(si.querySelectorAll("t")).map(t => t.textContent).join("")) : [];
+  const dstyles = xlDateStyles(pick("xl/styles.xml") ? xDoc(pick("xl/styles.xml")) : null);
+  const out = [];
+  Array.from(wbDoc.querySelectorAll("sheets>sheet")).forEach((sh, i) => {
+    const rid = sh.getAttribute("r:id") || sh.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id");
+    const target = rel[rid] || ("worksheets/sheet" + (i + 1) + ".xml");
+    const u8 = pick("xl/" + target);
+    if (!u8) return;
+    out.push({ name: sh.getAttribute("name") || ("시트" + (i + 1)), rows: xlSheetRows(xDoc(u8), shared, dstyles) });
+  });
+  if (!out.length) throw new Error("엑셀 파일 안에서 시트를 찾지 못했습니다.");
+  return out;
+}
+
+/* ---------- 값 읽어내기 ---------- */
+function impDate(v) {
+  if (v == null || v === "") return "";
+  if (typeof v === "number") return v > 20000 && v < 80000 ? xlDate(v) : "";
+  const t = String(v).trim();
+  let m = t.match(/^(\d{4})\s*[-./년]\s*(\d{1,2})\s*[-./월]\s*(\d{1,2})/);
+  if (!m) m = t.match(/^(\d{4})(\d{2})(\d{2})$/);
+  if (!m) return "";
+  const y = +m[1], mo = +m[2], d = +m[3];
+  const dt = new Date(y, mo - 1, d);
+  if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return "";
+  return ymd(y, mo, d);
+}
+/* 시각 — "9:00" · "09:00" · "9시" · "9시 30분" · 엑셀 시각(0.375). 못 읽으면 null */
+function impTime(v) {
+  if (v == null || v === "") return "";
+  if (typeof v === "number") {
+    if (v >= 0 && v < 1) return xlTime(v);
+    if (Number.isInteger(v) && v >= 0 && v <= 24) return pad(v) + ":00";
+    return null;
+  }
+  const t = String(v).trim();
+  const m = t.match(/^(\d{1,2})\s*(?::|시)\s*(\d{1,2})?\s*분?$/) || t.match(/^(\d{1,2})$/);
+  if (!m) return null;
+  const h = +m[1], mi = m[2] ? +m[2] : 0;
+  if (h > 24 || mi > 59) return null;
+  return pad(h) + ":" + pad(mi);
+}
+/* 금액·인원 — 빈 칸은 null, 못 읽으면 NaN */
+function impNum(v) {
+  if (v == null || v === "") return null;
+  if (typeof v === "number") return v;
+  const t = String(v).replace(/[,\s원명]/g, "");
+  if (t === "" || t === "-") return null;
+  return Number(t);
+}
+const impYes = v => /^(o|y|yes|예|면제|완료|입금|1|○|◯|●|v|✓|✔|true)$/i.test(String(v == null ? "" : v).trim());
+function impFacility(v) {
+  const n = impNorm(v);
+  if (!n) return null;
+  const fs = state.facilities;
+  let f = fs.find(x => impNorm(x.name) === n);
+  if (f) return f;
+  const hit = fs.filter(x => n.includes(impNorm(x.name)) || impNorm(x.name).includes(n));
+  if (hit.length === 1) return hit[0];
+  /* 한밭체육관 · 한밭야구장 은 앞 두 글자가 같아서 **종류 낱말까지** 본다 */
+  const kw = n.includes("야구") ? "야구" : n.includes("충무") ? "충무"
+           : (n.includes("한밭") && n.includes("체육관")) ? "한밭체육관" : null;
+  if (!kw) return null;
+  const k = fs.filter(x => impNorm(x.name).includes(kw));
+  return k.length === 1 ? k[0] : null;
+}
+/* 감면은 **비율로** 맞춘다. 같은 id 라도 목록이 바뀌면 뜻이 달라진다 */
+function impDiscount(v) {
+  const t = String(v == null ? "" : v).trim();
+  const byRate = rate => state.discounts.find(d => Number(d.rate) === rate) || null;
+  if (!t || /^(없음|해당없음|해당 없음|-|0|0%)$/.test(t)) return state.discounts[0] || null;
+  if (/면제|100/.test(t)) return byRate(100);
+  const m = t.match(/(\d{1,3})\s*%?/);
+  if (m) return byRate(+m[1]);
+  return state.discounts.find(d => impNorm(d.name) === impNorm(t)) || null;
+}
+/* 머리글 줄 — 앞쪽 30줄 안에서 「날짜」 와 「시설」 이 함께 있는 줄 */
+function impHead(rows) {
+  for (let i = 0; i < Math.min(rows.length, 30); i++) {
+    const n = (rows[i] || []).map(impNorm);
+    if (n.includes("날짜") && (n.includes("시설") || n.includes("장소"))) return i;
+  }
+  return -1;
+}
+
+/* 한 줄을 예약으로. { res } 이거나 { reason } 이다. 주의 사항은 warn 에 담는다 */
+function impRow(get) {
+  const warn = [];
+  const date = impDate(get("date"));
+  if (!date) return { reason: "날짜를 읽지 못함 (" + (get("date") === "" ? "빈 칸" : String(get("date"))) + ")" };
+  const fac = impFacility(get("fac"));
+  if (!fac) return { reason: "시설을 알아보지 못함 (" + (get("fac") === "" ? "빈 칸" : String(get("fac"))) + ")" };
+  let start = impTime(get("start")), end = impTime(get("end"));
+  if (start === null) return { reason: "시작 시각을 읽지 못함 (" + get("start") + ")" };
+  if (end === null) return { reason: "종료 시각을 읽지 못함 (" + get("end") + ")" };
+  if (!start) start = "09:00";
+  if (!end) end = "18:00";
+  if (toMin(end) <= toMin(start)) warn.push("종료가 시작보다 이르거나 같음");
+
+  const kind = /준비/.test(String(get("kind"))) ? "준비" : "행사";
+  if (kind === "준비" && !(fac.prep && fac.prep.allowed)) warn.push(fac.name + " 은 준비시간을 받지 않는 시설");
+  const useType = /외/.test(String(get("useType"))) ? "체육경기 외" : "체육경기";
+
+  const exempt = impYes(get("exempt"));
+  let dc = impDiscount(get("discount"));
+  if (!dc) return { reason: "감면 유형을 알아보지 못함 (" + get("discount") + ")" };
+  if (exempt && Number(dc.rate) === 0) dc = state.discounts.find(d => Number(d.rate) === 100) || dc;
+
+  const nums = {};
+  for (const k of ["use", "annex", "power", "water", "head"]) {
+    const n = impNum(get(k));
+    if (n != null && (!isFinite(n) || n < 0)) {
+      const col = IMP_COLS.find(c => c.k === k).label;
+      return { reason: col + " 칸을 숫자로 읽지 못함 (" + get(k) + ")" };
+    }
+    nums[k] = n;
+  }
+  if (exempt && ["use", "annex", "power", "water"].some(k => nums[k] > 0)) warn.push("면제 건이라 적힌 금액을 넣지 않음");
+  if (!exempt && ["use", "annex", "power", "water"].every(k => !nums[k])) warn.push("금액이 하나도 없음 (0원으로 들어감)");
+
+  const paid = impYes(get("paid"));
+  const res = {
+    id: uid(), kind: kind, linkId: null, date: date, start: start, end: end,
+    facilityId: fac.id, status: "승인", useType: useType,
+    admission: null, schoolGame: false, annex: null, annexTimes: null,
+    power: exempt ? 0 : (nums.power || 0), water: exempt ? 0 : (nums.water || 0),
+    applicant: aiSafe(String(get("applicant")).trim()),
+    headcount: nums.head ? Math.round(nums.head) : null,
+    purpose: aiSafe(String(get("purpose")).trim()),
+    discountId: dc.id,
+    memo: aiSafe(String(get("memo")).trim()),
+    paid: paid, paidPower: paid, paidWater: paid,
+    feeOverride: null,
+    /* 옛 대장 금액 — calcLedgerFee() 가 이것을 그대로 쓴다 */
+    ledger: exempt ? { exempt: true } : { use: nums.use || 0, annex: nums.annex || 0 }
+  };
+  return { res: res, warn: warn };
+}
+const impKey = r => [r.date, r.facilityId, r.start, r.end, impNorm(r.applicant), impNorm(r.purpose), r.kind].join("|");
+
+async function impLoad(file) {
+  $("#impFileName").textContent = file.name;
+  $("#impResult").innerHTML = '<p class="hint">읽는 중…</p>';
+  $("#impApply").disabled = true;
+  IMP = null;
+  let sheets;
+  try {
+    if (!/\.xlsx$/i.test(file.name)) throw new Error(".xlsx 파일만 받습니다. 엑셀에서 「다른 이름으로 저장 → Excel 통합 문서(.xlsx)」 로 저장해 주세요.");
+    sheets = await readXlsx(await file.arrayBuffer());
+  } catch (err) {
+    $("#impResult").innerHTML = '<p class="warn">' + esc(err.message || String(err)) + "</p>";
+    return;
+  }
+  const ok = [], bad = [], dupOld = [], warns = [], ignored = new Set(), used = [];
+  let read = 0;
+  const have = new Set(state.reservations.map(impKey));
+  const seen = new Map();
+  sheets.forEach(sh => {
+    const h = impHead(sh.rows);
+    if (h < 0) return;
+    used.push(sh.name);
+    const head = sh.rows[h].map(impNorm);
+    const colOf = {};
+    head.forEach((n, i) => {
+      if (!n) return;
+      if (IMP_BLOCK.some(b => n.includes(b))) { ignored.add(String(sh.rows[h][i]).trim() + " (개인정보)"); return; }
+      const c = IMP_COLS.find(c => c.names.includes(n));
+      if (c && colOf[c.k] == null) colOf[c.k] = i;
+      else if (!c) ignored.add(String(sh.rows[h][i]).trim());
+    });
+    for (let i = h + 1; i < sh.rows.length; i++) {
+      const row = sh.rows[i] || [];
+      const get = k => colOf[k] == null ? "" : (row[colOf[k]] == null ? "" : row[colOf[k]]);
+      // 읽는 열이 모두 빈 줄은 줄로 치지 않는다
+      if (!IMP_COLS.some(c => String(get(c.k)).trim() !== "")) continue;
+      if (/^예\)/.test(String(get("date")).trim())) continue;   // 양식의 보기 줄
+      read++;
+      const at = sh.name + " " + (i + 1) + "행";
+      const x = impRow(get);
+      if (!x.res) { bad.push({ at: at, reason: x.reason }); continue; }
+      const key = impKey(x.res);
+      if (have.has(key)) { dupOld.push({ at: at, r: x.res }); continue; }
+      if (seen.has(key)) x.warn.push("파일 안에 같은 줄이 또 있음 (" + seen.get(key) + ") — 둘 다 넣음");
+      else seen.set(key, at);
+      x.warn.forEach(w => warns.push({ at: at, w: w, r: x.res }));
+      ok.push({ at: at, res: x.res });
+    }
+  });
+  if (!used.length) {
+    $("#impResult").innerHTML = '<p class="warn">「날짜」·「시설」 머리글이 있는 시트를 찾지 못했습니다. 「양식 받기」 의 머리글을 그대로 써 주세요.</p>';
+    return;
+  }
+  /* 시간 중복 검사는 옛 자료끼리 하지 않는다 — 가져온 마지막 달의 다음 달 1일부터 검사한다.
+     **뒤로만 민다.** 이미 더 늦게 잡혀 있으면 그대로 둔다 */
+  let cf = "";
+  if (ok.length) {
+    const last = ok.reduce((m, x) => x.res.date > m ? x.res.date : m, "");
+    const y = +last.slice(0, 4), mo = +last.slice(5, 7);
+    cf = mo === 12 ? ymd(y + 1, 1, 1) : ymd(y, mo + 1, 1);
+    const cur = state.settings.conflictFrom || "";
+    if (cur && cur >= cf) cf = "";
+  }
+  IMP = { ok: ok, bad: bad, dupOld: dupOld, warns: warns, read: read, cf: cf, ignored: Array.from(ignored), sheets: used };
+  impRender();
+}
+
+function impRender() {
+  const X = IMP;
+  const facName = id => (facilityOf(id) || {}).name || "-";
+  // 월별 맞춰 보기 — 원본 엑셀의 월 합계와 견줄 수 있게
+  const by = {};
+  X.ok.forEach(({ res: r }) => {
+    const ym = r.date.slice(0, 7);
+    const m = by[ym] || (by[ym] = { ev: 0, prep: 0, ex: 0, use: 0, annex: 0, power: 0, water: 0 });
+    if (r.kind === "준비") m.prep++; else m.ev++;
+    if (r.ledger.exempt) { m.ex++; return; }
+    m.use += r.ledger.use; m.annex += r.ledger.annex; m.power += r.power; m.water += r.water;
+  });
+  const tot = { ev: 0, prep: 0, ex: 0, use: 0, annex: 0, power: 0, water: 0 };
+  const yms = Object.keys(by).sort();
+  yms.forEach(k => Object.keys(tot).forEach(f => { tot[f] += by[k][f]; }));
+  const n = v => v ? won(v) : "–";
+  const tr = (lab, m, tag) => "<" + tag + ">" +
+    "<td>" + lab + "</td><td class=\"num\">" + m.ev + "</td><td class=\"num\">" + m.prep + "</td><td class=\"num\">" + m.ex + "</td>" +
+    "<td class=\"num\">" + n(m.use) + "</td><td class=\"num\">" + n(m.annex) + "</td><td class=\"num\">" + n(m.power) + "</td><td class=\"num\">" + n(m.water) + "</td>" +
+    "<td class=\"num\">" + n(m.use + m.annex + m.power + m.water) + "</td></" + tag + ">";
+  const equal = X.read === X.ok.length + X.dupOld.length + X.bad.length;
+  const list = (arr, fn) => '<ul class="imp-list">' + arr.slice(0, 200).map(fn).join("") +
+    (arr.length > 200 ? "<li>… 외 " + (arr.length - 200) + "줄</li>" : "") + "</ul>";
+  const brief = r => esc(r.date + " " + facName(r.facilityId) + " " + (r.applicant || "") + (r.purpose ? " · " + r.purpose : ""));
+
+  $("#impResult").innerHTML =
+    '<div class="imp-sum">' +
+      "<div>읽은 줄 <b class=\"mono\">" + X.read + "</b></div><div>＝</div>" +
+      "<div>가져올 줄 <b class=\"mono\">" + X.ok.length + "</b></div><div>＋</div>" +
+      "<div>이미 있는 줄 <b class=\"mono\">" + X.dupOld.length + "</b></div><div>＋</div>" +
+      "<div" + (X.bad.length ? ' class="bad"' : "") + ">못 읽은 줄 <b class=\"mono\">" + X.bad.length + "</b></div>" +
+      '<div class="' + (equal ? "ok" : "bad") + '">' + (equal ? "✓ 빠진 줄 없음" : "⚠ 줄 수가 맞지 않음") + "</div>" +
+    "</div>" +
+    '<p class="hint" style="margin:6px 0 0">읽은 시트: ' + X.sheets.map(esc).join(", ") +
+      (X.ignored.length ? " · 읽지 않은 열: " + X.ignored.map(esc).join(", ") : "") + "</p>" +
+    (X.cf ? '<p class="hint" style="margin:6px 0 0">시간 중복 검사를 <b class="mono">' + X.cf +
+      "</b> 부터 하도록 맞춥니다 — 그 앞의 옛 자료끼리는 겹쳐도 붉게 뜨지 않습니다.</p>" : "") +
+    (X.bad.length ? '<h4 class="imp-h bad">못 읽은 줄 — 들어가지 않습니다. 원본을 고쳐 다시 올리세요</h4>' +
+      list(X.bad, b => "<li><span class=\"mono\">" + esc(b.at) + "</span> " + esc(b.reason) + "</li>") : "") +
+    (X.dupOld.length ? '<h4 class="imp-h">이미 대장에 있는 줄 — 건너뜁니다</h4>' +
+      list(X.dupOld, d => "<li><span class=\"mono\">" + esc(d.at) + "</span> " + brief(d.r) + "</li>") : "") +
+    (X.warns.length ? '<h4 class="imp-h">살펴볼 줄 — 그대로 들어갑니다</h4>' +
+      list(X.warns, w => "<li><span class=\"mono\">" + esc(w.at) + "</span> " + esc(w.w) + " — " + brief(w.r) + "</li>") : "") +
+    (yms.length ? '<h4 class="imp-h">달마다 맞춰 보기 — 원본 엑셀의 합계와 견줘 보세요</h4>' +
+      '<div style="overflow:auto"><table class="tbl imp-tbl"><thead><tr><th>달</th><th class="num">행사</th><th class="num">준비</th><th class="num">면제</th>' +
+      '<th class="num">이용료</th><th class="num">부속시설</th><th class="num">전기료</th><th class="num">수도료</th><th class="num">합계</th></tr></thead><tbody>' +
+      yms.map(k => tr(k.slice(0, 4) + "년 " + (+k.slice(5)) + "월", by[k], "tr")).join("") +
+      "</tbody><tfoot>" + tr("합계", tot, "tr") + "</tfoot></table></div>" : "");
+  $("#impApply").disabled = !X.ok.length;
+  $("#impApply").textContent = X.ok.length ? X.ok.length + "건 가져오기" : "가져오기";
+  $("#impFootNote").textContent = X.ok.length ? "누르면 서버에 바로 올라갑니다" : "";
+}
+
+function impApply() {
+  if (!IMP || !IMP.ok.length) return;
+  if (currentRole() !== "manager") { toast("담당자 계정으로 로그인해야 합니다"); return; }
+  if (!RUNTIME.writable) { toast("지금은 저장할 수 없는 상태입니다"); return; }
+  if (!confirm(IMP.ok.length + "건을 대장에 넣습니다. 계속할까요?")) return;
+  const n = IMP.ok.length;
+  IMP.ok.forEach(x => state.reservations.push(x.res));
+  if (IMP.cf) state.settings.conflictFrom = IMP.cf;
+  // **짝으로 부른다** — saveNow() 만 부르면 dirty 가 안 서서 조용히 저장되지 않는다
+  save(); saveNow(true);
+  closeImport();
+  renderSettings(); renderAll();
+  toast("예약 " + n + "건을 가져왔습니다. 서버에 올리는 중입니다");
+}
+
+/* 양식 — 이 머리글 그대로 채워 올린다. 예시 줄은 넣지 않는다 (지우지 않고 올리면 들어가 버린다) */
+function impTemplateXlsx() {
+  const FSZ = 11;
+  const wb = xwNew("가져오기 양식");
+  const S = o => xwStyle(wb, Object.assign({ fn: "맑은 고딕", sz: FSZ }, o));
+  const GR = "FF999999", box = { t: "thin|" + GR, b: "thin|" + GR, l: "thin|" + GR, r: "thin|" + GR };
+  const sTitle = S({ sz: 14, b: 1, v: "center" });
+  const sNote = S({ c: "FF555555", v: "center" });
+  const sHead = S({ b: 1, h: "center", v: "center", bd: box, fl: { p: "solid", fg: "DDDDDD" } });
+  const sReq = S({ b: 1, h: "center", v: "center", bd: box, fl: { p: "solid", fg: "FFF2CC" } });
+  const sEx = S({ c: "FF777777", h: "center", v: "center", w: 1, bd: box });
+  const N = IMP_COLS.length;
+  xwPut(wb, 0, 0, { t: "시설 예약 관리대장 — 엑셀 가져오기 양식", s: sTitle });
+  const notes = [
+    "· 5행 머리글은 고치지 않습니다. 6행부터 한 줄에 한 건씩 적습니다. 노란 머리글(날짜·시설)은 꼭 적습니다.",
+    "· 날짜는 2026-08-01 모양, 시설은 " + state.facilities.map(f => f.name).join(" · ") + " 중 하나. 시각을 모르면 비워 둡니다 (09:00~18:00).",
+    "· 금액은 엑셀 대장에 적힌 그대로 넣습니다 (감면 반영된 금액). 면제 건은 「면제」 칸에 O 를 적고 금액을 비웁니다. 입금 칸에 O 를 적으면 입금 완료로 들어갑니다."
+  ];
+  notes.forEach((t, i) => { xwPut(wb, 1 + i, 0, { t: t, s: sNote }); wb.merges.push([1 + i, 0, 1, N]); });
+  wb.merges.push([0, 0, 1, N]);
+  IMP_COLS.forEach((c, i) => {
+    xwPut(wb, 4, i, { t: c.label, s: c.req ? sReq : sHead });
+    xwPut(wb, 5, i, { t: c.ex ? "예) " + c.ex : "", s: sEx });
+  });
+  wb.rowH[0] = 24; wb.rowH[4] = 22; wb.rowH[5] = 30;
+  wb.cols = IMP_COLS.map(c => Math.round((c.w + 2) * 10) / 10);
+  wb.page = { orient: "landscape", fitW: 1 };
+  downloadBytes("예약가져오기_양식.xlsx", xwXlsx(wb),
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  toast("양식을 내려받았습니다 — 6행의 「예)」 줄은 지우고 적으세요");
+}
+
+function openImport() {
+  if (currentRole() !== "manager") { toast("담당자 계정으로 로그인해야 합니다"); return; }
+  IMP = null;
+  $("#impFileName").textContent = "";
+  $("#impResult").innerHTML = "";
+  $("#impApply").disabled = true;
+  $("#impApply").textContent = "가져오기";
+  $("#impFootNote").textContent = "";
+  $("#settingsBox").hidden = true;
+  $("#impBox").hidden = false;
+}
+function closeImport() { $("#impBox").hidden = true; IMP = null; }
+
+/* =========================================================
    10. 렌더 총괄
    ========================================================= */
 function renderAll() {
@@ -6423,7 +6978,8 @@ function init() {
     if (cp) {
       const src = state.reservations.find(x => x.id === cp.dataset.copy);
       if (src) {
-        const c = Object.assign({}, src, { id: uid(), status: "신청" });
+        // 옛 대장 금액은 그 건의 기록이라 복제본에 딸려 보내지 않는다 (금액이 두 번 잡힌다)
+        const c = Object.assign({}, src, { id: uid(), status: "신청", ledger: null });
         state.reservations.push(c); save(); saveNow(true); renderAll(); openModal(c.id);
       }
     }
@@ -6518,6 +7074,7 @@ function init() {
      글자를 끌어 고르다가 손을 창 밖에서 떼면 그것도 바깥 클릭으로 잡혀서,
      적던 내용이 통째로 날아갔다(‘튕김’). 닫기는 닫기 ✕ · 취소 · Esc 로만 한다 */
   document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && !$("#impBox").hidden) { closeImport(); return; }
     if (e.key === "Escape" && !$("#copyBox").hidden) { $("#copyBox").hidden = true; return; }
     if (e.key === "Escape" && !$("#printBox").hidden) { $("#printBox").hidden = true; return; }
     if (e.key === "Escape" && !$("#aiBox").hidden) { $("#aiBox").hidden = true; return; }
@@ -6764,6 +7321,7 @@ function init() {
     if (!b || !b.id) return;
     const run = { clearRes: doClearRes, resetAll: doResetAll, exportJson: doExportJson,
                   importJson: doImportJson, importPaste: doImportPaste,
+                  openImport: openImport,
                   setSave: saveSettingsNow,
                   setStampPick: () => $("#setStampFile").click(),
                   setStampReset: () => {
@@ -6820,6 +7378,16 @@ function init() {
   $("#pdAll").addEventListener("click", () => $$("#printDateList [data-pd]").forEach(el => { el.checked = true; }));
   $("#pdNone").addEventListener("click", () => $$("#printDateList [data-pd]").forEach(el => { el.checked = false; }));
 
+  // 엑셀 가져오기 (9-E) — 바깥을 눌러도 닫지 않는다 (등록창과 같은 까닭)
+  $("#impClose").addEventListener("click", closeImport);
+  $("#impCancel").addEventListener("click", closeImport);
+  $("#impPick").addEventListener("click", () => $("#impFile").click());
+  $("#impTemplate").addEventListener("click", impTemplateXlsx);
+  $("#impApply").addEventListener("click", impApply);
+  $("#impFile").addEventListener("change", e => {
+    const f = e.target.files[0]; e.target.value = "";
+    if (f) impLoad(f);
+  });
   $("#copyClose").addEventListener("click", () => { $("#copyBox").hidden = true; });
   // 누른 자리와 뗀 자리가 모두 바깥일 때만 닫는다 (드래그로 닫히지 않게)
   let copyDownOutside = false;
