@@ -1797,7 +1797,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-09-23.56";
+const APP_VERSION = "2026-09-23.57";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -6356,7 +6356,9 @@ function impRow(get) {
     nums[k] = n;
   }
   if (exempt && ["use", "annex", "power", "water"].some(k => nums[k] > 0)) warn.push("면제 건이라 적힌 금액을 넣지 않음");
-  if (!exempt && ["use", "annex", "power", "water"].every(k => !nums[k])) warn.push("금액이 하나도 없음 (0원으로 들어감)");
+  /* 금액 칸이 **모두 빈 칸**일 때만 알린다. 0 을 적은 것은 일부러 0원이다 —
+     여러 날 대관의 뒷날은 금액을 첫날에 모으고 0 을 적는다 */
+  if (!exempt && ["use", "annex", "power", "water"].every(k => nums[k] == null)) warn.push("금액 칸이 모두 비어 있음 (0원으로 들어감)");
 
   const paid = impYes(get("paid"));
   const res = {
@@ -6440,7 +6442,11 @@ async function impLoad(file) {
     const cur = state.settings.conflictFrom || "";
     if (cur && cur >= cf) cf = "";
   }
-  IMP = { ok: ok, bad: bad, dupOld: dupOld, warns: warns, read: read, cf: cf, ignored: Array.from(ignored), sheets: used };
+  /* 지난 달까지의 자료일 때만 미리 켠다. 앞으로 있을 일정까지 든 파일에 켜 두면
+     그 사이에 새로 등록하는 예약의 겹침 경고까지 꺼진다 */
+  const thisMonth = ymd(new Date().getFullYear(), new Date().getMonth() + 1, 1);
+  IMP = { ok: ok, bad: bad, dupOld: dupOld, warns: warns, read: read, cf: cf, cfOn: !!cf && cf <= thisMonth,
+          ignored: Array.from(ignored), sheets: used };
   impRender();
 }
 
@@ -6479,8 +6485,11 @@ function impRender() {
     "</div>" +
     '<p class="hint" style="margin:6px 0 0">읽은 시트: ' + X.sheets.map(esc).join(", ") +
       (X.ignored.length ? " · 읽지 않은 열: " + X.ignored.map(esc).join(", ") : "") + "</p>" +
-    (X.cf ? '<p class="hint" style="margin:6px 0 0">시간 중복 검사를 <b class="mono">' + X.cf +
-      "</b> 부터 하도록 맞춥니다 — 그 앞의 옛 자료끼리는 겹쳐도 붉게 뜨지 않습니다.</p>" : "") +
+    (X.cf ? '<label class="hint" style="display:flex;gap:6px;align-items:flex-start;margin:6px 0 0">' +
+      '<input type="checkbox" id="impCf"' + (X.cfOn ? " checked" : "") + '><span>시간 중복 검사를 <b class="mono">' + X.cf +
+      "</b> 부터 하도록 맞춥니다 — 그 앞의 옛 자료끼리는 겹쳐도 붉게 뜨지 않습니다." +
+      (X.cfOn ? "" : " <b>앞으로 있을 일정이 든 파일이라 꺼 두었습니다</b> — 켜면 그날까지 새로 등록하는 예약의 겹침 경고도 꺼집니다.") +
+      "</span></label>" : "") +
     (X.bad.length ? '<h4 class="imp-h bad">못 읽은 줄 — 들어가지 않습니다. 원본을 고쳐 다시 올리세요</h4>' +
       list(X.bad, b => "<li><span class=\"mono\">" + esc(b.at) + "</span> " + esc(b.reason) + "</li>") : "") +
     (X.dupOld.length ? '<h4 class="imp-h">이미 대장에 있는 줄 — 건너뜁니다</h4>' +
@@ -6504,7 +6513,7 @@ function impApply() {
   if (!confirm(IMP.ok.length + "건을 대장에 넣습니다. 계속할까요?")) return;
   const n = IMP.ok.length;
   IMP.ok.forEach(x => state.reservations.push(x.res));
-  if (IMP.cf) state.settings.conflictFrom = IMP.cf;
+  if (IMP.cf && $("#impCf") && $("#impCf").checked) state.settings.conflictFrom = IMP.cf;
   // **짝으로 부른다** — saveNow() 만 부르면 dirty 가 안 서서 조용히 저장되지 않는다
   save(); saveNow(true);
   closeImport();
