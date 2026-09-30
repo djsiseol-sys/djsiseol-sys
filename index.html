@@ -168,6 +168,13 @@ main{max-width:1440px;margin:0 auto;padding:18px 20px 60px}
 .legend{display:flex;gap:14px;font-size:11px;color:var(--muted);flex-wrap:wrap}
 .legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
 .legend .fac i{background:var(--fc-soft);border:1px solid var(--fc-line)}
+/* 달력 시설 고르기 — 범례의 시설 이름이 곧 체크다 (끈 시설은 달력에서 빠진다) */
+.legend label.fac{display:inline-flex;align-items:center;gap:4px;cursor:pointer;user-select:none;
+  padding:2px 6px 2px 4px;border:1px solid var(--line);border-radius:4px;color:var(--ink)}
+.legend label.fac input{margin:0;accent-color:var(--accent);cursor:pointer}
+.legend label.fac i{margin-right:0}
+.legend label.fac.off{color:var(--muted)}
+.legend label.fac.off i{opacity:.35}
 .legend-sep{width:1px;align-self:stretch;background:var(--line)}
 .lg-prep{background:var(--accent-soft);box-shadow:inset 2px 0 0 var(--accent)}
 .lg-cancel{background:var(--line-strong)}
@@ -1749,7 +1756,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-09-22.55";
+const APP_VERSION = "2026-09-30.56";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -3067,6 +3074,21 @@ function byDateTime(a, b) {
   return a.date.localeCompare(b.date) || byTime(a, b);
 }
 
+/* 달력에 띄울 시설 — 범례의 체크로 고른다. **끈 시설의 id** 만 담는다
+   (새로 더한 시설은 저절로 보인다). 보는 사람 저마다의 편의라 자료(state)에 넣지 않고
+   이 브라우저에만 남긴다. 우측 상세·목록·요금 관리는 거르지 않는다 */
+const CAL_FAC_KEY = "facility-ledger.calHideFac";
+const CAL_HIDE = new Set((() => {
+  try { const a = JSON.parse(localStorage.getItem(CAL_FAC_KEY) || "[]"); return Array.isArray(a) ? a : []; }
+  catch (e) { return []; }
+})());
+function calFacOn(r) { return !CAL_HIDE.has(r.facilityId); }
+function calFacFiltered() { return state.facilities.some(f => CAL_HIDE.has(f.id)); }
+function setCalFac(id, on) {
+  if (on) CAL_HIDE.delete(id); else CAL_HIDE.add(id);
+  try { localStorage.setItem(CAL_FAC_KEY, JSON.stringify([...CAL_HIDE])); } catch (e) {}
+}
+
 function monthReservations(y, m) {
   const p = y + "-" + pad(m);
   return state.reservations.filter(r => r.date.startsWith(p));
@@ -3090,7 +3112,7 @@ function calCellsHtml(o) {
   const todayStr = ymd(today.getFullYear(), today.getMonth() + 1, today.getDate());
 
   const byDate = {};
-  monthReservations(y, m).forEach(r => (byDate[r.date] = byDate[r.date] || []).push(r));
+  monthReservations(y, m).filter(calFacOn).forEach(r => (byDate[r.date] = byDate[r.date] || []).push(r));
   Object.values(byDate).forEach(a => a.sort(byFacility));
 
   const cells = [];
@@ -3105,7 +3127,7 @@ function calCellsHtml(o) {
     const dow = (i % 7);
     // 인쇄판은 이번 달만 찍는다. 앞뒤 달 칸은 자리만 남기고 비운다
     if (out && !live) { cells.push('<div class="cell out blank"></div>'); continue; }
-    const dayAll = byDate[date] || (out ? state.reservations.filter(r => r.date === date) : []);
+    const dayAll = byDate[date] || (out ? state.reservations.filter(r => r.date === date && calFacOn(r)) : []);
     const items = dayAll.filter(r => kinds.includes(r.kind || "행사"));
     const evCount = dayAll.filter(r => (r.kind || "행사") !== "준비").length;
     const prepCount = dayAll.length - evCount;
@@ -3165,26 +3187,35 @@ function calCellsHtml(o) {
 function renderCalendar() {
   const y = view.year, m = view.month;
   $("#calTitle").textContent = y + "년 " + m + "월";
-  const mr = monthReservations(y, m).filter(r => r.status !== "취소");
+  // 범례에서 끈 시설은 부제의 건수·금액에서도 뺀다 (달력에 보이는 것과 맞춘다)
+  const mr = monthReservations(y, m).filter(r => r.status !== "취소" && calFacOn(r));
   const nEv = mr.filter(r => r.kind !== "준비").length, nPr = mr.length - nEv;
+  const shown = state.facilities.filter(f => !CAL_HIDE.has(f.id));
   /* 로그인하지 않은 사람에게는 월간 이용료를 **만들어 넣지 않는다** (감추는 것이 아니다).
      `renderSummary`·`renderList` 와 같은 규칙이다 — 위 「역할」 절 참고.
      금액을 합산하는 일 자체를 하지 않으므로 개발자도구로도 보이지 않는다 */
   const money = currentRole() !== "viewer";
   $("#calSubtitle").textContent = "행사 " + nEv + "건" + (nPr ? " · 준비 " + nPr + "건" : "") +
-    (money ? " · 이용료 " + won(mr.reduce((a, r) => a + feeOf(r), 0)) + "원" : "");
+    (money ? " · 이용료 " + won(mr.reduce((a, r) => a + feeOf(r), 0)) + "원" : "") +
+    (calFacFiltered() ? " · " + (shown.length ? shown.map(f => f.name).join("·") + "만" : "고른 시설 없음") : "");
   $("#calOrgNote").textContent = state.settings.orgNote || "";   // 인쇄할 때만 보인다
 
   // 달력 화면에는 행사만 띄운다. 준비는 날짜를 누르면 우측에서 함께 보인다
   $("#calGrid").innerHTML = calCellsHtml({ year: y, month: m, kinds: ["행사"], cap: CAL_CHIPS, live: true });
+  // 범례가 곧 시설 고르기다. 체크를 끄면 그 시설 일정이 달력에서 빠진다
   $("#facLegend").innerHTML = state.facilities
-    .map(f => '<span class="fac" data-fc="' + colorOf(f) + '"><i></i>' + esc(f.name) + "</span>")
+    .map(f => {
+      const on = !CAL_HIDE.has(f.id);
+      return '<label class="fac' + (on ? "" : " off") + '" data-fc="' + colorOf(f) + '" title="달력에 ' +
+        esc(f.name) + (on ? " 일정을 띄웁니다. 끄면 빠집니다" : " 일정이 빠져 있습니다. 켜면 다시 보입니다") + '">' +
+        '<input type="checkbox" data-calfac="' + esc(f.id) + '"' + (on ? " checked" : "") + "><i></i>" + esc(f.name) + "</label>";
+    })
     .join(" ");
   renderSummary();
 }
 
 function renderSummary() {
-  const mr = monthReservations(view.year, view.month);
+  const mr = monthReservations(view.year, view.month).filter(calFacOn);   // 달력에서 고른 시설만
   const live = mr.filter(r => r.status !== "취소");
   const ev = live.filter(r => r.kind !== "준비");
   const pr = live.filter(r => r.kind === "준비");
@@ -4825,9 +4856,10 @@ function pickedPrintDates() {
    현장에 붙여 두는 종이가 다르기 때문이다 (행사 일정표 / 준비 작업표) */
 function buildPrintCalendar(kindList, showHead) {
   const y = view.year, m = view.month;
-  const mr = monthReservations(y, m).filter(r => r.status !== "취소");
+  // 화면 달력에서 고른 시설만 찍는다 (한 체육관 일정표만 뽑아 붙일 수 있게)
+  const mr = monthReservations(y, m).filter(r => r.status !== "취소" && calFacOn(r));
   const org = state.settings.orgNote || "";
-  const legend = '<span class="pc-legend">' + state.facilities
+  const legend = '<span class="pc-legend">' + state.facilities.filter(f => !CAL_HIDE.has(f.id))
     .map(f => '<span data-fc="' + colorOf(f) + '"><i></i>' + esc(f.name) + "</span>").join("") + "</span>";
 
   $("#printArea").innerHTML = kindList.map(kind => {
@@ -6392,6 +6424,14 @@ function init() {
     const next = cur === "dark" ? "light" : cur === "light" ? "" : "dark";
     if (next) document.documentElement.setAttribute("data-theme", next);
     else document.documentElement.removeAttribute("data-theme");
+  });
+
+  // 달력 시설 고르기 — 범례의 체크. 보는 사람의 편의라 저장(save)하지 않는다
+  $("#facLegend").addEventListener("change", e => {
+    const cb = e.target.closest("input[data-calfac]");
+    if (!cb) return;
+    setCalFac(cb.dataset.calfac, cb.checked);
+    renderCalendar();
   });
 
   // 달력 클릭
