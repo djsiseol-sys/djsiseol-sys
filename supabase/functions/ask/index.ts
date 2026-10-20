@@ -12,6 +12,11 @@
      AI_EFFORT            low (기본) | none | minimal | medium | high | off(안 보냄)
      AI_MAX_TOKENS        기본 1200
 
+   **흘려보내기(스트리밍)** — 대장이 `stream: true` 를 보내면 업체의 답을 받는 대로
+   한 조각씩 넘긴다 (Server-Sent Events). 업체마다 조각 모양이 달라서 여기서 한 가지 꼴로 고른다:
+     data: {"t":"글 조각"}   data: {"note":"…"}   data: {"error":"…"}   data: {"done":true}
+   `stream` 이 없으면 예전처럼 JSON 한 덩이로 답한다.
+
    로그인한 사람만 부를 수 있다 — `verify_jwt` 를 켜 두면 Supabase 가 먼저 막는다.
    설치 절차는 저장소의 `AI설치안내.md` 를 본다.
    ============================================================ */
@@ -152,6 +157,7 @@ Deno.serve(async (req: Request) => {
   const messages = [...turns, { role: "user", content: userText }];
 
   let url: string, payload: Record<string, unknown>;
+  const stream = body.stream === true;
   if (STYLE === "chat") {
     url = BASE_URL + "/chat/completions";
     payload = {
@@ -170,6 +176,7 @@ Deno.serve(async (req: Request) => {
     };
     if (EFFORT !== "off") payload.reasoning = { effort: EFFORT };
   }
+  if (stream) payload.stream = true;
 
   let res: Response;
   try {
@@ -181,6 +188,9 @@ Deno.serve(async (req: Request) => {
   } catch (e) {
     return json({ error: "AI 업체에 연결하지 못했습니다 — " + (e as Error).message }, 502);
   }
+
+  const isSSE = /event-stream/.test(res.headers.get("content-type") || "");
+  if (stream && res.ok && isSSE && res.body) return relay(res.body);
 
   const raw = await res.text();
   let data: any = null;
@@ -194,5 +204,70 @@ Deno.serve(async (req: Request) => {
     return json({ error: "답을 읽지 못했습니다. 응답 형식이 예상과 다릅니다 (AI_STYLE 확인). 받은 항목: " +
       (data && typeof data === "object" ? Object.keys(data).join(", ") : typeof data) }, 502);
   }
+  // 흘려받기를 원했는데 업체가 한 덩이로 답했으면, 그 덩이를 한 조각으로 흘려 준다
+  if (stream) return sse([{ t: text }, { done: true }]);
   return json({ text, model: MODEL });
 });
+
+const SSE_HEADERS = { ...CORS, "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache" };
+const enc = new TextEncoder();
+const frame = (o: unknown) => enc.encode("data: " + JSON.stringify(o) + "\n\n");
+
+function sse(events: unknown[]) {
+  return new Response(new ReadableStream({
+    start(c) { for (const e of events) c.enqueue(frame(e)); c.close(); },
+  }), { headers: SSE_HEADERS });
+}
+
+/* 업체의 SSE 를 읽어 우리 꼴로 바꿔 흘려보낸다.
+   Responses API — response.output_text.delta / response.incomplete / response.failed · error
+   Chat Completions — choices[0].delta.content / finish_reason "length" / [DONE] */
+function relay(up: ReadableStream<Uint8Array>) {
+  const reader = up.getReader();
+  const dec = new TextDecoder();
+  return new Response(new ReadableStream({
+    async start(c) {
+      let buf = "", got = false;
+      const send = (o: unknown) => c.enqueue(frame(o));
+      const cut = "답이 길어 중간에서 끊겼습니다 (AI_MAX_TOKENS 를 늘리면 더 길게 받습니다)";
+      const take = (line: string) => {
+        if (!line.startsWith("data:")) return;
+        const d = line.slice(5).trim();
+        if (!d || d === "[DONE]") return;
+        let ev: any; try { ev = JSON.parse(d); } catch { return; }
+        // Responses API
+        if (ev.type === "response.output_text.delta" && typeof ev.delta === "string") { got = true; send({ t: ev.delta }); return; }
+        if (ev.type === "response.incomplete") { send({ note: cut }); return; }
+        if (ev.type === "response.failed" || ev.type === "error") {
+          send({ error: ev.response?.error?.message || ev.error?.message || ev.message || "AI 업체가 답을 끝내지 못했습니다" });
+          return;
+        }
+        // Chat Completions
+        const ch = ev.choices?.[0];
+        if (ch) {
+          const t = typeof ch.delta?.content === "string" ? ch.delta.content : "";
+          if (t) { got = true; send({ t }); }
+          if (ch.finish_reason === "length") send({ note: cut });
+          return;
+        }
+        if (ev.error) send({ error: ev.error.message || String(ev.error) });
+      };
+      try {
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          let k;
+          while ((k = buf.indexOf("\n")) >= 0) { take(buf.slice(0, k).replace(/\r$/, "")); buf = buf.slice(k + 1); }
+        }
+        if (buf) take(buf);
+        if (!got) send({ error: "답을 읽지 못했습니다. 흘려받은 형식이 예상과 다릅니다 (AI_STYLE 확인)" });
+        send({ done: true });
+      } catch (e) {
+        send({ error: "답을 받다가 끊겼습니다 — " + (e as Error).message });
+      }
+      c.close();
+    },
+    cancel() { reader.cancel().catch(() => {}); },
+  }), { headers: SSE_HEADERS });
+}

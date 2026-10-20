@@ -411,27 +411,109 @@ td.dow-sun{color:var(--sun);font-weight:600}
 .qsum .note{color:var(--ink-2);font-size:12px}
 .qsum .warn{color:var(--alert);font-size:12px;font-weight:600}
 #qResult .fee-why{margin-top:12px}
-/* AI 도우미 — 주고받은 말을 위아래로 쌓는다. 답은 esc() 를 거쳐 글자로만 넣는다 */
-.ai-log{display:flex;flex-direction:column;gap:10px;min-height:160px}
-.ai-msg{max-width:88%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;
-  font-size:13px;line-height:1.7;word-break:keep-all;overflow-wrap:anywhere}
-/* 표가 든 답은 폭을 다 쓴다 — 표가 좁은 말풍선에 갇히면 읽을 수가 없다 */
-.ai-msg.has-tbl{max-width:100%;align-self:stretch}
-.ai-msg.me{align-self:flex-end;background:var(--surface);border-color:var(--line-strong)}
-.ai-msg.err{border-color:var(--alert);color:var(--alert)}
-.ai-msg .who{display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--faint);margin-bottom:3px}
-.ai-xls{margin-left:auto;font-size:11px;padding:2px 8px}
-.ai-p{white-space:pre-wrap}
-.ai-p+.ai-p{margin-top:6px}
-/* 답에 든 표 — 화면 표와 같은 테두리·머리글을 쓴다. 좁으면 가로로 굴린다 */
-.ai-tblwrap{overflow-x:auto;margin:8px 0}
-.ai-tbl{border-collapse:collapse;font-size:12px}
-.ai-tbl th,.ai-tbl td{border:1px solid var(--line);padding:5px 9px;text-align:left;vertical-align:top}
+/* AI 도우미 — 챗봇 모양 (2026-10-20 담당자 요청 「너무 사각형에 딱딱하다」).
+   가운데 한 줄(.ai-col)에 말을 쌓고, 입력칸은 아래에 붙박이로 둔다.
+   **새 색을 만들지 않았다** — 바탕·강조·경고 모두 기존 토큰이다.
+   답은 esc() 를 거쳐 글자로만 넣는다 (aiHtml) */
+#aiBox{align-items:center;padding:24px 16px}
+.ai-win{max-width:920px;height:min(860px,calc(100vh - 48px));display:flex;flex-direction:column;
+  border-radius:18px;overflow:hidden;background:var(--bg)}
+.ai-head{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:12px 14px 12px 18px;
+  background:var(--surface);border-bottom:1px solid var(--line)}
+.ai-head .ai-title{flex:1;min-width:0;display:flex;flex-direction:column}
+.ai-head h2{margin:0;font-size:15px;font-weight:600}
+.ai-head .ai-sub{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ai-head .btn{border-radius:999px}
+.ai-logo,.ai-ava{flex:none;display:inline-grid;place-items:center;border-radius:50%;
+  background:var(--accent);color:var(--surface);font-size:14px;line-height:1}
+.ai-logo{width:32px;height:32px}
+.ai-ava{width:28px;height:28px;font-size:12px;margin-top:1px}
+.ai-scroll{flex:1 1 auto;overflow-y:auto;overscroll-behavior:contain;scroll-behavior:auto}
+.ai-col{max-width:760px;margin:0 auto;padding:0 20px}
+.ai-scroll .ai-col{padding-top:24px;padding-bottom:24px}
+
+/* 첫 화면 — 인사 · 이 창이 지키는 것 · 예시 질문 */
+.ai-hello{text-align:center;padding:28px 0 8px}
+.ai-hello .ai-logo{width:48px;height:48px;font-size:20px;margin-bottom:14px}
+.ai-hello h3{margin:0 0 6px;font-size:21px;font-weight:600;letter-spacing:-.01em}
+.ai-hello>p{margin:0 auto;max-width:520px;color:var(--ink-2);font-size:13px;line-height:1.7}
+.ai-rules{list-style:none;margin:18px auto 0;padding:0;max-width:560px;display:flex;flex-wrap:wrap;
+  justify-content:center;gap:6px}
+.ai-rules li{font-size:11.5px;color:var(--ink-2);background:var(--surface);border:1px solid var(--line);
+  border-radius:999px;padding:4px 11px}
+.ai-tips{margin:26px auto 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;text-align:left}
+.ai-tip{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:1px solid var(--line);
+  border-radius:14px;background:var(--surface);color:var(--ink);font-size:13px;line-height:1.5;text-align:left;cursor:pointer}
+.ai-tip small{font-size:11px;color:var(--muted)}
+.ai-tip:hover{border-color:var(--line-strong);background:var(--surface-2)}
+
+/* 주고받은 말 */
+.ai-log{display:flex;flex-direction:column;gap:22px}
+.ai-row{display:flex;gap:12px;align-items:flex-start}
+.ai-row.me{justify-content:flex-end}
+.ai-bubble{max-width:78%;padding:10px 15px;border-radius:18px 18px 4px 18px;background:var(--accent-soft);
+  color:var(--ink);font-size:13.5px;line-height:1.65;white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere}
+.ai-body{flex:1;min-width:0;font-size:13.5px;line-height:1.75;color:var(--ink);word-break:keep-all;overflow-wrap:anywhere}
+.ai-body.err .ai-md{color:var(--alert);background:var(--alert-soft);border:1px solid var(--alert);
+  border-radius:12px;padding:9px 13px}
+.ai-md>*:first-child{margin-top:0}
+.ai-md>*:last-child{margin-bottom:0}
+.ai-md p{margin:0 0 9px;white-space:pre-wrap}
+.ai-md h4{margin:14px 0 6px;font-size:14px;font-weight:600}
+.ai-md ul,.ai-md ol{margin:0 0 9px;padding-left:22px}
+.ai-md li{margin:2px 0}
+.ai-md code{font-family:"IBM Plex Mono",monospace;font-size:12px;background:var(--surface-2);
+  border-radius:4px;padding:1px 5px}
+.ai-stop{font-size:11.5px;color:var(--muted);margin-top:6px}
+/* 답을 받는 중 — 글이 흘러나오는 자리에 커서를, 아직 한 글자도 없으면 점 셋을 띄운다 */
+.ai-caret::after{content:"";display:inline-block;width:7px;height:15px;margin-left:2px;vertical-align:-2px;
+  background:var(--accent);border-radius:1px;animation:aiBlink 1s steps(1) infinite}
+.ai-dots{display:inline-flex;gap:4px;padding:8px 0}
+.ai-dots i{width:7px;height:7px;border-radius:50%;background:var(--faint);animation:aiDot 1.2s infinite ease-in-out}
+.ai-dots i:nth-child(2){animation-delay:.15s}
+.ai-dots i:nth-child(3){animation-delay:.3s}
+@keyframes aiBlink{50%{opacity:0}}
+@keyframes aiDot{0%,80%,100%{opacity:.3;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}
+@media (prefers-reduced-motion:reduce){.ai-caret::after,.ai-dots i{animation:none}}
+/* 답 밑의 작은 단추 — 복사 · 엑셀 · 다시 생성 */
+.ai-acts{display:flex;gap:2px;margin-top:6px;margin-left:-8px}
+.ai-acts button{border:0;background:transparent;color:var(--muted);font-size:11.5px;padding:3px 8px;border-radius:999px;cursor:pointer}
+.ai-acts button:hover{background:var(--surface-2);color:var(--ink)}
+
+/* 답에 든 표 — 둥근 테두리 안에 가로로만 가른다. 좁으면 가로로 굴린다 */
+.ai-tblwrap{overflow-x:auto;margin:10px 0;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.ai-tbl{border-collapse:collapse;font-size:12.5px;width:100%}
+.ai-tbl th,.ai-tbl td{padding:7px 12px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+.ai-tbl tbody tr:last-child td{border-bottom:0}
 /* 날짜·시각처럼 띄어쓰기 없는 칸은 저절로 한 줄로 남고, 긴 행사명만 낱말 단위로 접힌다.
    전부 nowrap 으로 두면 표가 창을 넘겨 오른쪽이 잘린다 */
 .ai-tbl td{white-space:normal;word-break:keep-all}
-.ai-tbl th{white-space:nowrap}
-.ai-tbl th{background:var(--surface);font-weight:600}
+.ai-tbl th{white-space:nowrap;background:var(--surface-2);font-weight:600;color:var(--ink-2);font-size:12px}
+
+/* 입력칸 — 둥근 상자 하나에 글칸과 범위·메모·보내기를 함께 담는다 */
+.ai-dock{flex:0 0 auto;padding:4px 0 12px;background:var(--bg)}
+.ai-composer{border:1px solid var(--line-strong);border-radius:22px;background:var(--surface);
+  box-shadow:var(--shadow);padding:10px 10px 8px 16px;display:flex;flex-direction:column;gap:6px}
+.ai-composer:focus-within{border-color:var(--accent)}
+.ai-composer textarea{border:0;outline:0;background:transparent;color:var(--ink);resize:none;
+  font:inherit;font-size:14px;line-height:1.6;min-height:24px;max-height:200px;padding:4px 0}
+.ai-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ai-pill{font:inherit;font-size:12px;color:var(--ink-2);border:1px solid var(--line);background:var(--surface);
+  border-radius:999px;padding:4px 10px}
+select.ai-pill{padding-right:6px}
+.ai-chk{display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+.ai-chk input{margin:0}
+.ai-send{margin-left:auto;width:34px;height:34px;padding:0;border-radius:50%;display:grid;place-items:center;
+  font-size:16px;line-height:1;font-weight:600}
+.ai-send:disabled{opacity:.35;cursor:default;filter:none}
+.ai-foot{margin:7px 0 0;font-size:11px;color:var(--faint);text-align:center;line-height:1.5}
+@media (max-width:640px){
+  #aiBox{padding:0}
+  .ai-win{height:100vh;height:100dvh;border-radius:0;max-width:none;border:0}
+  .ai-col{padding:0 12px}
+  .ai-bubble{max-width:88%}
+  .ai-head .ai-sub{display:none}
+}
 /* 분석 — 시설마다 그래프를 따로 둔다. 색은 달력·목록과 같은 시설 구분색 그대로다
    (`data-fc` 가 --fc-ink 를 정한다). **새 색을 만들지 않았다** */
 .st-kpi{display:flex;gap:10px;flex-wrap:wrap}
@@ -544,14 +626,6 @@ td.dow-sun{color:var(--sun);font-weight:600}
 .st-legend{display:flex;flex-wrap:wrap;gap:16px;margin:2px 0 8px;font-size:11.5px;color:var(--ink-2)}
 .st-legend span{display:flex;align-items:center;gap:6px}
 .st-legend i{width:14px;height:3px;border-radius:2px;background:var(--fc-chart);flex:none}
-.ai-opts{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;font-size:12px}
-.ai-opts>label{color:var(--ink-2)}
-.ai-opts select{font:inherit}
-.ai-chk{display:flex;align-items:center;gap:5px;cursor:pointer}
-.ai-opts .hint{margin-left:auto;text-align:right}
-.ai-tips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
-.ai-ask{display:flex;gap:8px;align-items:stretch;width:100%}
-.ai-ask textarea{flex:1;min-height:58px;resize:vertical;font:inherit}
 .notice{font-size:12px;padding:8px 10px;border-radius:var(--r);background:var(--alert-soft);color:var(--alert);border:1px solid var(--alert)}
 
 .rob{font-size:10px;letter-spacing:.06em;padding:2px 8px;border-radius:999px;border:1px solid var(--line-strong);color:var(--muted)}
@@ -1542,41 +1616,53 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
      그건 calcFee() 가 하고, 정확한 금액은 「요금 계산」 탭에서 본다.
      키는 브라우저에 없다. Supabase Edge Function 이 중간에서 부른다 -->
 <div class="backdrop" id="aiBox" hidden>
-  <div class="modal" style="max-width:880px">
-    <div class="modal-head">
-      <h2>AI 도우미</h2>
+  <div class="modal ai-win" role="dialog" aria-modal="true" aria-labelledby="aiTitle">
+    <div class="ai-head">
+      <span class="ai-logo" aria-hidden="true">✦</span>
+      <div class="ai-title">
+        <h2 id="aiTitle">AI 도우미</h2>
+        <span class="ai-sub">조례 · 지금 설정된 요금 기준 · 대장에 적힌 예약 내역을 보고 답합니다</span>
+      </div>
+      <button type="button" class="btn btn-quiet btn-sm" id="aiNew" title="주고받은 말을 비우고 새로 시작합니다">＋ 새 대화</button>
       <button type="button" class="btn btn-quiet btn-sm" id="aiClose">닫기 ✕</button>
     </div>
-    <div class="modal-body">
-      <!-- .field 는 세로 flex 라 안에 든 <b> 가 줄마다 끊긴다. hint 만 쓴다 -->
-      <p class="hint" style="margin:0 0 12px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface)">
-        조례와 <b>지금 설정된 요금 기준</b>을 보고 답합니다.
-        <b>금액을 직접 계산하지 않습니다</b> — 정확한 금액은 윗줄 <b>요금 계산</b> 탭에서 봅니다.<br>
-        <b>대장에 적힌 예약 내역</b>(날짜·시설·단체·목적·금액·입금)을 함께 보고 답합니다 —
-        로그인한 담당자만 쓰는 창이라 금액까지 넣습니다.<br>
-        <b>메모는 기본으로 보내지 않습니다</b>(연락처가 적히는 칸입니다).
-        어느 칸이든 전화번호·주민번호 형태는 지우고 보냅니다. 주고받은 말은 저장되지 않습니다.
-      </p>
-      <div class="ai-opts">
-        <label for="aiScope">자료 범위</label>
-        <select id="aiScope">
-          <option value="all">전체 기간</option>
-          <option value="year">올해</option>
-          <option value="month">이 달</option>
-        </select>
-        <label class="ai-chk"><input type="checkbox" id="aiMemo"><span>메모도 보내기</span></label>
-        <span class="hint" id="aiDataNote"></span>
+    <div class="ai-scroll" id="aiScroll">
+      <div class="ai-col">
+        <!-- 첫 화면. 이 창이 지키는 것을 여기에 적는다 — 보이지 않게 나가는 자료가 없어야 한다 -->
+        <div class="ai-hello" id="aiHello">
+          <span class="ai-logo" aria-hidden="true">✦</span>
+          <h3>무엇을 도와드릴까요?</h3>
+          <p>대관 내역을 찾거나, 요금이 <b>왜 그렇게 나왔는지</b> 조례로 풀어 드립니다.
+            정확한 새 금액은 윗줄 <b>요금 계산</b> 탭에서 봅니다.</p>
+          <ul class="ai-rules">
+            <li>금액을 직접 계산하지 않습니다</li>
+            <li>예약 내역은 금액·입금까지 함께 봅니다</li>
+            <li>메모는 기본으로 보내지 않습니다</li>
+            <li>전화번호·주민번호 형태는 지우고 보냅니다</li>
+            <li>주고받은 말은 저장되지 않습니다</li>
+          </ul>
+          <div class="ai-tips" id="aiTips"></div>
+        </div>
+        <div class="ai-log" id="aiLog" aria-live="polite"></div>
       </div>
-      <div class="ai-tips" id="aiTips"></div>
-      <div class="ai-log" id="aiLog"></div>
     </div>
-    <div class="modal-foot" style="flex-direction:column;align-items:stretch;gap:8px">
-      <div class="ai-ask">
-        <textarea id="aiQ" rows="2" maxlength="2000"
-          placeholder="예) 학교 수업으로 쓰면 감면이 얼마나 되나요?"></textarea>
-        <button type="button" class="btn btn-primary" id="aiSend">보내기</button>
+    <div class="ai-dock">
+      <div class="ai-col">
+        <div class="ai-composer">
+          <textarea id="aiQ" rows="1" maxlength="2000" aria-label="질문"
+            placeholder="무엇이든 물어보세요 — 예) 10월 태권도협회 대관 내역 알려줘"></textarea>
+          <div class="ai-bar">
+            <select id="aiScope" class="ai-pill" aria-label="자료 범위" title="AI 에게 보낼 예약 내역의 범위">
+              <option value="all">전체 기간</option>
+              <option value="year">올해</option>
+              <option value="month">이 달</option>
+            </select>
+            <label class="ai-pill ai-chk" title="연락처가 적히는 칸이라 기본으로 빼 둡니다"><input type="checkbox" id="aiMemo"><span>메모도 보내기</span></label>
+            <button type="button" class="btn btn-primary ai-send" id="aiSend" aria-label="보내기" title="보내기 (Enter)">↑</button>
+          </div>
+        </div>
+        <p class="ai-foot"><span id="aiDataNote"></span><br>Enter 보내기 · Shift+Enter 줄바꿈 · AI 답은 틀릴 수 있으니 금액은 대장과 대조하세요</p>
       </div>
-      <span class="hint" id="aiNote"></span>
     </div>
   </div>
 </div>
@@ -1756,7 +1842,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-09-30.56";
+const APP_VERSION = "2026-10-20.57";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -4056,18 +4142,23 @@ function stHover(e) {
    지키는 것 세 가지 — 이 규칙을 빼지 않는다:
    ① **AI 에게 금액을 계산시키지 않는다.** 계산은 calcFee() 가 한다.
       AI 에게는 이미 나온 숫자와 근거 조문을 주고 풀어 쓰게만 한다
-   ② **개인정보를 보내지 않는다.** 신청 단체·이용 목적·메모는 넘기지 않는다
+   ② **메모는 기본으로 보내지 않고**, 어느 칸이든 전화번호·주민번호 형태는 지우고 보낸다 (aiSafe).
+      단체명·이용 목적은 개인정보가 아니므로 보낸다 (2026-09-21 담당자 결정)
    ③ **로그인한 사람만 쓴다.** 화면에서 감추는 데 그치지 않고
       Edge Function 의 `verify_jwt` 가 서버에서 막는다
    답은 자료에 남기지 않는다 — 창을 닫으면 사라진다 */
-const AI = { ready: null, busy: false, msgs: [] };
+/* msgs — 주고받은 말. seed — `쉬운 말로 설명` 으로 연 대화의 산정 내역.
+   ctrl — 받는 중인 답을 멈추는 손잡이. **셋 다 state 밖이고 저장하지 않는다** */
+const AI = { ready: null, busy: false, msgs: [], seed: null, ctrl: null };
 let AI_PROBED;   // 마지막으로 확인해 본 토큰. 로그인 상태가 바뀔 때만 다시 확인한다
+/* 첫 화면의 예시 질문. k 는 카드 위의 작은 갈래 이름이다 */
 const AI_TIPS = [
-  "10월 태권도협회 대관 내역 알려줘",
-  "이번 달 충무체육관 예약 목록 보여줘",
-  "아직 입금 안 된 건 뭐가 있나요?",
-  "토요일 야간에는 왜 요금이 올라가나요?",
-  "학교 수업으로 쓰면 감면이 얼마인가요?"
+  { k: "대관 내역 찾기", q: "10월 태권도협회 대관 내역 알려줘" },
+  { k: "이 달 일정",     q: "이번 달 충무체육관 예약 목록 보여줘" },
+  { k: "입금 확인",      q: "아직 입금 안 된 건 뭐가 있나요?" },
+  { k: "요금 근거",      q: "토요일 야간에는 왜 요금이 올라가나요?" },
+  { k: "감면",           q: "학교 수업으로 쓰면 감면이 얼마인가요?" },
+  { k: "부속시설",       q: "마이크를 두 개 쓰면 부속시설 요금은 어떻게 붙나요?" }
 ];
 
 async function aiCall(payload) {
@@ -4085,6 +4176,49 @@ async function aiCall(payload) {
   return d;
 }
 
+/* 답을 **흘려받는다** (`stream: true`). 중계기가 글을 받는 대로 한 조각씩 넘겨 주고,
+   그때마다 `onDelta` 가 화면에 이어 붙인다 — 챗봇처럼 글이 흘러나온다.
+   **예전 중계기(스트리밍 전)는 이 값을 모르고 JSON 한 덩이로 답한다.** 그것도 그대로 받는다 —
+   함수를 다시 올리지 않아도 대장은 돈다. `signal` 로 중간에 멈출 수 있다 */
+async function aiStream(payload, onDelta, signal) {
+  const cfg = serverCfg();
+  if (!cfg) throw new Error("서버가 설정돼 있지 않습니다");
+  if (!SERVER.token) throw new Error("로그인해야 씁니다 (⚙ 설정)");
+  const res = await fetch(cfg.url + "/functions/v1/ask", {
+    method: "POST", signal: signal,
+    headers: { "Content-Type": "application/json", apikey: cfg.anonKey, Authorization: "Bearer " + SERVER.token },
+    body: JSON.stringify(Object.assign({ stream: true }, payload))
+  });
+  const type = res.headers.get("content-type") || "";
+  if (!res.ok || !/event-stream/.test(type) || !res.body) {
+    let d = {};
+    try { d = await res.json(); } catch (e) {}
+    if (!res.ok) throw new Error(d.error || "중계기가 " + res.status + " 로 답했습니다");
+    if (d.text) onDelta(d.text);
+    return { note: "" };
+  }
+  // 중계기가 고르게 맞춰 보내는 꼴: data: {"t":"…"} · {"note":"…"} · {"error":"…"} · {"done":true}
+  const reader = res.body.getReader(), dec = new TextDecoder();
+  let buf = "", note = "", got = false;
+  const take = line => {
+    if (!line.startsWith("data:")) return;
+    let ev; try { ev = JSON.parse(line.slice(5).trim()); } catch (e) { return; }
+    if (ev.error) throw new Error(ev.error);
+    if (typeof ev.t === "string" && ev.t) { got = true; onDelta(ev.t); }
+    if (ev.note) note = ev.note;
+  };
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let k;
+    while ((k = buf.indexOf("\n")) >= 0) { take(buf.slice(0, k).replace(/\r$/, "")); buf = buf.slice(k + 1); }
+  }
+  if (buf) take(buf);
+  if (!got) throw new Error("답이 비어 왔습니다. 잠시 뒤에 다시 해보세요");
+  return { note: note };
+}
+
 /* 중계기가 살아 있는지 한 번 물어본다. 안 되면 단추를 아예 띄우지 않는다 —
    **AI 가 꺼져 있어도 대장은 그대로 돈다** */
 function aiSync() {
@@ -4099,7 +4233,7 @@ function applyAiBtn() {
   const on = AI.ready === true && currentRole() !== "viewer";
   const b = $("#aiBtn"); if (b) b.hidden = !on;
   $$("[data-explain]").forEach(x => { x.hidden = !on; });
-  if (!on) $("#aiBox").hidden = true;
+  if (!on && !$("#aiBox").hidden) closeAi();
 }
 
 /* 자유입력 칸에 전화번호·주민번호가 적혀 있으면 **보내기 전에 지운다.**
@@ -4250,15 +4384,40 @@ function aiBlocks(text) {
   flush();
   return out;
 }
-/* `**굵게**` 만 살린다. 링크·그림은 살리지 않는다 — 살릴 이유가 없고 위험만 는다 */
-function aiInline(s) { return esc(s).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>"); }
+/* 글 묶음 — 문단 · 목록(`-`·`1.`) · 소제목(`#`) 만 **우리가 만든 틀로** 세운다.
+   칸 내용은 전부 aiInline() → esc() 를 거친다. 살리는 글꼴 서식은 `**굵게**` 와 `코드` 뿐이고
+   링크·그림은 살리지 않는다 */
+function aiTextHtml(lines) {
+  const out = [];
+  let list = null, para = [];
+  const endPara = () => { if (para.length) { out.push("<p>" + aiInline(para.join("\n")) + "</p>"); para = []; } };
+  const endList = () => { if (list) { out.push("<" + list.tag + ">" + list.items.map(x => "<li>" + aiInline(x) + "</li>").join("") + "</" + list.tag + ">"); list = null; } };
+  lines.forEach(raw => {
+    const l = raw.replace(/\s+$/, "");
+    let m;
+    if (!l.trim()) { endPara(); endList(); return; }
+    if ((m = l.match(/^\s*#{1,4}\s+(.*)$/))) { endPara(); endList(); out.push("<h4>" + aiInline(m[1]) + "</h4>"); return; }
+    if ((m = l.match(/^\s*[-*•]\s+(.*)$/)) || (m = l.match(/^\s*\d+[.)]\s+(.*)$/))) {
+      const tag = /^\s*\d/.test(l) ? "ol" : "ul";
+      endPara();
+      if (!list || list.tag !== tag) { endList(); list = { tag: tag, items: [] }; }
+      list.items.push(m[1]);
+      return;
+    }
+    if (list && /^\s{2,}\S/.test(raw)) { list.items[list.items.length - 1] += " " + l.trim(); return; }
+    endList(); para.push(l);
+  });
+  endPara(); endList();
+  return out.join("");
+}
+/* `**굵게**` 와 `코드` 만 살린다. 링크·그림은 살리지 않는다 — 살릴 이유가 없고 위험만 는다 */
+function aiInline(s) {
+  return esc(s).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/`([^`\n]+)`/g, "<code>$1</code>");
+}
 
 function aiHtml(text) {
   return aiBlocks(text).map(b => {
-    if (b.type === "text") {
-      const t = b.lines.join("\n").replace(/^\n+|\n+$/g, "");
-      return t ? '<div class="ai-p">' + aiInline(t) + "</div>" : "";
-    }
+    if (b.type === "text") return aiTextHtml(b.lines);
     const al = n => b.align[n] ? ' style="text-align:' + b.align[n] + '"' : "";
     return '<div class="ai-tblwrap"><table class="ai-tbl"><thead><tr>' +
       b.head.map((h, n) => "<th" + al(n) + ">" + aiInline(h) + "</th>").join("") +
@@ -4268,58 +4427,144 @@ function aiHtml(text) {
   }).join("");
 }
 
-function aiRender() {
-  const log = $("#aiLog");
-  log.innerHTML = AI.msgs.length
-    ? AI.msgs.map((m, i) => {
-        const me = m.role === "user";
-        // 표가 든 답에만 엑셀 단추를 붙인다. **그 답 하나만** 내려받는다
-        const hasTbl = !me && !m.err && aiBlocks(m.text).some(b => b.type === "table");
-        return '<div class="ai-msg' + (me ? " me" : "") + (m.err ? " err" : "") +
-          (hasTbl ? " has-tbl" : "") + '">' +
-          '<span class="who">' + (me ? "나" : "AI 도우미") +
-          (hasTbl ? '<button type="button" class="btn btn-sm ai-xls" data-aixls="' + i +
-            '" title="이 답의 표만 엑셀로 내려받습니다">⤓ 엑셀</button>' : "") +
-          "</span>" +
-          (me ? aiInline(m.text) : aiHtml(m.text)) + "</div>";
-      }).join("")
-    : '<p class="hint" style="margin:0">아래 칸에 물어보거나, 위의 예시를 눌러 보세요.</p>';
-  $("#aiTips").innerHTML = AI_TIPS.map(t =>
-    '<button type="button" class="btn btn-sm" data-aitip="' + esc(t) + '">' + esc(t) + "</button>").join("");
-  $("#aiNote").textContent = AI.busy ? "생각하는 중…" : "";
-  $("#aiSend").disabled = AI.busy;
-  aiDataNote();
-  log.scrollTop = log.scrollHeight;
+/* 말 하나의 마크업. 받는 중인 답(`m.live`)은 커서를, 한 글자도 없으면 점 셋을 띄운다.
+   **단추는 다 받은 뒤에만 붙는다** — 받는 중에 엑셀로 내면 반쪽 표가 나간다 */
+function aiMsgHtml(m, i) {
+  if (m.role === "user")
+    return '<div class="ai-row me"><div class="ai-bubble">' + esc(m.text) + "</div></div>";
+  const last = i === AI.msgs.length - 1;
+  let body;
+  if (m.live && !m.text) body = '<span class="ai-dots" aria-label="답을 쓰는 중"><i></i><i></i><i></i></span>';
+  else body = '<div class="ai-md' + (m.live ? " ai-caret" : "") + '">' + (m.err ? aiInline(m.text) : aiHtml(m.text)) + "</div>";
+  if (m.note) body += '<div class="ai-stop">' + esc(m.note) + "</div>";
+  let acts = "";
+  if (!m.live) {
+    const b = [];
+    if (!m.err) b.push('<button type="button" data-aicopy="' + i + '" title="이 답을 글자로 복사합니다">⧉ 복사</button>');
+    if (!m.err && aiBlocks(m.text).some(x => x.type === "table"))
+      b.push('<button type="button" data-aixls="' + i + '" title="이 답의 표만 엑셀로 내려받습니다">⤓ 엑셀</button>');
+    if (last && !AI.busy) b.push('<button type="button" data-airetry="1" title="같은 질문을 다시 보냅니다">↻ ' + (m.err ? "다시 시도" : "다시 생성") + "</button>");
+    acts = b.length ? '<div class="ai-acts">' + b.join("") + "</div>" : "";
+  }
+  return '<div class="ai-row bot"><span class="ai-ava" aria-hidden="true">✦</span>' +
+    '<div class="ai-body' + (m.err ? " err" : "") + '">' + body + acts + "</div></div>";
 }
 
-/* 무엇을 보내는지 창에 적어 둔다 — 보이지 않게 나가는 자료가 없어야 한다 */
+/* 맨 아래에 붙어 보고 있을 때만 따라 내려간다 — 위로 올려 읽는 중에 끌어내리지 않는다 */
+function aiNearBottom() {
+  const s = $("#aiScroll");
+  return s.scrollHeight - s.scrollTop - s.clientHeight < 90;
+}
+function aiToBottom() { const s = $("#aiScroll"); s.scrollTop = s.scrollHeight; }
+
+function aiRender() {
+  const stick = aiNearBottom();
+  const empty = !AI.msgs.length;
+  $("#aiHello").hidden = !empty;
+  if (empty) $("#aiTips").innerHTML = AI_TIPS.map(t =>
+    '<button type="button" class="ai-tip" data-aitip="' + esc(t.q) + '"><small>' + esc(t.k) + "</small>" + esc(t.q) + "</button>").join("");
+  $("#aiLog").innerHTML = AI.msgs.map(aiMsgHtml).join("");
+  aiSendBtn();
+  // 첫 화면은 인사부터 보이게 맨 위에서 연다
+  if (empty) $("#aiScroll").scrollTop = 0;
+  else if (stick) aiToBottom();
+}
+/* 받는 중에는 **마지막 말 하나만** 다시 그린다. 조각마다 창 전체를 그리면 긴 대화에서 버벅인다 */
+let AI_PAINT = 0;
+function aiPaintLast() {
+  if (AI_PAINT) return;
+  AI_PAINT = requestAnimationFrame(() => {
+    AI_PAINT = 0;
+    const el = $("#aiLog").lastElementChild, i = AI.msgs.length - 1;
+    if (!el || i < 0) return;
+    const stick = aiNearBottom();
+    el.outerHTML = aiMsgHtml(AI.msgs[i], i);
+    if (stick) aiToBottom();
+  });
+}
+/* 보내기 단추는 받는 중에 **멈춤(■)** 이 된다 */
+function aiSendBtn() {
+  const b = $("#aiSend");
+  b.textContent = AI.busy ? "■" : "↑";
+  b.setAttribute("aria-label", AI.busy ? "멈추기" : "보내기");
+  b.title = AI.busy ? "답 받기를 멈춥니다" : "보내기 (Enter)";
+  b.disabled = !AI.busy && !$("#aiQ").value.trim();
+}
+/* 글칸은 적는 만큼 늘어난다 (200px 까지) */
+function aiGrow() {
+  const q = $("#aiQ");
+  q.style.height = "auto";
+  q.style.height = Math.min(200, q.scrollHeight) + "px";
+  aiSendBtn();
+}
+
+/* 무엇을 보내는지 창에 적어 둔다 — 보이지 않게 나가는 자료가 없어야 한다.
+   예약 전체의 금액을 다시 매기므로 **글자가 흘러들 때마다 부르지 않는다** (열 때 · 범위를 바꿀 때 · 답이 끝날 때) */
 function aiDataNote() {
   const d = aiResContext($("#aiScope").value, $("#aiMemo").checked);
   $("#aiDataNote").textContent =
-    "예약 " + d.건수 + "건 (" + d.범위 + ") · 금액 포함" +
+    "보내는 자료: 요금 기준 + 예약 " + d.건수 + "건" + (d.건수 ? " (" + d.범위 + ")" : "") + " · 금액 포함" +
     ($("#aiMemo").checked ? " · 메모 포함" : " · 메모 제외") +
+    (AI.seed ? " · 이 건의 산정 내역" : "") +
     (d.참고 ? " · " + d.참고 : "");
 }
 
-async function aiAsk(q, seed) {
+function aiAsk(q) {
   q = String(q || "").trim();
   if (!q || AI.busy) return;
   AI.msgs.push({ role: "user", text: q });
-  AI.busy = true; $("#aiQ").value = ""; aiRender();
+  $("#aiQ").value = ""; aiGrow();
+  aiRun();
+}
+/* 마지막 질문에 답을 받는다. `다시 생성` 도 이것을 부른다 */
+async function aiRun() {
+  const qi = AI.msgs.length - 1;
+  if (qi < 0 || AI.msgs[qi].role !== "user") return;
+  const q = AI.msgs[qi].text;
+  const m = { role: "assistant", text: "", live: true };
+  AI.msgs.push(m);
+  AI.busy = true;
+  const ctrl = AI.ctrl = new AbortController();
+  aiRender(); aiToBottom();
   try {
     const ctx = { 요금기준: aiRateContext() };
     // 대장에 적힌 예약 내역도 함께 보낸다 (범위·메모 포함 여부는 창에서 고른다)
     ctx.예약내역 = aiResContext($("#aiScope").value, $("#aiMemo").checked);
-    if (seed) ctx["이 예약의 산정 내역"] = seed;
-    const d = await aiCall({
+    // `쉬운 말로 설명` 으로 연 대화는 **이어 묻는 질문에도** 그 건의 산정 내역을 함께 보낸다
+    if (AI.seed) ctx["이 예약의 산정 내역"] = AI.seed;
+    const r = await aiStream({
       question: q, context: ctx,
-      history: AI.msgs.slice(0, -1).map(m => ({ role: m.role, text: m.text }))
-    });
-    AI.msgs.push({ role: "assistant", text: d.text });
+      // 오류 말풍선은 대화가 아니다 — 보내지 않는다
+      history: AI.msgs.slice(0, qi).filter(x => !x.err && x.text).map(x => ({ role: x.role, text: x.text }))
+    }, t => { m.text += t; aiPaintLast(); }, ctrl.signal);
+    if (r.note) m.note = r.note;
   } catch (e) {
-    AI.msgs.push({ role: "assistant", text: e.message, err: true });
+    if (e.name === "AbortError") m.note = "여기서 멈췄습니다";
+    else if (!m.text) { m.text = e.message; m.err = true; }
+    else m.note = "답을 받다가 끊겼습니다 — " + e.message;
   }
-  AI.busy = false; aiRender();
+  if (AI.ctrl !== ctrl) return;   // 그사이 창을 닫았거나 새 대화를 열었다
+  m.live = false; AI.busy = false; AI.ctrl = null;
+  aiRender(); aiDataNote();
+}
+function aiStop() { if (AI.ctrl) AI.ctrl.abort(); }
+/* `다시 생성` — 마지막 답을 지우고 같은 질문을 다시 보낸다 */
+function aiRetry() {
+  if (AI.busy) return;
+  const last = AI.msgs[AI.msgs.length - 1];
+  if (last && last.role === "assistant") AI.msgs.pop();
+  aiRun();
+}
+/* 대화를 비운다. 받는 중이면 멈춘다 — **답은 자료에 남기지 않는다** */
+function aiReset() {
+  if (AI.ctrl) { const c = AI.ctrl; AI.ctrl = null; c.abort(); }
+  AI.busy = false; AI.msgs = []; AI.seed = null;
+}
+async function aiCopy(i) {
+  const m = AI.msgs[i];
+  if (!m) return;
+  try { await navigator.clipboard.writeText(m.text); toast("복사했습니다"); }
+  catch (e) { toast("이 화면에서는 복사가 막혀 있습니다 — 글을 끌어 골라 Ctrl+C 를 누르세요"); }
 }
 
 /* 답 하나에 든 표를 진짜 `.xlsx` 로 낸다 (`⤓ 엑셀`).
@@ -4401,16 +4646,22 @@ function aiExportXlsx(i) {
 function openAi() {
   if (currentRole() === "viewer") { toast("로그인해야 씁니다 (⚙ 설정)"); return; }
   $("#aiBox").hidden = false;
-  aiRender();
+  aiRender(); aiDataNote(); aiGrow();
   $("#aiQ").focus();
 }
-/* 우측 상세의 `쉬운 말로 설명` — 그 건의 산정 내역을 들고 창을 연다 */
+/* 창을 닫으면 **주고받은 말이 사라진다** (`AI.msgs` 는 state 밖이고 저장하지 않는다) */
+function closeAi() {
+  $("#aiBox").hidden = true;
+  aiReset();
+}
+/* 우측 상세의 `쉬운 말로 설명` — 그 건의 산정 내역을 들고 새 대화를 연다 */
 function aiExplain(id) {
   const r = state.reservations.find(x => x.id === id);
   if (!r) return;
+  aiReset();
+  AI.seed = aiFeeSeed(r);
   openAi();
-  AI.msgs = [];
-  aiAsk("이 건의 금액이 왜 이렇게 나왔는지 쉬운 말로 설명해 주세요. 근거 조문도 함께 알려 주세요.", aiFeeSeed(r));
+  aiAsk("이 건의 금액이 왜 이렇게 나왔는지 쉬운 말로 설명해 주세요. 근거 조문도 함께 알려 주세요.");
 }
 
 /* =========================================================
@@ -6377,8 +6628,11 @@ function init() {
 
   // AI 도우미 — 주고받은 말은 자료에 남기지 않는다 (창을 닫으면 사라진다)
   $("#aiBtn").addEventListener("click", openAi);
-  $("#aiClose").addEventListener("click", () => { $("#aiBox").hidden = true; });
-  $("#aiSend").addEventListener("click", () => aiAsk($("#aiQ").value));
+  $("#aiClose").addEventListener("click", closeAi);
+  $("#aiNew").addEventListener("click", () => { aiReset(); aiRender(); aiDataNote(); $("#aiQ").focus(); });
+  // 받는 중에는 같은 단추가 멈춤이다
+  $("#aiSend").addEventListener("click", () => { if (AI.busy) aiStop(); else aiAsk($("#aiQ").value); });
+  $("#aiQ").addEventListener("input", aiGrow);
   $("#aiTips").addEventListener("click", e => {
     const t = e.target.closest("[data-aitip]");
     if (t) aiAsk(t.dataset.aitip);
@@ -6386,14 +6640,17 @@ function init() {
   // 범위·메모를 바꾸면 무엇을 보내는지 바로 다시 적는다
   $("#aiScope").addEventListener("change", aiDataNote);
   $("#aiMemo").addEventListener("change", aiDataNote);
-  // 답마다 붙는 `⤓ 엑셀` — 누른 그 답의 표만 낸다
+  // 답 밑의 단추 — `⤓ 엑셀` 은 누른 그 답의 표만 낸다
   $("#aiLog").addEventListener("click", e => {
-    const b = e.target.closest("[data-aixls]");
-    if (b) aiExportXlsx(Number(b.dataset.aixls));
+    const x = e.target.closest("[data-aixls]");
+    if (x) { aiExportXlsx(Number(x.dataset.aixls)); return; }
+    const c = e.target.closest("[data-aicopy]");
+    if (c) { aiCopy(Number(c.dataset.aicopy)); return; }
+    if (e.target.closest("[data-airetry]")) aiRetry();
   });
   // 줄바꿈은 Shift+Enter, 보내기는 Enter
   $("#aiQ").addEventListener("keydown", e => {
-    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); aiAsk($("#aiQ").value); }
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); if (!AI.busy) aiAsk($("#aiQ").value); }
   });
   $("#prevMonth").addEventListener("click", () => shiftMonth(-1));
   $("#nextMonth").addEventListener("click", () => shiftMonth(1));
@@ -6560,7 +6817,7 @@ function init() {
   document.addEventListener("keydown", e => {
     if (e.key === "Escape" && !$("#copyBox").hidden) { $("#copyBox").hidden = true; return; }
     if (e.key === "Escape" && !$("#printBox").hidden) { $("#printBox").hidden = true; return; }
-    if (e.key === "Escape" && !$("#aiBox").hidden) { $("#aiBox").hidden = true; return; }
+    if (e.key === "Escape" && !$("#aiBox").hidden) { closeAi(); return; }
     if (e.key === "Escape" && !$("#settingsBox").hidden) { $("#settingsBox").hidden = true; return; }
     if (e.key === "Escape" && !$("#modal").hidden) closeModal();
     if ($("#modal").hidden && !/input|select|textarea/i.test(document.activeElement.tagName)) {
