@@ -75,7 +75,7 @@ Supabase 대시보드에서 합니다. CLI 를 깔지 않아도 됩니다.
 | `AI_BASE_URL` | `https://api.openai.com/v1` | 업체 주소 |
 | `AI_STYLE` | `responses` | 요청 형식. `chat` 으로 바꿀 수 있습니다 |
 | `AI_EFFORT` | `low` | 생각 깊이. `off` 로 두면 아예 안 보냅니다 |
-| `AI_MAX_TOKENS` | `1200` | 답 길이 상한 |
+| `AI_MAX_TOKENS` | `4000` | 답 길이 상한. 미입금 목록처럼 긴 표를 받으려면 6000~9000 으로 올린다 |
 
 ---
 

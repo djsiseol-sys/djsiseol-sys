@@ -1842,7 +1842,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-10-20.57";
+const APP_VERSION = "2026-10-29.58";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -4250,7 +4250,8 @@ function aiSafe(s) {
 
    줄마다 키를 되풀이하지 않게 **「열 + 줄」** 로 넣는다. 같은 내용이 훨씬 짧아진다.
    **메모는 기본으로 넣지 않는다** — 담당자가 창에서 켜야 들어간다 (개인정보가 적히는 칸이다).
-   월별 합계를 미리 더해서 함께 넣는다 — **AI 가 산수를 하지 않아도 되게** 하려는 것이다 */
+   월별 합계와 입금 현황(완료·일부·미입금 건수와 받을 금액)을 미리 더해서 함께 넣는다 —
+   **AI 가 산수를 하지 않아도 되게** 하려는 것이다 */
 const AI_ROW_CAP = 500;
 function aiResContext(scope, withMemo) {
   const all = state.reservations.filter(r => r.status !== "취소").slice().sort(byDateTime);
@@ -4291,6 +4292,14 @@ function aiResContext(scope, withMemo) {
   };
   const 줄 = rows.map(line);
 
+  // 입금 현황도 미리 센다 — 「미입금 몇 건, 얼마」 를 AI 가 세지 않게
+  const pay = { 완료: { 건수: 0 }, 일부: { 건수: 0, "받을 금액": 0 }, 미입금: { 건수: 0, "받을 금액": 0 } };
+  rows.forEach(r => {
+    const k = fullyPaid(r) ? "완료" : (paidAmount(r) ? "일부" : "미입금");
+    pay[k].건수++;
+    if (k !== "완료") pay[k]["받을 금액"] += Math.max(0, feeParts(r).total - paidAmount(r));
+  });
+
   return {
     범위: rows.length ? rows[0].date + " ~ " + rows[rows.length - 1].date : "(없음)",
     건수: rows.length,
@@ -4298,6 +4307,7 @@ function aiResContext(scope, withMemo) {
     참고: note || undefined,
     메모포함: !!withMemo,
     열: cols, 줄: 줄,
+    "입금 현황(이미 센 값)": pay,
     "월별 합계(이미 더해 둔 값)": Object.keys(months).sort().map(m => Object.assign({ 월: m }, months[m]))
   };
 }
