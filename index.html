@@ -318,8 +318,9 @@ tbody tr.is-prep td:first-child{border-left:2px solid var(--prep-line)}
 tbody tr.is-prep td:last-child{border-right:2px solid var(--prep-line)}
 /* 목록 — 날짜가 바뀌는 자리에 조금 굵은 줄 (2026-11-04 담당자 요청). 새 날짜의 첫 줄 위에 긋는다.
    준비 건의 노란 테두리(2px)보다 **조금 더 굵게** 둔다 — 같은 굵기면 겹치는 자리에서 노랑에 묻힌다
-   (border-collapse 는 굵은 쪽이 이긴다). 그 자리만 회색이 되고 준비 건의 나머지 테두리는 노랑 그대로다 */
-#listBody tr.day-start td{border-top:3px solid var(--line-strong)}
+   (border-collapse 는 굵은 쪽이 이긴다). 그 자리만 회색이 되고 준비 건의 나머지 테두리는 노랑 그대로다.
+   색은 --ink-2 (짙은 회색) — --line-strong 은 밝아서 잘 안 보인다는 담당자 지적을 받았다 */
+#listBody tr.day-start td{border-top:3px solid var(--ink-2)}
 tfoot td{font-weight:600;background:var(--surface-2);border-top:1px solid var(--line-strong)}
 tfoot td.foot-label{white-space:nowrap;color:var(--ink-2)}
 td.memo{white-space:pre-wrap;word-break:break-word;min-width:180px}
@@ -1868,7 +1869,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-11-04.61";
+const APP_VERSION = "2026-11-04.62";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
