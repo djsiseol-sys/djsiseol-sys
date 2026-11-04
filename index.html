@@ -316,6 +316,10 @@ td.t{font-family:"IBM Plex Mono",monospace;white-space:nowrap}
 tbody tr.is-prep td{border-top:2px solid var(--prep-line);border-bottom:2px solid var(--prep-line)}
 tbody tr.is-prep td:first-child{border-left:2px solid var(--prep-line)}
 tbody tr.is-prep td:last-child{border-right:2px solid var(--prep-line)}
+/* 목록 — 날짜가 바뀌는 자리에 조금 굵은 줄 (2026-11-04 담당자 요청). 새 날짜의 첫 줄 위에 긋는다.
+   준비 건의 노란 테두리(2px)보다 **조금 더 굵게** 둔다 — 같은 굵기면 겹치는 자리에서 노랑에 묻힌다
+   (border-collapse 는 굵은 쪽이 이긴다). 그 자리만 회색이 되고 준비 건의 나머지 테두리는 노랑 그대로다 */
+#listBody tr.day-start td{border-top:3px solid var(--line-strong)}
 tfoot td{font-weight:600;background:var(--surface-2);border-top:1px solid var(--line-strong)}
 tfoot td.foot-label{white-space:nowrap;color:var(--ink-2)}
 td.memo{white-space:pre-wrap;word-break:break-word;min-width:180px}
@@ -795,6 +799,8 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
   body.print-fees td,body.print-fees th{padding:3px 6px;border-bottom:1px solid #ccc}
   body.print-list thead,body.print-fees thead{display:table-header-group}
   body.print-list tr,body.print-fees tr{break-inside:avoid;page-break-inside:avoid}
+  /* 종이에서도 날짜가 바뀌는 자리에 굵은 줄 — 화면과 같다 */
+  body.print-list #listBody tr.day-start td{border-top:3px solid #555}
   /* 단추가 있던 열·정산 체크 칸과 접어 둔 산정 내역은 종이에서 뺀다 */
   body.print-list .selcol{display:none!important}
   body.print-list #listHead th:last-child,
@@ -1862,7 +1868,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-11-04.60";
+const APP_VERSION = "2026-11-04.61";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -3582,10 +3588,13 @@ function renderList() {
     "<th" + (LIST_COLS[k].cls === "num" ? ' style="text-align:right"' : "") + ">" + LIST_COLS[k].label + "</th>"
   ).join("") + (money ? "<th></th>" : "") + "</tr>";
 
-  $("#listBody").innerHTML = rows.length ? rows.map(row => {
+  $("#listBody").innerHTML = rows.length ? rows.map((row, i) => {
     const r = row.r;
+    // 새 날짜의 첫 줄 — 위에 굵은 줄을 그어 날짜끼리 갈라 보이게 한다 (맨 첫 줄은 머리글이 받는다)
+    const dayStart = i > 0 && rows[i - 1].r.date !== r.date;
+    const cls = [((r.kind || "행사") === "준비" ? "is-prep" : ""), (dayStart ? "day-start" : "")].filter(Boolean).join(" ");
     return "<tr" + (conflicts.has(r.id) ? ' style="background:var(--alert-soft)"' : "") +
-      ((r.kind || "행사") === "준비" ? ' class="is-prep"' : "") + ">" +
+      (cls ? ' class="' + cls + '"' : "") + ">" +
       (money
         ? '<td class="selcol"><input type="checkbox" data-settle="' + r.id + '"' +
           (settleSel.has(r.id) ? " checked" : "") + ' aria-label="정산서에 넣기"></td>'
