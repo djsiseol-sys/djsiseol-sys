@@ -384,6 +384,11 @@ td.dow-sun{color:var(--sun);font-weight:600}
 .timepick{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
 .timepick select{flex:1 1 52px;width:auto;min-width:52px;padding-right:4px}
 .timepick span{font-size:12px;color:var(--muted);flex:0 0 auto}
+/* 오픈시간 앞당기기 — 날짜 줄 바로 밑. 목록에서만 시작 시각을 당겨 보여준다 */
+.open-early{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.open-early .prep-toggle{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink);letter-spacing:0;white-space:nowrap}
+.open-early .timepick{flex:0 1 260px}
+.open-early .timepick[aria-disabled="true"]{opacity:.45}
 .fee-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .fee-head h3{margin:0}
 .fee-sum{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:2px}
@@ -393,6 +398,7 @@ td.dow-sun{color:var(--sun);font-weight:600}
 .annex-row{display:flex;align-items:center;gap:10px;padding:3px 0;border-top:1px solid var(--line)}
 .annex-row:first-child{border-top:0}
 .annex-name{flex:1;font-size:12px;min-width:0}
+.annex-row input[type="checkbox"]{width:auto;accent-color:var(--accent)}
 .annex-row input{width:64px;padding:3px 6px;border:1px solid var(--line-strong);border-radius:4px;background:var(--surface);text-align:right}
 .annex-q{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);white-space:nowrap}
 #annexList:not([hidden]){margin-top:8px;border-top:1px solid var(--line);padding-top:4px}
@@ -1402,6 +1408,20 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
         </div>
       </div>
 
+      <!-- 오픈시간 (2026-11-04 담당자 요청) — 체크하고 시간을 넣으면 **목록에서만**
+           시작 시각을 그만큼 당겨 보여준다. 달력·요금·중복 검사는 위의 시작 시각 그대로다 -->
+      <div class="field">
+        <label for="fOpenOn">오픈시간</label>
+        <div class="open-early">
+          <label class="prep-toggle"><input type="checkbox" id="fOpenOn"><span>오픈시간 앞당기기</span></label>
+          <div class="timepick" id="fOpenPick">
+            <select id="fOpenH" class="mono" aria-label="앞당길 시간"></select><span>시간</span>
+            <select id="fOpenM" class="mono" aria-label="앞당길 분"></select><span>분 일찍</span>
+          </div>
+        </div>
+        <span class="hint" id="fOpenHint">달력과 이용료는 시작 시각 그대로이고, 목록에서만 오픈시간을 당겨 보여줍니다.</span>
+      </div>
+
       <div class="row2">
         <div class="field">
           <label for="fFac">시설</label>
@@ -1842,7 +1862,7 @@ body.ro #serverCard input,body.ro #serverCard select,body.ro #serverCard textare
 /* 판 번호. **내용을 고치면 반드시 여기를 올린다.**
    ⚙ 설정 창 맨 아래에 뜬다. "고쳤다는데 화면이 그대로다" 는 대개 옛 파일을
    열고 있는 것인데, 이 표시가 없으면 어느 파일을 보고 있는지 확인할 방법이 없다 */
-const APP_VERSION = "2026-10-29.58";
+const APP_VERSION = "2026-11-04.60";
 
 const STORAGE_KEY = "rsv.mgmt.v1";
 
@@ -1903,7 +1923,11 @@ const BYULPYO6 = [
   { id: "a15", name: "중계방송료",               fee: 81000, unit: "1회",
     article: "행사촬영 · 담당자 확인 금액 (조례 조문 미확인)" },
   { id: "a16", name: "입장료",                   fee:   100, unit: "명",
-    article: "입장인원 1명당 100원 · 담당자 확인 금액 (조례 조문 미확인)" }
+    article: "입장인원 1명당 100원 · 담당자 확인 금액 (조례 조문 미확인)" },
+  /* 촬영 상행위 사용료 (2026-11-04 담당자 요청). 등록창에서 **체크 하나로** 켠다 (`check`) —
+     켜면 1회분 300,000원이다. 정산서에서는 ④ 상행위 칸으로 간다 (SETTLE_OWN_ROWS) */
+  { id: "a17", name: "상행위 사용료(촬영)",      fee: 300000, unit: "1회", check: true,
+    article: "상행위 사용료 · 촬영 · 담당자 확인 금액 (조례 조문 미확인)" }
 ];
 
 /* 부속시설 단위 — 「개」·「명」 은 수량을 세는 단위다 (단가 × 수량).
@@ -1911,6 +1935,8 @@ const BYULPYO6 = [
    정산서의 개수 칸도 이 판정을 따른다 */
 const ANNEX_UNITS = ["1회", "1일", "개", "명"];
 function annexCounts(unit) { return unit === "개" || unit === "명"; }
+/* 체크 하나로 켜는 항목 (촬영 상행위). 담당자가 단위를 「개」·「명」 으로 바꾸면 수량 칸으로 돌아간다 */
+function annexIsCheck(it) { return !!(it && it.check) && !annexCounts(it.unit); }
 function annexUnitWord(unit) { return annexCounts(unit) ? unit : "회"; }
 
 /* 설정 화면·등록창에 보이는 차례 (2026-09-11 담당자 요청).
@@ -1919,7 +1945,7 @@ function annexUnitWord(unit) { return annexCounts(unit) ? unit : "회"; }
    집중조명 · 마이크 · 전광판 · 냉난방 · 바닥깔이 · 탁자 · 의자 뒤에
    서식에 자리가 없는 것(조명타워)과 제 칸이 따로 있는 것(플래카드·중계방송료·입장료)을 둔다.
    여기 없는 항목(담당자가 새로 더한 것)은 뒤에 붙되 서로의 차례는 그대로 둔다 */
-const ANNEX_ORDER = ["a4", "a2", "a3", "a6", "a10", "a9", "a8", "a5", "a14", "a15", "a16"];
+const ANNEX_ORDER = ["a4", "a2", "a3", "a6", "a10", "a9", "a8", "a5", "a14", "a17", "a15", "a16"];
 function sortAnnexItems(list) {
   const rank = x => { const i = ANNEX_ORDER.indexOf(x.id); return i < 0 ? ANNEX_ORDER.length : i; };
   return list.map((x, i) => ({ x: x, i: i }))
@@ -2033,7 +2059,7 @@ function facSeed(id, name, color, prepAllowed) {
 }
 
 const DEFAULT_STATE = {
-  version: 9,
+  version: 10,
   settings: {
     rounding: 10,
 
@@ -2257,10 +2283,16 @@ function migrate(d) {
   }
   // 설정·등록창의 차례를 정산서와 맞춘다 (뺀 것·더한 것을 다 정리한 뒤에 줄 세운다)
   if (old < 8) st.annexItems = sortAnnexItems(st.annexItems);
+  /* 촬영 상행위 사용료(a17)를 더한다 (2026-11-04 담당자 요청). 담당자가 지운 뒤에
+     다시 생기지 않게 판이 바뀔 때 한 번만 넣는다 */
+  if (old < 10 && !st.annexItems.some(x => x.id === "a17")) {
+    st.annexItems.push(structuredClone(BYULPYO6.find(x => x.id === "a17")));
+    st.annexItems = sortAnnexItems(st.annexItems);
+  }
   delete st.minHours; delete st.nightStart; delete st.holidayRate; delete st.surchargeArticle;
 
   // 시설은 늘 충무 → 한밭 → 야구장 차례로 둔다
-  return { version: 9, settings: st, facilities: sortFacilities(facs), discounts: dcs, reservations: res };
+  return { version: 10, settings: st, facilities: sortFacilities(facs), discounts: dcs, reservations: res };
 }
 
 function readLocal() {
@@ -3148,7 +3180,7 @@ function byFacility(a, b) {
       || (toMin(a.end) - toMin(b.end))
       || ((a.kind === "준비" ? 1 : 0) - (b.kind === "준비" ? 1 : 0));
 }
-/* 목록·내보내기 정렬 — 대장은 시간 흐름대로 읽어야 하므로 시각이 먼저다.
+/* 요금 관리·AI·정산서 정렬 — 시간 흐름대로 읽어야 하므로 시각이 먼저다 (목록은 byDateFacility).
    날짜 → 시각 → 시설 차례 */
 function byTime(a, b) {
   return (toMin(a.start) - toMin(b.start))
@@ -3158,6 +3190,12 @@ function byTime(a, b) {
 }
 function byDateTime(a, b) {
   return a.date.localeCompare(b.date) || byTime(a, b);
+}
+/* 목록 정렬 — 날짜 → **시설 차례**(충무 → 한밭 → 야구장) → 시각 (2026-11-04 담당자 요청).
+   달력과 같은 차례로 읽히게 한다. 목록 화면·인쇄·엑셀·CSV 와 달력의 「이 달 엑셀·CSV」,
+   날짜별 상세 인쇄가 이것을 쓴다. 요금 관리는 시간순(byDateTime) 그대로다 */
+function byDateFacility(a, b) {
+  return a.date.localeCompare(b.date) || byFacility(a, b);
 }
 
 /* 달력에 띄울 시설 — 범례의 체크로 고른다. **끈 시설의 id** 만 담는다
@@ -3471,7 +3509,9 @@ function listRow(r) {
     paid: r.paid ? "✓" : "",
     date: r.date,
     dow: DOW[parseYmd(r.date).getDay()],
-    time: r.start + "–" + r.end,
+    // 오픈시간을 켠 건은 목록에서만 시작을 당겨 보여준다 (요금은 r.start 그대로)
+    start: listStartOf(r),
+    time: listStartOf(r) + "–" + r.end,
     fac: f ? f.name : "-",
     kind: (r.kind || "행사"),
     applicant: r.applicant || "",
@@ -3512,7 +3552,7 @@ function listRows() {
   rows.cancelledHidden = dropped;
   if (fKind) rows = rows.filter(r => (r.kind || "행사") === fKind);
   if (q) rows = rows.filter(r => [r.applicant, r.purpose, r.memo].join(" ").toLowerCase().includes(q));
-  rows.sort(byDateTime);
+  rows.sort(byDateFacility);
   return rows;
 }
 
@@ -3557,9 +3597,12 @@ function renderList() {
         const extra = k === "dow" ? dowClassOf(r.date) : "";
         // 시작 시각만 따로 세운다 (끝 시각은 그대로). 종이·엑셀에는 글자 그대로 나간다
         const body = k === "time"
-          ? '<b class="t-start">' + esc(r.start) + "</b>–" + esc(r.end)
+          ? '<b class="t-start">' + esc(row.start) + "</b>–" + esc(r.end)
           : esc(listCellText(row, k));
-        return '<td class="' + c.cls + extra + '">' + body + "</td>";
+        // 오픈시간을 당긴 건은 원래 시작 시각을 마우스를 올리면 볼 수 있게 둔다
+        const tip = (k === "time" && openEarlyOf(r))
+          ? ' title="오픈 ' + esc(row.start) + " · 행사 시작 " + esc(r.start) + '"' : "";
+        return '<td class="' + c.cls + extra + '"' + tip + ">" + body + "</td>";
       }).join("") +
       (money ? '<td><button type="button" class="btn btn-sm" data-edit="' + r.id + '">수정</button></td>' : "") +
     "</tr>";
@@ -4848,6 +4891,11 @@ function openModal(id, presetDate) {
   $("#fDate").value = r ? r.date : (presetDate || view.selected || ymd(view.year, view.month, 1));
   setTimeVal("fStart", r ? r.start : "09:00");
   setTimeVal("fEnd", r ? r.end : "18:00");      // 종료는 18시가 기본이다
+  // 오픈시간 — 켜 둔 건만 값이 있다. 처음 켤 때는 1시간이 기본이다
+  const oe = r ? openEarlyOf(r) : 0;
+  $("#fOpenOn").checked = oe > 0;
+  $("#fOpenH").value = String(oe > 0 ? Math.floor(oe / 60) : 1);
+  $("#fOpenM").value = String(oe > 0 ? oe % 60 : 0);
   $("#fFac").value = r ? r.facilityId : (state.facilities[0] ? state.facilities[0].id : "");
   $("#fApplicant").value = r ? r.applicant : "";
   $("#fHead").value = r ? (r.headcount || "") : "";
@@ -4864,6 +4912,7 @@ function openModal(id, presetDate) {
   $("#annexToggle").textContent = $("#annexList").hidden ? "부속시설 고르기" : "접기";
   $("#annexToggle").setAttribute("aria-expanded", String(!$("#annexList").hidden));
   updateKindUI();
+  updateOpenEarlyUI();
 
   $("#saveRes").hidden = !RUNTIME.writable;
   if (!RUNTIME.writable) $("#deleteRes").hidden = true;
@@ -4882,6 +4931,8 @@ function formToRes() {
     date: $("#fDate").value,
     start: timeVal("fStart"),
     end: timeVal("fEnd"),
+    // 오픈시간 앞당김(분). 목록에서만 쓴다 — 요금·달력은 start 그대로다
+    openEarly: readOpenEarly(),
     facilityId: $("#fFac").value,
     status: prev ? prev.status : "승인",   // 취소를 쓰지 않는다. 예전 자료의 상태는 그대로 둔다
     // 입금 표시는 요금 관리 화면에서만 켠다. 예약을 고쳐도 그대로 둔다
@@ -4918,8 +4969,13 @@ function renderAnnexList(r) {
           : "") +
         (it.article ? " · " + esc(it.article) : "") + "</span></span>" +
       /* 「개」·「명」 은 수량과 횟수를 따로 적는다. 「1회」·「1일」 은 횟수 하나뿐이다 —
-         24개를 두 번 쓰면 두 배로 받아야 해서 담당자가 요청한 칸이다 */
-      (annexCounts(it.unit)
+         24개를 두 번 쓰면 두 배로 받아야 해서 담당자가 요청한 칸이다.
+         `check` 가 붙은 항목(촬영 상행위)은 체크 하나로 켠다 — 켜면 1회분이다 */
+      (annexIsCheck(it)
+        ? '<label class="annex-q"><span>사용</span>' +
+            '<input type="checkbox" data-annex="' + it.id + '"' +
+            (Number(q[it.id]) > 0 ? " checked" : "") + "></label>"
+      : annexCounts(it.unit)
         ? '<label class="annex-q"><span>수량</span>' +
             '<input type="number" class="mono" min="0" step="1" data-annex="' + it.id + '" value="' +
             (Number(q[it.id]) || "") + '" placeholder="0"></label>' +
@@ -4934,7 +4990,7 @@ function renderAnnexList(r) {
 function readAnnexQty() {
   const out = {};
   document.querySelectorAll("#annexList [data-annex]").forEach(el => {
-    const n = Number(el.value) || 0;
+    const n = el.type === "checkbox" ? (el.checked ? 1 : 0) : (Number(el.value) || 0);
     if (n > 0) out[el.dataset.annex] = n;
   });
   return Object.keys(out).length ? out : null;
@@ -4969,6 +5025,37 @@ function setTimeVal(k, hhmm) {
   $("#" + k + "H").value = String(h || 0);
   // 10분 단위 밖의 값(예전 자료)은 가장 가까운 아래 눈금으로 맞춘다
   $("#" + k + "M").value = String(Math.floor((m || 0) / TIME_MIN_STEP) * TIME_MIN_STEP);
+}
+
+/* 오픈시간 앞당김 (2026-11-04 담당자 요청). 앞당길 분을 `openEarly` 에 담는다.
+   **목록(화면·인쇄·엑셀·CSV)에서만** 시작 시각을 그만큼 당겨 보여준다 —
+   달력·우측 상세·이용료·중복 검사는 원래 시작 시각(start) 그대로다 */
+const OPEN_EARLY_MAX_H = 6;
+function fillOpenEarlySelects() {
+  $("#fOpenH").innerHTML = Array.from({ length: OPEN_EARLY_MAX_H + 1 }, (_, i) =>
+    '<option value="' + i + '">' + i + "</option>").join("");
+  $("#fOpenM").innerHTML = Array.from({ length: 60 / TIME_MIN_STEP }, (_, i) =>
+    '<option value="' + i * TIME_MIN_STEP + '">' + pad(i * TIME_MIN_STEP) + "</option>").join("");
+}
+function openEarlyOf(r) { const n = Number(r && r.openEarly) || 0; return n > 0 ? n : 0; }
+function readOpenEarly() {
+  if (!$("#fOpenOn").checked) return null;
+  const n = Number($("#fOpenH").value) * 60 + Number($("#fOpenM").value);
+  return n > 0 ? n : null;
+}
+/* 목록에 띄울 시작 시각 — 오픈시간을 켠 건만 당긴다 */
+function listStartOf(r) {
+  const n = openEarlyOf(r);
+  return n ? minToHm(toMin(r.start) - n) : r.start;
+}
+function updateOpenEarlyUI() {
+  const on = $("#fOpenOn").checked;
+  $("#fOpenH").disabled = $("#fOpenM").disabled = !on;
+  $("#fOpenPick").setAttribute("aria-disabled", String(!on));
+  const n = readOpenEarly(), st = timeVal("fStart");
+  $("#fOpenHint").textContent = n
+    ? "목록에는 " + minToHm(toMin(st) - n) + "–" + timeVal("fEnd") + " 로 나옵니다. 달력과 이용료는 " + st + " 시작 그대로입니다."
+    : "체크하고 시간을 넣으면 목록에서만 오픈시간을 그만큼 당겨 보여줍니다. 달력과 이용료는 시작 시각 그대로입니다.";
 }
 
 function updateKindUI() {
@@ -5199,7 +5286,7 @@ function buildPrintDetail(dates) {
   ).join("") + "</tr>";
 
   const body = dates.map(d => {
-    const items = state.reservations.filter(r => r.date === d).sort(byTime);
+    const items = state.reservations.filter(r => r.date === d).sort(byFacility);
     const dt = parseYmd(d), w = dt.getDay(), hn = holidayName(d);
     const dowCls = hn || w === 0 ? "pd-sun" : (w === 6 ? "pd-sat" : "");
     const live = items.filter(r => r.status !== "취소");
@@ -5433,7 +5520,7 @@ function exportTable(fmt, rows, mode, periodLabel) {
       }
       if (k === "time") {                                  // 시작 시각만 붉게 (화면과 같다)
         xwPut(wb, r, c, { s: S(base),
-          rich: [{ t: row.r.start, b: 1, c: ALERT, sz: FSZ }, { t: "–" + row.r.end, sz: FSZ }] });
+          rich: [{ t: row.start, b: 1, c: ALERT, sz: FSZ }, { t: "–" + row.r.end, sz: FSZ }] });
         return;
       }
       if (col.cls === "num") {                             // 인원 — 글자가 아니라 숫자로
@@ -5813,7 +5900,11 @@ const SETTLE_ANNEX_SLOTS = [
 const SETTLE_OWN_ROWS = [
   { slot: "entry",     id: "a16", key: "입장료" },
   { slot: "broadcast", id: "a15", key: "중계방송" },
-  { slot: "placard",   id: "a14", key: "플래카드" }
+  { slot: "placard",   id: "a14", key: "플래카드" },
+  /* 촬영 상행위 (2026-11-04 담당자 요청) — ④ 상행위 칸 왼쪽 묶음(원본의 「애드벌룬 및 유사물」 자리,
+     C17 딱지 · C19 금액)에 넣는다. 원본은 그 칸을 ④ 계(N12)에 더하지 않았으므로
+     N12 를 L19+C19 로 고쳐 함께 더한다 (settleWorkbook) */
+  { slot: "film",      id: "a17", key: "촬영" }
 ];
 
 /* 원본 서식을 이 파일의 서식으로 등록한다. 번호 차례는 원본 그대로 */
@@ -6018,6 +6109,12 @@ function settleWorkbook(d) {
   atNum("F16", d.broadcast.qty);
   atNum("H19", d.placard.qty > 0 ? d.placard.unitFee : 0);
   atNum("J19", d.placard.qty);
+  /* ④ 촬영 상행위 (2026-11-04 담당자 요청) — 왼쪽 묶음(원본 「애드벌룬 및 유사물」)을
+     촬영 칸으로 쓴다. 단가 × 수량 × 감면율(I19) 을 수식으로 넣고, ④ 계(N12)에 더한다.
+     안 쓴 장에도 딱지는 늘 「촬영」 이다 — 종이에서 늘 같은 자리를 보게 한다 */
+  ["C17", "C57"].forEach(ref => at(ref, { t: "촬    영\n(상행위)" }));
+  atFml("C19", (d.film.qty > 0 ? d.film.unitFee : 0) + "*" + d.film.qty + "*I19");
+  atFml("N12", "L19+C19");
   /* 서식에 「일반(입장인원x200원)」 으로 박혀 있는 딱지를 설정한 단가로 고쳐 넣는다
      (감면율 딱지와 같은 방식이다). 입장료 항목을 지웠으면 서식 글을 그대로 둔다 */
   if (d.entry.has) {
@@ -6085,7 +6182,7 @@ function settleWorkbook(d) {
   /* 1장에서 손으로 적는 칸(허가번호·전용사용료·허가일자)은 비어 있다.
      그대로 따라가면 2장에 0 이나 1899.12.30 이 찍히므로, 비었을 때는 비워 둔다 */
   [["C40", "C1"], ["C68", "C28"], ["I68", "I28"], ["C53", "C14"], ["F53", "F14"],
-   ["C56", "C16"], ["H56", "F16"], ["H59", "H19"], ["J59", "J19"],
+   ["C56", "C16"], ["H56", "F16"], ["H59", "H19"], ["J59", "J19"], ["C59", "C19"],
    ["K63", "K23"], ["L63", "L23"], ["K64", "K24"], ["L64", "L24"]]
     .forEach(x => atFml(x[0], 'IF(' + x[1] + '="","",' + x[1] + ")"));
   // 제출용 부속시설 이름도 잘리지 않게 줄여 담는다 (일곱 줄이 늘 차 있다)
@@ -6203,6 +6300,7 @@ function settleData(list) {
     mixedRate: rates.length > 1,
     annex: slots,                      // ⑤ 의 일곱 줄 (안 쓴 줄도 0원으로 들어 있다)
     entry: own.entry, broadcast: own.broadcast, placard: own.placard,   // ②③④
+    film: own.film,                    // ④ 촬영 상행위 (C19)
     over: over,                        // 서식에 자리가 없는데 쓴 항목
     power: power, water: water,
     useAcct: acct(set.useBank, set.useAcct),
@@ -6601,6 +6699,7 @@ function init() {
   $("#appVer").textContent = APP_VERSION;
   $("#monthInput").innerHTML = Array.from({ length: 12 }, (_, i) => '<option value="' + (i + 1) + '">' + (i + 1) + "월</option>").join("");
   fillTimeSelects();
+  fillOpenEarlySelects();
   fillSelects();
   // 요금 계산 화면의 첫 값 — 오늘 · 09:00~18:00 (등록창과 같은 기본값)
   const today = new Date();
@@ -6839,6 +6938,8 @@ function init() {
    "#fUseType", "#fPower", "#fWater"].forEach(sel =>
     $(sel).addEventListener("input", () => { updateKindUI(); updateFeePreview(); }));
   $("#annexList").addEventListener("input", () => updateFeePreview());
+  ["#fOpenOn", "#fOpenH", "#fOpenM", "#fStartH", "#fStartM", "#fEndH", "#fEndM"].forEach(sel =>
+    $(sel).addEventListener("change", updateOpenEarlyUI));
 
   // 부속시설 항목 접었다 펴기
   $("#annexToggle").addEventListener("click", () => {
@@ -7052,7 +7153,7 @@ function init() {
       JSON.stringify(state, null, 2), "application/json");
   }
   // 달력 화면의 내보내기는 그 달 전체를 수익집계용으로 뽑는다
-  const monthRows = () => monthReservations(view.year, view.month).slice().sort(byDateTime);
+  const monthRows = () => monthReservations(view.year, view.month).slice().sort(byDateFacility);
   $("#exportXls").addEventListener("click", () =>
     exportTable("xls", monthRows(), "income", view.year + "년 " + view.month + "월"));
   $("#exportCsv").addEventListener("click", () =>
